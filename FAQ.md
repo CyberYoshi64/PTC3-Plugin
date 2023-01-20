@@ -42,3 +42,7 @@ Once the launcher for this plugin is released, this issue should be resolved. Fo
 The default hotkey is set by CTRPluginFramework and the fine folks there figured that the SELECT button was the best button to use as a default.
 
 To change the hotkey, open the in-app menu, then tap "Tools", select "Settings", then "Change menu hotkeys". There you can set the hotkey to your liking.
+
+## I'm on New3DS but the C Stick doesn't work / SmileBASIC doesn't detect ZL/ZR, when using the plugin.
+
+This is a bug in CTRPluginFramework that needs to be fixed. CTRPluginFramework can use ZL/ZR buttons, as of now, but fails to pass the buttons through to SmileBASIC.
