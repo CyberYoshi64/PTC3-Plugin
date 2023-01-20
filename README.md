@@ -30,8 +30,8 @@ A sample of v0.0.3 can be found in [here](https://cyberyoshi64.github.io/assets/
 Requirements:
 
 - devkitPro with 3DS toolchains installed
-- [bannertool](https://github.com/Steveice10/bannertool/releases)
-- [makerom](https://github.com/3DSGuy/Project_CTR/releases/latest)
+- [bannertool](https://github.com/Steveice10/bannertool/releases/latest)
+- [makerom](https://github.com/3DSGuy/Project_CTR/releases)
 - [3gxtool v1.1+](https://gitlab.com/thepixellizeross/3gxtool/-/releases)
 - [CTRPluginFramework](https://gitlab.com/thepixellizeross/ctrpluginframework/-/releases)
 
