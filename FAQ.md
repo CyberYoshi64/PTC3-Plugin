@@ -46,3 +46,9 @@ To change the hotkey, open the in-app menu, then tap "Tools", select "Settings",
 ## I'm on New3DS but the C Stick doesn't work / SmileBASIC doesn't detect ZL/ZR, when using the plugin.
 
 This is a bug in CTRPluginFramework that needs to be fixed. CTRPluginFramework can use ZL/ZR buttons, as of now, but fails to pass the buttons through to SmileBASIC.
+
+## [Citra] The in-app menu is making horrible grinding noises; it like freezes the audio
+
+This is an emulation inaccuracy caused by Citra, whereas the sound keeps trying to play, even if it shouldn't. I cannot find and hook the related function in SmileBASIC's code, so I'm sorry for this issue.
+
+Note that any other issue that is Citra-specific and does not occur on 3DS is to be reported to the Citra Team, instead of me, m'kay?
