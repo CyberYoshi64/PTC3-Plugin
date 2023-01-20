@@ -6,6 +6,7 @@
 //
 #include "_Utils.hpp"
 #include "PetitCYX.hpp"
+#include "ExceptionHandler.hpp"
 #include "Misc.hpp"
 //
 

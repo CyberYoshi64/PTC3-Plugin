@@ -71,7 +71,7 @@
 // BASIC Start string
 //
 
-#define BOOT_TEXT_LEN	70 // 69 + NULL
+#define BOOT_TEXT_LEN	70 // 69 (nice) + NULL
 #define EUR_BOOTTEXT	0x2E9AE0
 #define USA_BOOTTEXT	0x2E9AE0
 #define JPN_BOOTTEXT	0x2E9B20

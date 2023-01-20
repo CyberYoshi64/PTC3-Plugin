@@ -3,24 +3,22 @@
 #include <3ds/util/utf.h>
 #include <Unicode.h>
 
+/*
+	OnionFS — with modifications applied by CyberYoshi64 in 2022
+
+	- Removed UI for configuring OnionFS; this should be handled by the plugin's code instead
+	- Removed settings and related functions
+	- Added hooking for extData, which is where the interesting data for SB3 is found.
+*/
+
 namespace CTRPluginFramework {
 	archData OnionSave::save = {0};
-	saveData OnionSave::settings = { 0 };
-	char OnionSave::savePath[100] = {0};
 	u16 OnionSave::romPath[50] = { 0 };
 	u16 OnionSave::dataPath[50] = { 0 };
 	u16 OnionSave::extPath[50] = { 0 };
 	File* OnionSave::debugFile = nullptr;
-	bool OnionSave::needsReboot = false;
 
 	LightLock debugLock = { 0 };
-	Result OnionSave::loadDefaults() {
-		settings.header.magic = SAVE_MAGIC;
-		settings.header.version = SAVE_REVISION;
-		settings.header.numEntries = 0;
-		settings.header.lastLoadedPack = 0;
-		return addModEntry(g_ProcessTID + 8, ARCH_ROMFS|ARCH_SAVE|ARCH_EXTDATA);
-	}
 
 	bool checkFolderExists(u16* name) {
 		FS_Archive sdmcArchive;
@@ -31,9 +29,7 @@ namespace CTRPluginFramework {
 		ret = FSUSER_OpenDirectory(&dirHandle, sdmcArchive, fsMakePath(PATH_UTF16, name));
 		FSDIR_Close(dirHandle);
 		FSUSER_CloseArchive(sdmcArchive);
-		if (ret) {
-			return false;
-		}
+		if (ret) return false;
 		return true;
 	}
 
@@ -49,8 +45,7 @@ namespace CTRPluginFramework {
 
 	int strcmpu8u16(char* ptr1, u16* ptr2) {
 		int i = 0;
-		u16 char1;
-		u16 char2;
+		u16 char1, char2;
 		do {
 			char1 = (u16)(ptr1[i]);
 			char2 = ptr2[i++];
@@ -60,8 +55,7 @@ namespace CTRPluginFramework {
 
 	int strcmpdot(char* ptr1, char* ptr2) {
 		int i = 0;
-		char char1;
-		char char2;
+		char char1, char2;
 		do {
 			char1 = ptr1[i];
 			char2 = ptr2[i++];
@@ -96,8 +90,7 @@ namespace CTRPluginFramework {
 		LightLock_Unlock(&debugLock);
 	}
 
-	int OnionSave::existArchiveu16(u16 * arch)
-	{
+	int OnionSave::existArchiveu16(u16 * arch) {
 		for (int i = 0; i < save.numEntries; i++) {
 			if (strcmpu8u16(save.entries[i].archName, arch) == 0) {
 				if (save.entries[i].finished) return i;
@@ -107,8 +100,7 @@ namespace CTRPluginFramework {
 		return -1;
 	}
 
-	int OnionSave::existArchiveHnd(u64 hnd)
-	{
+	int OnionSave::existArchiveHnd(u64 hnd) {
 		for (int i = 0; i < save.numEntries; i++) {
 			if (save.entries[i].archHandle == hnd) {
 				return i;
@@ -117,8 +109,7 @@ namespace CTRPluginFramework {
 		return -1;
 	}
 
-	int OnionSave::existArchiveu8(u8 * arch)
-	{
+	int OnionSave::existArchiveu8(u8 * arch) {
 		for (int i = 0; i < save.numEntries; i++) {
 			if (strcmpdot(save.entries[i].archName, (char*)arch) == 0) {
 				if (save.entries[i].finished) return i;
@@ -133,13 +124,13 @@ namespace CTRPluginFramework {
 			DEBUG("Archive buffer is full.\n");
 			return;
 		}
-		if (archid == 4) {
+		if (archid == 4) { // application save data
 			if (existArchiveHnd(handle) != -1) return;
 			DEBUG("Adding save archive: %016lX\n", handle);
 			save.entries[save.numEntries].type = ARCH_SAVE;
 			save.entries[save.numEntries].archHandle = handle;
 			save.entries[save.numEntries++].finished = 0;
-		} else if (archid == 6) {
+		} else if (archid == 6) { // Extra User Save Data
 			if (existArchiveHnd(handle) != -1) return;
 			DEBUG("Adding extData archive: %016lX\n", handle);
 			save.entries[save.numEntries].type = ARCH_EXTDATA;
@@ -150,13 +141,17 @@ namespace CTRPluginFramework {
 		}
 	}
 
-	void OnionSave::addArchive(u8* arch, u64 handle)
-	{
+	void OnionSave::addArchive(u8* arch, u64 handle) {
 		char newbuf[10];
 		if (ENABLE_DEBUG) strcpydot(newbuf, (char*)arch, 10);
+		/*
+			Archives starting with $ are used by Nintendo libraries
+			internally. In SmileBASIC, it's to mount the SD Card for
+			screenshots (Nintendo 3DS Camera).
+		*/
 		if (arch[0] == '$') {
 			DEBUG("Rejected \"%s\"\n", newbuf, (u32)(handle >> 32), (u32)handle);
-			return; //Archives starting with $ are used by the game internally, usually mii data.
+			return;
 		}
 		if (existArchiveu8(arch) == -1) {
 			int hndpos = existArchiveHnd(handle);
@@ -172,8 +167,7 @@ namespace CTRPluginFramework {
 					strcpydot((save.entries[save.numEntries].archName), (char*)arch, sizeof(save.entries[0].archName));
 					save.entries[save.numEntries++].finished = 1;
 					return;
-				}
-				else {
+				} else {
 					DEBUG("Rejected \"%s\" with handle: 0x%08X%08X\n", newbuf, (u32)(handle >> 32), (u32)handle);
 					return;
 				}
@@ -185,76 +179,21 @@ namespace CTRPluginFramework {
 		}
 	}
 
-	bool OnionSave::addModEntry(const char* name, u8 flags) {
-		strcpy(settings.entries[settings.header.numEntries].name, name);
-		settings.entries[settings.header.numEntries].flags = flags;
-		char* dirName = static_cast<char *>(::operator new(0x200));
-		if (!dirName) return false;
-		//
-		strcpy(dirName, (char*)TOP_DIR"/");
-		strcat(dirName, name);
-		createDirectory(dirName);
-		//
-		strcpy(dirName, (char*)TOP_DIR"/");
-		strcat(dirName, name);
-		strcat(dirName, (char*)"/datafs");
-		createDirectory(dirName);
-		//
-		strcpy(dirName, (char*)TOP_DIR"/");
-		strcat(dirName, name);
-		strcat(dirName, (char*)"/savefs");
-		createDirectory(dirName);		
-		//
-		strcpy(dirName, (char*)TOP_DIR"/");
-		strcat(dirName, name);
-		strcat(dirName, (char*)"/config");
-		createDirectory(dirName);		
-		delete[] dirName;
-		settings.header.numEntries++;
-		return true;
-	}
-
-	bool showMsgKbd(std::string text, DialogType digtype) {
-		Keyboard kbd(text);
-		StringVector opts;
-		switch (digtype)
-		{
-		case CTRPluginFramework::DialogType::DialogOk:
-			opts = { "Ok" };
-			break;
-		case CTRPluginFramework::DialogType::DialogOkCancel:
-			opts = { "Ok", "Cancel" };
-			break;
-		case CTRPluginFramework::DialogType::DialogYesNo:
-			opts = { "Yes", "No" };
-			break;
-		default:
-			break;
-		}
-		kbd.Populate(opts);
-		return kbd.Open() == 0;
-	}
-
 	void OnionSave::setupPackPaths() {
-		strcatu16(OnionSave::romPath, (char*)"ram:" TOP_DIR"/", (char*)"datafs/");
-		strcatu16(OnionSave::dataPath, (char*)"ram:" TOP_DIR"/",(char*)"config/");
-		strcatu16(OnionSave::extPath, (char*)"ram:" TOP_DIR"/",(char*)"savefs/");
+		strcatu16(OnionSave::romPath, (char*)"ram:" TOP_DIR "/", (char*)"datafs/");
+		strcatu16(OnionSave::dataPath, (char*)"ram:" TOP_DIR "/",(char*)"config/");
+		strcatu16(OnionSave::extPath, (char*)"ram:" TOP_DIR "/",(char*)"savefs/");
 		if (!checkFolderExists(OnionSave::romPath + 4)) Directory::Create(TOP_DIR "/datafs");
 		if (!checkFolderExists(OnionSave::dataPath + 4)) Directory::Create(TOP_DIR "/config");
 		if (!checkFolderExists(OnionSave::extPath + 4)) Directory::Create(TOP_DIR "/savefs");
 	}
 	
-	bool OnionSave::getArchive(u16 * arch, u8* mode, bool isReadOnly)
-	{
+	bool OnionSave::getArchive(u16 * arch, u8* mode, bool isReadOnly) {
 		int entry = existArchiveu16(arch);
 		if (entry == -1) return false;
 		u8 flag = save.entries[entry].type;
 		*mode = flag;
-		u8 romode = !((flag & ARCH_ROMFS) && isReadOnly); //Only allow functions without the readonly flag
+		u8 romode = !((flag & ARCH_ROMFS) && isReadOnly);
 		return romode;
-	}
-
-	bool OnionSave::loadSettings() {
-		return loadDefaults();
 	}
 }
