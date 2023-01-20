@@ -5,8 +5,10 @@
 
 namespace CTRPluginFramework {
     class Exception {
-        public:
-            static Process::ExceptionCallbackState Handler(ERRF_ExceptionInfo *excep, CpuRegisters *regs);
+    public:
+        static Process::ExceptionCallbackState Handler(ERRF_ExceptionInfo *excep, CpuRegisters *regs);
+    private:
+        static File* excepFile;
     };
 }
 

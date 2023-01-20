@@ -184,8 +184,7 @@ namespace CTRPluginFramework {
         return ret;
     }
 
-    int  fsOpenArchiveFunc(u32* fsHandle, u64* out, u32 archiveID, u32 pathType, u32 pathData, u32 pathsize)
-    {
+    int  fsOpenArchiveFunc(u32* fsHandle, u64* out, u32 archiveID, u32 pathType, u32 pathData, u32 pathsize) {
         u32 *cmdbuf = getThreadCommandBuffer();
 
         cmdbuf[0] = IPC_MakeHeader(0x80C, 3, 2); // 0x80C00C2
@@ -200,8 +199,7 @@ namespace CTRPluginFramework {
 
         *out = cmdbuf[2] | ((u64)(cmdbuf[3]) << 32);
         DEBUG("fsOpenArch return 0x%08X%08X\n", cmdbuf[3], cmdbuf[2]);
-        if ((u32)(*out) < 0x100000) 
-            OnionSave::addArchiveHnd(*out, archiveID);
+        if ((u32)(*out) < 0x100000) OnionSave::addArchiveHnd(*out, archiveID);
         return cmdbuf[1];
     }
 

@@ -1,11 +1,6 @@
 #include "PetitCYX.hpp"
 #include "main.hpp"
 
-/*
-    TODO: Come up with a better name...
-    CYX (CY64 Extension) seems too cocky
-*/
-
 namespace CTRPluginFramework {
     void CYX::Initialize(void) {
         switch (g_region) {
@@ -15,40 +10,43 @@ namespace CTRPluginFramework {
         }
     }
 
+    void CYX::LoadSettings(){} // To be used soon
+    void CYX::SaveSettings(){} // Not needed for now
+
     void CYX::ReplaceServerName(std::string& saveURL, std::string& loadURL){
-        /*
-            TODO: Make this function more ellegant.
-            Works for now (TM)
-        */
-        u32 addresses[] = {
-            JPN_SERVERNAME_LOAD2_1,JPN_SERVERNAME_LOAD2_2,JPN_SERVERNAME_SAVE3_1,JPN_SERVERNAME_SAVE3_2,JPN_SERVERNAME_SHOW2,JPN_SERVERNAME_LIST2,JPN_SERVERNAME_INFO2,JPN_SERVERNAME_DELETE2,JPN_SERVERNAME_SHOPLIST2,JPN_SERVERNAME_PREPURCHASE2,JPN_SERVERNAME_PURCHASE2,
-            USA_SERVERNAME_LOAD2_1,USA_SERVERNAME_LOAD2_2,USA_SERVERNAME_SAVE3_1,USA_SERVERNAME_SAVE3_2,USA_SERVERNAME_SHOW2,USA_SERVERNAME_LIST2,USA_SERVERNAME_INFO2,USA_SERVERNAME_DELETE2,USA_SERVERNAME_SHOPLIST2,USA_SERVERNAME_PREPURCHASE2,USA_SERVERNAME_PURCHASE2,
-            EUR_SERVERNAME_LOAD2_1,EUR_SERVERNAME_LOAD2_2,EUR_SERVERNAME_SAVE3_1, EUR_SERVERNAME_SAVE3_2, EUR_SERVERNAME_SHOW2, EUR_SERVERNAME_LIST2, EUR_SERVERNAME_INFO2, EUR_SERVERNAME_DELETE2, EUR_SERVERNAME_SHOPLIST2, EUR_SERVERNAME_PREPURCHASE2, EUR_SERVERNAME_PURCHASE2
-        };
-        char buf[64]; int off = (g_region-1)*11;
-        if (off < 0 || off > 22) return;
+        u32 jpnPtr[]={JPN_SERVERNAME_LOAD2_1, JPN_SERVERNAME_LOAD2_2, JPN_SERVERNAME_SAVE3_1, JPN_SERVERNAME_SAVE3_2, JPN_SERVERNAME_SHOW2, JPN_SERVERNAME_LIST2, JPN_SERVERNAME_INFO2, JPN_SERVERNAME_DELETE2, JPN_SERVERNAME_SHOPLIST2, JPN_SERVERNAME_PREPURCHASE2, JPN_SERVERNAME_PURCHASE2};
+        u32 usaPtr[]={USA_SERVERNAME_LOAD2_1, USA_SERVERNAME_LOAD2_2, USA_SERVERNAME_SAVE3_1, USA_SERVERNAME_SAVE3_2, USA_SERVERNAME_SHOW2, USA_SERVERNAME_LIST2, USA_SERVERNAME_INFO2, USA_SERVERNAME_DELETE2, USA_SERVERNAME_SHOPLIST2, USA_SERVERNAME_PREPURCHASE2, USA_SERVERNAME_PURCHASE2};
+        u32 eurPtr[]={EUR_SERVERNAME_LOAD2_1, EUR_SERVERNAME_LOAD2_2, EUR_SERVERNAME_SAVE3_1, EUR_SERVERNAME_SAVE3_2, EUR_SERVERNAME_SHOW2, EUR_SERVERNAME_LIST2, EUR_SERVERNAME_INFO2, EUR_SERVERNAME_DELETE2, EUR_SERVERNAME_SHOPLIST2, EUR_SERVERNAME_PREPURCHASE2, EUR_SERVERNAME_PURCHASE2};
+        u32* ptr;
+        switch (g_region) {
+            case JPN: ptr = jpnPtr; break;
+            case USA: ptr = usaPtr; break;
+            case EUR: ptr = eurPtr; break;
+            default: return;
+        }
+        char buf[50];
         sprintf(buf, "%s" _NAME_SERVERNAME_LOAD_LOAD2, loadURL.c_str());
-        memcpy((void*)addresses[off+0], buf, strlen(buf)+1);
+        memcpy((void*)ptr[0], buf, strlen(buf)+1);
         sprintf(buf, "%s" _NAME_SERVERNAME_LOAD_LOAD2, loadURL.c_str());
-        memcpy((void*)addresses[off+1], buf, strlen(buf)+1);
+        memcpy((void*)ptr[1], buf, strlen(buf)+1);
         sprintf(buf, "%s" _NAME_SERVERNAME_SAVE_SAVE3, saveURL.c_str());
-        memcpy((void*)addresses[off+2], buf, strlen(buf)+1);
+        memcpy((void*)ptr[2], buf, strlen(buf)+1);
         sprintf(buf, "%s" _NAME_SERVERNAME_SAVE_SAVE3, saveURL.c_str());
-        memcpy((void*)addresses[off+3], buf, strlen(buf)+1);
+        memcpy((void*)ptr[3], buf, strlen(buf)+1);
         sprintf(buf, "%s" _NAME_SERVERNAME_SAVE_SHOW2, saveURL.c_str());
-        memcpy((void*)addresses[off+4], buf, strlen(buf)+1);
+        memcpy((void*)ptr[4], buf, strlen(buf)+1);
         sprintf(buf, "%s" _NAME_SERVERNAME_SAVE_LIST2, saveURL.c_str() );
-        memcpy((void*)addresses[off+5], buf, strlen(buf)+1);
+        memcpy((void*)ptr[5], buf, strlen(buf)+1);
         sprintf(buf, "%s" _NAME_SERVERNAME_LOAD_INFO2, loadURL.c_str());
-        memcpy((void*)addresses[off+6], buf, strlen(buf)+1);
+        memcpy((void*)ptr[6], buf, strlen(buf)+1);
         sprintf(buf, "%s" _NAME_SERVERNAME_SAVE_DELETE2, saveURL.c_str());
-        memcpy((void*)addresses[off+7], buf, strlen(buf)+1);
+        memcpy((void*)ptr[7], buf, strlen(buf)+1);
         sprintf(buf, "%s" _NAME_SERVERNAME_SAVE_SHOPLIST2, saveURL.c_str());
-        memcpy((void*)addresses[off+8], buf, strlen(buf)+1);
+        memcpy((void*)ptr[8], buf, strlen(buf)+1);
         sprintf(buf, "%s" _NAME_SERVERNAME_SAVE_PREPURCHASE2, saveURL.c_str());
-        memcpy((void*)addresses[off+9], buf, strlen(buf)+1);
+        memcpy((void*)ptr[9], buf, strlen(buf)+1);
         sprintf(buf, "%s" _NAME_SERVERNAME_SAVE_PURCHASE2, saveURL.c_str());
-        memcpy((void*)addresses[off+10], buf, strlen(buf)+1);
+        memcpy((void*)ptr[10], buf, strlen(buf)+1);
     }
 
     void CYX::ChangeBootText(const char* text){

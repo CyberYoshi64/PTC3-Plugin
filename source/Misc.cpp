@@ -14,7 +14,6 @@ namespace CTRPluginFramework {
             srvName = _DEFAULT_SERVERNAME_SAVE;
             std::string srvLoad = _DEFAULT_SERVERNAME_LOAD;
             CYX::ReplaceServerName(srvName, srvLoad);
-            MessageBox("Server name was reset to the original.", DialogType::DialogOk, ClearScreen::Both)();
             return;
         } else {
             Keyboard kbd("Enter the server name to which to connect to:\n\nThe domain name must be " TOSTRING(_LEN_SERVERNAME_URL) "\ncharacers long or less.");

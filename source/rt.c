@@ -1,5 +1,6 @@
-#include "3ds.h"
+#include <3ds.h>
 #include "rt.h"
+#include <string.h>
 
 Handle hCurrentProcess = 0;
 u32 currentPid = 0;
@@ -15,19 +16,15 @@ u32 getCurrentProcessHandle() {
     if (hCurrentProcess != 0) return hCurrentProcess;
     svcGetProcessId(&currentPid, 0xffff8001);
     ret = svcOpenProcess(&handle, currentPid);
-    if (ret != 0) {
-        return 0;
-    }
+    if (ret != 0) return 0;
     hCurrentProcess = handle;
     return hCurrentProcess;
 }
 
-u32 rtGetPageOfAddress(u32 addr) {
-    return (addr / 0x1000) * 0x1000;
-}
+u32 rtGetPageOfAddress(u32 addr) {return (addr / 0x1000) * 0x1000;}
 
 u32 rtFlushInstructionCache(void* ptr, u32 size) {
-    return svcFlushProcessDataCache(getCurrentProcessHandle(), (const void*)ptr, size);
+    return svcFlushProcessDataCache(getCurrentProcessHandle(), (u32)(const void*)ptr, size);
 }
 
 u32 rtGenerateJumpCode(u32 dst, u32* buf) {
@@ -48,9 +45,7 @@ void rtInitHook(RT_HOOK* hook, u32 funcAddr, u32 callbackAddr) {
 
 
 void rtEnableHook(RT_HOOK* hook) {
-    if (hook->isEnabled) {
-        return;
-    }
+    if (hook->isEnabled) return;
     u32* dst = (u32*)hook->funcAddr;
     dst[0] = hook->jmpCode[0];
     dst[1] = hook->jmpCode[1];
@@ -59,9 +54,7 @@ void rtEnableHook(RT_HOOK* hook) {
 }
 
 void rtDisableHook(RT_HOOK* hook) {
-    if (!hook->isEnabled) {
-        return;
-    }
+    if (!hook->isEnabled) return;
     u32* dst = (u32*)hook->funcAddr;
     dst[0] = hook->bakCode[0];
     dst[1] = hook->bakCode[1];

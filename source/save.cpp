@@ -12,12 +12,12 @@
 
 namespace CTRPluginFramework {
     archData OnionSave::save = {0};
-    u16 OnionSave::romPath[50] = { 0 };
-    u16 OnionSave::dataPath[50] = { 0 };
-    u16 OnionSave::extPath[50] = { 0 };
+    u16 OnionSave::romPath[50] = {0};
+    u16 OnionSave::dataPath[50] = {0};
+    u16 OnionSave::extPath[50] = {0};
     File* OnionSave::debugFile = nullptr;
 
-    LightLock debugLock = { 0 };
+    LightLock debugLock = {0};
 
     bool checkFolderExists(u16* name) {
         FS_Archive sdmcArchive;

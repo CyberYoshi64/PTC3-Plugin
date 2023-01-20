@@ -26,6 +26,11 @@ namespace CTRPluginFramework {
         bot.Draw(Utils::Format("PC   : %08X",regs->pc),220,80);
         OSD::SwapBuffers();
         OSD::Unlock();
+        
+        // Write an exception file here soon
+        // TODO: Find program slot names + project name
+        // MAYBE: Look for common crashes to blame user
+        
         Sleep(Seconds(1));
         while (true) {
             Controller::Update();
