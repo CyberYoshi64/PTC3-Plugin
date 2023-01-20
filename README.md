@@ -50,7 +50,7 @@ For now, it has to be placed in `/luma/plugins/[TID]/`, whereas TID is:
 
 This folder contains romfs overlay and savefs for the plugin.
 
-If it's not created, it will make the folders for you, however, it will look like your save data is gone. Don't worry, as it's not gone! See "Restore Save" to transfer your save for this plugin.
+If it's not created, it will make the folders for you, however, it will look like your save data is gone. Don't worry, as it's not gone! See `FAQ.md` for details on how to transfer your save.
 
 **Any changes you perform in this folder will not affect SmileBASIC, as well as your main save data.**
 
