@@ -1,0 +1,19 @@
+{
+    "configurations": [
+        {
+            "name": "Linux",
+            "includePath": [
+                "${workspaceFolder}/include",
+                "${DEVKITARM}/arm-none-eabi/include",
+                "${DEVKITPRO}/libctru/include",
+                "${DEVKITPRO}/libctrpf/include"
+            ],
+            "defines": [],
+            "compilerPath": "${DEVKITARM}/bin/arm-none-eabi-gcc",
+            "cStandard": "c11",
+            "cppStandard": "c++11",
+            "intelliSenseMode": "linux-gcc-arm"
+        }
+    ],
+    "version": 4
+}

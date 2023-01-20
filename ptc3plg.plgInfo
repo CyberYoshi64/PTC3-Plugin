@@ -1,0 +1,20 @@
+Author: CyberYoshi64
+
+Version: # Plugin version
+    Major: 1
+    Minor: 0
+    Revision: 0
+
+Targets: # Low TitleId of games which are compatibles with this plugin (empty for all)
+    - 0x00117200 # JPN
+    - 0x0016DE00 # USA
+    - 0x001A1C00 # EUR
+
+Title: SmileBASIC extension
+
+Summary: Some more stuff for SB3
+
+Description: |
+  For use with SmileBASIC and no other 3DS application.
+  
+Compatibility: Any

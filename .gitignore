@@ -27,6 +27,7 @@
 *.lib
 
 # Executables
-*.exe
+build/
+*.elf
 *.out
-*.app
+*.3gx
