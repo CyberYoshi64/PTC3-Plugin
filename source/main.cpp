@@ -28,6 +28,28 @@ namespace CTRPluginFramework {
     RT_HOOK fsSetSecValHook = {0};
     u32 fsMountArchive = 0;
     char g_ProcessTID[17];
+    
+    void mcuSetSleep(bool on){
+        u8 reg;
+        if (R_FAILED(mcuHwcInit())) return;
+        MCUHWC_ReadRegister(0x18, &reg, 1);
+        if (on)
+            reg &= ~0x6C;
+        else
+            reg |= 0x6C;
+        MCUHWC_WriteRegister(0x18, &reg, 1);
+        mcuHwcExit();
+        return;
+    }
+
+    bool menuOpen(){
+        //
+        return true;
+    }
+
+    void menuClose(){
+        //
+    }
 
     void deleteSecureVal() {
         DEBUG("NOTE: This game uses a secure value, ");
@@ -403,6 +425,7 @@ namespace CTRPluginFramework {
         menu += new MenuFolder("Miscellaneous", std::vector<MenuEntry *>({
             new MenuEntry("Change server…", nullptr, serverAdrChg, ""),
             new MenuEntry("Spoof version", nullptr, versionSpoof, ""),
+            //new MenuEntry("123456789012345678901234567890123456789012345678901234567890", nullptr, dummyEntry, "Lorem ipsum dolor sit amet, consetetur sadipscing elitr, sed diam nonumy eirmod tempor invidunt ut labore et dolore magna aliquyam erat, sed diam voluptua."),
         }));
         menu += new MenuEntry("Details", nullptr, pluginDetails, "");
     }
@@ -434,6 +457,8 @@ namespace CTRPluginFramework {
         menu->SynchronizeWithFrame(true);
         menu->ShowWelcomeMessage(false);
         // menu->SetHexEditorState(false);
+        menu->OnOpening = menuOpen;
+        menu->OnClosing = menuClose;
 
         Process::exceptionCallback = Exception::Handler;
 

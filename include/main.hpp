@@ -1,6 +1,7 @@
 #pragma once
 #include <CTRPluginFramework.hpp>
 #include "rt.h"
+#include "plgldr.h"
 #include <csvc.h>
 
 #include "_Utils.hpp"
@@ -9,6 +10,11 @@
 #include "Misc.hpp"
 
 #define TOP_DIR             "/PTC3PLG"
+
+#define ROMFS_PATH          "/datafs"
+#define SAVEDATA_PATH       "/config"
+#define EXTDATA_PATH        "/savefs"
+
 #define NUMBER_FILE_OP      9
 #define MAJOR_VERSION       0
 #define MINOR_VERSION       0
@@ -75,6 +81,7 @@ namespace CTRPluginFramework {
     extern bool canSaveRedirect;
     extern Region g_region;
     extern char g_regionString[];
+    void mcuSetSleep(bool on);
     int strlen16(u16* str);
     int fsSetThisSaveDataSecureValue(u32 a1, u64 a2);
     int Obsoleted_5_0_fsSetSaveDataSecureValue(u64 a1, u32 a2, u32 a3, u8 a4);

@@ -1,8 +1,6 @@
 #!/usr/bin/python3
 
-import sys
-import ftplib
-import datetime
+import sys, datetime
 from ftplib import FTP
 
 # Usage:
@@ -40,6 +38,7 @@ if __name__ == '__main__':
 		ftp.quit();
 		printf("Disconnected");
 
-	except IOError as e:
+	except Exception as e:
 		printf("/!\ An error occured. /!\ ");
+		print(e);
 

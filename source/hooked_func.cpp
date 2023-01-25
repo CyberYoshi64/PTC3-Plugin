@@ -206,8 +206,10 @@ namespace CTRPluginFramework {
     //Stubbed functions, this prevents formatting the save data archive as well as updating secure nand values
     int fsFormatSaveData(int *a1, int a2, int a3, int a4, int a5, int a6, int a7, int a8, int a9, int a10, char a11) {
         DEBUG("fsFormatSaveData called, removing save directory.\n");
-        Directory::Remove(TOP_DIR "/savefs");
-        Directory::Create(TOP_DIR "/savefs");
+        std::string dir;
+        Utils::ConvertUTF16ToUTF8(dir, OnionSave::dataPath);
+        Directory::Remove(dir);
+        Directory::Create(dir);
         return 0;
     }
     int fsSetThisSaveDataSecureValue(u32 a1, u64 a2) { //0x086E00C0

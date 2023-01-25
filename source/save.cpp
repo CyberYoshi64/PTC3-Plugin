@@ -179,12 +179,12 @@ namespace CTRPluginFramework {
     }
 
     void OnionSave::setupPackPaths() {
-        strcatu16(OnionSave::romPath, (char*)"ram:" TOP_DIR "/", (char*)"datafs/");
-        strcatu16(OnionSave::dataPath, (char*)"ram:" TOP_DIR "/",(char*)"config/");
-        strcatu16(OnionSave::extPath, (char*)"ram:" TOP_DIR "/",(char*)"savefs/");
-        if (!checkFolderExists(OnionSave::romPath + 4)) Directory::Create(TOP_DIR "/datafs");
-        if (!checkFolderExists(OnionSave::dataPath + 4)) Directory::Create(TOP_DIR "/config");
-        if (!checkFolderExists(OnionSave::extPath + 4)) Directory::Create(TOP_DIR "/savefs");
+        strcatu16(OnionSave::romPath, (char*)"ram:" TOP_DIR, (char*)ROMFS_PATH "/");
+        strcatu16(OnionSave::dataPath, (char*)"ram:" TOP_DIR,(char*)SAVEDATA_PATH "/");
+        strcatu16(OnionSave::extPath, (char*)"ram:" TOP_DIR,(char*)EXTDATA_PATH "/");
+        if (!checkFolderExists(OnionSave::romPath + 4)) Directory::Create(TOP_DIR ROMFS_PATH);
+        if (!checkFolderExists(OnionSave::dataPath + 4)) Directory::Create(TOP_DIR SAVEDATA_PATH);
+        if (!checkFolderExists(OnionSave::extPath + 4)) Directory::Create(TOP_DIR EXTDATA_PATH);
     }
     
     bool OnionSave::getArchive(u16 * arch, u8* mode, bool isReadOnly) {

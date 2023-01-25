@@ -102,20 +102,16 @@ namespace CTRPluginFramework {
     std::string CYX::ColorPTCVerValid(u32 ver, u32 ok, u32 ng){
         char c[5]={0}; c[0]=0x1b;
         if (CYX::isPTCVersionValid(ver)){
-            if (ok==1){
+            if (ok == CYX__COLORVER_NOCOLOR){
                 return ResetColor();
             } else {
-                c[1]=MAX(1, (u8)(ok>>16));
-                c[2]=MAX(1, (u8)(ok>>8));
-                c[3]=MAX(1, (u8)ok);
+                return ""<<Color(ok);
             }
         } else {
-            if (ng==1){
+            if (ng == CYX__COLORVER_NOCOLOR){
                 return ResetColor();
             } else {
-                c[1]=MAX(1, (u8)(ng>>16));
-                c[2]=MAX(1, (u8)(ng>>8));
-                c[3]=MAX(1, (u8)ng);
+                return ""<<Color(ng);
             }
         }
         return (c);

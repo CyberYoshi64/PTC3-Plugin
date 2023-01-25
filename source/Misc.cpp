@@ -7,16 +7,16 @@ namespace CTRPluginFramework {
         std::string srvName;
         Keyboard kbd("");
         kbd.Populate({"Reset to original", "Specify custom server", "\uE072 Back"});
-        kbd.ChangeEntrySound(3, SoundEngine::Event::CANCEL);
+        kbd.ChangeEntrySound(2, SoundEngine::Event::CANCEL);
         int kbdres = kbd.Open();
-        if (kbdres < 0 || kbdres >= 3) return;
+        if (kbdres < 0 || kbdres >= 2) return;
         if (kbdres == 0) {
             srvName = _DEFAULT_SERVERNAME_SAVE;
             std::string srvLoad = _DEFAULT_SERVERNAME_LOAD;
             CYX::ReplaceServerName(srvName, srvLoad);
             return;
         } else {
-            Keyboard kbd("Enter the server name to which to connect to:\n\nThe domain name must be " TOSTRING(_LEN_SERVERNAME_URL) "\ncharacers long or less.");
+            Keyboard kbd("Enter the server name to which to connect to:\n\n The domain name must be " TOSTRING(_LEN_SERVERNAME_URL) " characters\n long or less.");
             kbd.SetMaxLength(_LEN_SERVERNAME_URL);
             kbdres = kbd.Open(srvName, "http://");
             if (kbdres < 0) return;
@@ -39,13 +39,16 @@ namespace CTRPluginFramework {
         menu:
         u32 oldVersion = *(u32*)offsets[g_region], newVersion = 0;
         Keyboard mainsel(
-            "Version spoofer\n\nCurrently set:\n"+SkipToPixel(48)+
-            CYX::ColorPTCVerValid(oldVersion, 1, 0xFF0000)+
-            CYX::PTCVersionString(oldVersion)+SkipToPixel(200)+
-            u8"\x1b\x7f\x7f\x7f"+Utils::Format("(0x%08X)\n", oldVersion)+"\x18"+
-            "Original:\n"+SkipToPixel(48)+
-            CYX::PTCVersionString(CYX::currentVersion)+SkipToPixel(200)+
-            u8"\x1b\x7f\x7f\x7f"+Utils::Format("(0x%08X)\n", CYX::currentVersion)+"\x18"
+            "Version spoofer\n\nCurrently set:\n" << SkipToPixel(48) <<
+            CYX::ColorPTCVerValid(oldVersion, CYX__COLORVER_NOCOLOR, 0xFF0000FF) <<
+            CYX::PTCVersionString(oldVersion) << SkipToPixel(200) <<
+            Color(0x7F7F7FFF) <<
+            Utils::Format("(0x%08X)\n", oldVersion) << ResetColor() <<
+            "Original:\n" << SkipToPixel(48) <<
+            CYX::PTCVersionString(CYX::currentVersion) << SkipToPixel(200) <<
+            Color(0x7F7F7FFF) <<
+            Utils::Format("(0x%08X)\n", CYX::currentVersion) <<
+            ResetColor()
         );
         mainsel.Populate({"Reset to original", "Set value", "\uE072 Back"});
         mainsel.ChangeEntrySound(2, SoundEngine::Event::CANCEL);
@@ -71,8 +74,7 @@ namespace CTRPluginFramework {
             (
                 Utils::Format("Base application: %s ",g_regionString)+
                 CYX::PTCVersionString(CYX::currentVersion)+
-                Utils::Format("\nCYX %s",STRING_VERSION)+
-                "\n\nCreated by CyberYoshi64 from Germany in 2022-2023"
+                Utils::Format("\nCYX %s",STRING_VERSION)
             ),
             DialogType::DialogOk, ClearScreen::Both)();
     }
