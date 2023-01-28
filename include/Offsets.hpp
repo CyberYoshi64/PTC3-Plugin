@@ -1,14 +1,26 @@
 #ifndef OFFSETS_HPP
 #define OFFSETS_HPP
 
-//
-// Server URL's
-//
+#define EUR_VERSION_INT		0x15E8E4
+#define USA_VERSION_INT		0x15E78C
+#define JPN_VERSION_INT		0x15E774
+
+#define BOOT_TEXT_LEN	70 // 69 (nice) + NULL
+#define EUR_BOOTTEXT	0x2E9AE0
+#define USA_BOOTTEXT	0x2E9AE0
+#define JPN_BOOTTEXT	0x2E9B20
+
+#define EUR_PROGSLOT_OFF    0x115DCA0
+#define USA_PROGSLOT_OFF    0x115DCA0
+#define JPN_PROGSLOT_OFF    0x115DD00
+
+#define EUR_ACTPROJ_STR    0x1B14B00
+#define USA_ACTPROJ_STR    0x1B14B00
+#define JPN_ACTPROJ_STR    0x1B14B60
 
 #define _DEFAULT_SERVERNAME_SAVE	"https://save.smilebasic.com"
 #define _DEFAULT_SERVERNAME_LOAD	"https://load.smilebasic.com"
 
-// save.smilebasic.com
 #define _NAME_SERVERNAME_SAVE_SAVE3			"/save3.php"
 #define _NAME_SERVERNAME_SAVE_SHOW2			"/show2.php"
 #define _NAME_SERVERNAME_SAVE_DELETE2		"/delete2.php"
@@ -16,8 +28,6 @@
 #define _NAME_SERVERNAME_SAVE_PREPURCHASE2	"/prepurchase2.php"
 #define _NAME_SERVERNAME_SAVE_PURCHASE2		"/purchase2.php"
 #define _NAME_SERVERNAME_SAVE_LIST2			"/list2.php"
-
-// load.smilebasic.com
 #define _NAME_SERVERNAME_LOAD_LOAD2			"/load2.php"
 #define _NAME_SERVERNAME_LOAD_INFO2			"/info2.php"
 
@@ -58,27 +68,6 @@
 #define JPN_SERVERNAME_SHOPLIST2			0x1570C8
 #define JPN_SERVERNAME_PREPURCHASE2			0x159A80
 #define JPN_SERVERNAME_PURCHASE2			0x15A6F4
-
-//
-// Version number
-//
-
-#define EUR_VERSION_INT		0x15E8E4
-#define USA_VERSION_INT		0x15E78C
-#define JPN_VERSION_INT		0x15E774
-
-//
-// BASIC Start string
-//
-
-#define BOOT_TEXT_LEN	70 // 69 (nice) + NULL
-#define EUR_BOOTTEXT	0x2E9AE0
-#define USA_BOOTTEXT	0x2E9AE0
-#define JPN_BOOTTEXT	0x2E9B20
-
-//
-// Themable colors
-//
 
 #define EUR_COLOR_KEYBBG		0x204F1C
 #define EUR_COLOR_SEARCHBG		0x12EBA4

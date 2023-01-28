@@ -26,11 +26,11 @@
 #define WRITEREMOTE32(addr, val) (*(u32 *)(PA_FROM_VA_PTR(addr)) = (val))
 
 enum Region {
-    NONE = 0,
-    JPN = 1,
-    USA = 2,
-    EUR = 3,
-    MAX = 4
+    REGION_NONE = 0,
+    REGION_JPN = 1,
+    REGION_USA = 2,
+    REGION_EUR = 3,
+    REGION_MAX = 4
 };
 extern Region g_region;
 

@@ -4,9 +4,9 @@
 namespace CTRPluginFramework {
     void CYX::Initialize(void) {
         switch (g_region) {
-            case JPN: currentVersion = *(u32*)JPN_VERSION_INT; break;
-            case USA: currentVersion = *(u32*)USA_VERSION_INT; break;
-            case EUR: currentVersion = *(u32*)EUR_VERSION_INT; break;
+            case REGION_JPN: currentVersion = *(u32*)JPN_VERSION_INT; break;
+            case REGION_USA: currentVersion = *(u32*)USA_VERSION_INT; break;
+            case REGION_EUR: currentVersion = *(u32*)EUR_VERSION_INT; break;
         }
     }
 
@@ -19,9 +19,9 @@ namespace CTRPluginFramework {
         u32 eurPtr[]={EUR_SERVERNAME_LOAD2_1, EUR_SERVERNAME_LOAD2_2, EUR_SERVERNAME_SAVE3_1, EUR_SERVERNAME_SAVE3_2, EUR_SERVERNAME_SHOW2, EUR_SERVERNAME_LIST2, EUR_SERVERNAME_INFO2, EUR_SERVERNAME_DELETE2, EUR_SERVERNAME_SHOPLIST2, EUR_SERVERNAME_PREPURCHASE2, EUR_SERVERNAME_PURCHASE2};
         u32* ptr;
         switch (g_region) {
-            case JPN: ptr = jpnPtr; break;
-            case USA: ptr = usaPtr; break;
-            case EUR: ptr = eurPtr; break;
+            case REGION_JPN: ptr = jpnPtr; break;
+            case REGION_USA: ptr = usaPtr; break;
+            case REGION_EUR: ptr = eurPtr; break;
             default: return;
         }
         char buf[50];
@@ -53,12 +53,9 @@ namespace CTRPluginFramework {
         char str[BOOT_TEXT_LEN];
         sprintf(str, "%s", text);
         switch (g_region) {
-        case JPN:
-            memcpy((void*)JPN_BOOTTEXT, str, BOOT_TEXT_LEN); break;
-        case USA:
-            memcpy((void*)USA_BOOTTEXT, str, BOOT_TEXT_LEN); break;
-        case EUR:
-            memcpy((void*)EUR_BOOTTEXT, str, BOOT_TEXT_LEN); break;
+        case REGION_JPN: memcpy((void*)JPN_BOOTTEXT, str, BOOT_TEXT_LEN); break;
+        case REGION_USA: memcpy((void*)USA_BOOTTEXT, str, BOOT_TEXT_LEN); break;
+        case REGION_EUR: memcpy((void*)EUR_BOOTTEXT, str, BOOT_TEXT_LEN); break;
         }
     }
     void CYX::SetDarkMenuPalette(){
@@ -67,9 +64,9 @@ namespace CTRPluginFramework {
         u32 jpnPtr[]={JPN_COLOR_KEYBBG,JPN_COLOR_SEARCHBG,JPN_COLOR_FCREATORBG,JPN_COLOR_FDESCBG,JPN_COLOR_ACTPRJLBL,JPN_COLOR_SETSMBUTF,JPN_COLOR_SETKEYREP,JPN_COLOR_SETKEYTL};
         u32* ptr;
         switch (g_region) {
-            case JPN: ptr = jpnPtr; break;
-            case USA: ptr = usaPtr; break;
-            case EUR: ptr = eurPtr; break;
+            case REGION_JPN: ptr = jpnPtr; break;
+            case REGION_USA: ptr = usaPtr; break;
+            case REGION_EUR: ptr = eurPtr; break;
             default: return;
         }
         *(u32*)(ptr[0]) = 0xFF100800;
@@ -118,4 +115,5 @@ namespace CTRPluginFramework {
     }
 
     u32 CYX::currentVersion = 0;
+    BASICEditorData* editorInstance = NULL;
 }

@@ -42,6 +42,42 @@ namespace CTRPluginFramework {
         return;
     }
 
+    bool drawOSD(const Screen& scr){
+        std::string str;
+        string16 s16;
+        switch (scr.IsTop){
+            case true:
+                /*Utils::ConvertUTF16ToUTF8(str, (u16*)0x01B14B00);
+                scr.Draw("Active project: "+str,0,0); str = "";
+                Utils::ConvertUTF16ToUTF8(str, (u16*)0x01B14B1E);
+                scr.Draw("Currently in  : "+str,0,10); str = "";
+
+                s16 = (u16*)0x0135DCBC;
+                s16.resize(*(u32*)0x0135DCD8);
+                Utils::ConvertUTF16ToUTF8(str, s16);
+                scr.Draw("0x0135DCBC: "+str,200,0); str = "";
+
+                s16 = (u16*)0x0155DCF0;
+                s16.resize(*(u32*)0x0155DD0C);
+                Utils::ConvertUTF16ToUTF8(str, s16);
+                scr.Draw("0x0155DCF0: "+str,200,10); str = "";
+
+                s16 = (u16*)0x0175dd24;
+                s16.resize(*(u32*)0x0175DD40);
+                Utils::ConvertUTF16ToUTF8(str, s16);
+                scr.Draw("0x0175dd24: "+str,200,20); str = "";
+
+                s16 = (u16*)0x0195dd58;
+                s16.resize(*(u32*)0x0195DD74);
+                Utils::ConvertUTF16ToUTF8(str, s16);
+                scr.Draw("0x0195dd58: "+str,200,30); str = "";*/
+                break;
+            case false:
+                break;
+        }
+        return true;
+    }
+
     bool menuOpen(){
         //
         return true;
@@ -353,33 +389,33 @@ namespace CTRPluginFramework {
 
     void CheckRegion(void)
     {
-        g_region = NONE;
+        g_region = REGION_NONE;
         u64 tid = Process::GetTitleID();
 
         // Get current game's region
         switch (tid) {
         case 0x0004000000117200:
-            g_region = JPN;
+            g_region = REGION_JPN;
             sprintf(g_regionString, "JPN");
             break;
         case 0x000400000016DE00:
-            g_region = USA;
+            g_region = REGION_USA;
             sprintf(g_regionString, "USA");
             break;
         case 0x00040000001A1C00:
-            g_region = EUR;
+            g_region = REGION_EUR;
             sprintf(g_regionString, "EUR");
             break;
         }
     }
     static bool CheckRevision() {
         switch (g_region) {
-        case JPN:
+        case REGION_JPN:
             if (CYX::currentVersion != 0x03060300)
                 return false;
             break;
-        case USA:
-        case EUR:
+        case REGION_USA:
+        case REGION_EUR:
             if (CYX::currentVersion != 0x03060000)
                 return false;
             break;
@@ -411,7 +447,7 @@ namespace CTRPluginFramework {
                 CYX::SetDarkMenuPalette();
             CYX::ChangeBootText("SmileBASIC-CYX " STRING_VERSION "\n2022-2023 CyberYoshi64\n\n");
         } else {
-            g_region = MAX;
+            g_region = REGION_MAX;
         }
     }
 
@@ -434,17 +470,18 @@ namespace CTRPluginFramework {
         u8"CYX extension for SmileBASIC\n\n"
         u8"2022-2023 CyberYoshi64\n\n"
         u8"Credits:\n"
-        u8"ThePixellizerOSS, devkitPro, Luma3DS Team";
+        u8"The Pixellizer Group, devkitPro,"
+        u8"Luma3DS Team";
 
     int main(void) {
-        if (g_region == NONE) {
+        if (g_region == REGION_NONE) {
             MessageBox(
                 "This application is not supported.\n"
                 "This plugin is for use with SmileBASIC 3.\n\n"
                 "The game will now be terminated."
             )();
             Process::ReturnToHomeMenu();
-        } else if (g_region == MAX) {
+        } else if (g_region == REGION_MAX) {
             MessageBox(
                 "This version of SmileBASIC 3 is not supported by this plugin.\n" +
                 Utils::Format("Detected: %s ", g_regionString) + CYX::PTCVersionString(CYX::currentVersion) +
@@ -459,6 +496,7 @@ namespace CTRPluginFramework {
         // menu->SetHexEditorState(false);
         menu->OnOpening = menuOpen;
         menu->OnClosing = menuClose;
+        OSD::Run(drawOSD);
 
         Process::exceptionCallback = Exception::Handler;
 

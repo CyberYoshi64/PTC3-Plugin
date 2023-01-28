@@ -5,15 +5,16 @@ namespace CTRPluginFramework {
         mcuSetSleep(0);
         OSD::Lock();
         Screen top = OSD::GetTopScreen();
-        top.DrawRect(0, 0, 400, 240, Color());
+        top.DrawRect(0, 0, 400, 240, Color(0x000000C0U));
+        top.DrawSysfont("A fatal error has occured", 5, 4, Color::Red);
         top.DrawSysfont("A fatal error has occured", 4, 4, Color::Red);
-        top.DrawSysfont("SmileBASIC encountered an error from", 8, 30);
-        top.DrawSysfont("which it can't recover from.", 8, 50);
+        top.DrawSysfont("SmileBASIC has encountered a problem and has", 8, 30);
+        top.DrawSysfont("to be shut down.", 8, 50);
         top.DrawSysfont("Press \uE001 to return to \uE073HOME Menu.", 8, 100);
         top.DrawSysfont("Press \uE003 to show exception details.", 8, 120);
         top.DrawSysfont("Press \uE002 to reboot.", 8, 140);
         Screen bot = OSD::GetBottomScreen();
-        bot.DrawRect(0, 0, 320, 240, Color());
+        bot.DrawRect(0, 0, 320, 240, Color(0x000000C0U));
         bot.Draw("Crash details:",3,5);
         for (size_t i=0; i<13; i++)
             bot.Draw(Utils::Format("R%02D  : %08X", i,regs->r[i]),6+107*(i%3),20+(i/3)*12);
