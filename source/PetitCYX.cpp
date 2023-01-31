@@ -2,12 +2,178 @@
 #include "main.hpp"
 
 namespace CTRPluginFramework {
+    u32 CYX::currentVersion = 0;
+    BASICEditorData* CYX::editorInstance = NULL;
+    RT_HOOK CYX::clipboardFunc = {0};
+    RT_HOOK CYX::scrShotStub = {0};
+    bool CYX::provideClipAPI = false;
+    bool CYX::wasClipAPIused = false;
+
     void CYX::Initialize(void) {
         switch (g_region) {
-            case REGION_JPN: currentVersion = *(u32*)JPN_VERSION_INT; break;
-            case REGION_USA: currentVersion = *(u32*)USA_VERSION_INT; break;
-            case REGION_EUR: currentVersion = *(u32*)EUR_VERSION_INT; break;
+            case REGION_JPN:
+                currentVersion = *(u32*)JPN_VERSION_INT;
+                editorInstance = (BASICEditorData*)JPN_EDITORDATA;
+                break;
+            case REGION_USA:
+                currentVersion = *(u32*)USA_VERSION_INT;
+                editorInstance = (BASICEditorData*)USA_EDITORDATA;
+                break;
+            case REGION_EUR:
+                currentVersion = *(u32*)EUR_VERSION_INT;
+                editorInstance = (BASICEditorData*)EUR_EDITORDATA;
+                //rtInitHook(&scrShotStub, 0x1A7B58, (u32)CYX::scrShotStubFunc);
+                //rtEnableHook(&scrShotStub);
+                rtInitHook(&clipboardFunc, EUR_CLIPBOARDFUNC, (u32)CYX::clipboardFuncHook);
+                break;
         }
+    }
+    void CYX::SetAPIClipboardAvailability(bool enabled){
+        provideClipAPI = enabled;
+    }
+    bool CYX::GetAPIClipboardAvailability(){
+        return provideClipAPI;
+    }
+    void CYX::DiscardAPIUse(){
+        wasClipAPIused = false;
+    }
+    bool CYX::WasClipAPIUsed(){
+        return wasClipAPIused;
+    }
+    int CYX::scrShotStubFunc() {
+        return 0;
+    }
+    int CYX::getSBVariableType(u32 rawType){
+        switch(rawType){
+            case SBVARRAW_INTEGER: return VARTYPE_INT;
+            case SBVARRAW_DOUBLE: return VARTYPE_DOUBLE;
+            case SBVARRAW_STRING: return VARTYPE_STRING;
+            case SBVARRAW_INTARRAY: return VARTYPE_INTARRAY;
+            case SBVARRAW_ARRAY: return VARTYPE_DBLARRAY;
+            //case SBVARRAW_STRARRAY: return VARTYPE_STRARRAY;
+        }
+        return VARTYPE_NONE;
+    }
+    
+    int CYX::clipboardFuncHook(void* ptr, u32 selfPtr, BASICGenericVariable* outv, u8 outc, void* a4, u8 argc, BASICGenericVariable* argv){
+        BASICGenericVariable* var; int type;
+        bool outToClip = true; int apiOut;
+        std::string newClipData;
+        for (u32 i=0; i<argc; i++){
+            newClipData = ""; var = argv++;
+            type = getSBVariableType(var->type);
+            if (type != VARTYPE_NONE){
+                switch (type){
+                    case VARTYPE_STRING: UTF16toUTF8(newClipData, (u16*)var->data2, var->data); break;
+                    case VARTYPE_INT: newClipData = Utils::Format("&H%08X", var->data); break;
+                    case VARTYPE_DOUBLE: newClipData = Utils::ToString(*(double*)&var->data,4); break;
+                }
+                apiOut = 1;
+                if (strlen_utf8(newClipData) > 1048576) return 3;
+                if (provideClipAPI) apiOut = ParseClipAPI(newClipData);
+                if (newClipData.length() > 1048576) newClipData.resize(1048576);
+                if (outToClip || apiOut == 0){
+                    Process::WriteString((u32)&editorInstance->clipboardData, newClipData, StringFormat::Utf16);
+                    editorInstance->clipboardLength = strlen_utf8(newClipData);
+                    outToClip = false;
+                }
+                switch (apiOut){
+                    case 0: case 1: break;
+                    case 2: return 1; // Silent exit
+                    case 3: return 2; // Non-fatal quit
+                    default: return 3; // Fatal quit
+                }
+            }
+        }
+        for (u32 i=0; i<outc; i++){
+            var = outv++;
+            if (!var->type) break;
+            var->type = SBVARRAW_STRING;
+            var->data = editorInstance->clipboardLength;
+            var->data2 = &editorInstance->clipboardData;
+        }
+        return 0;
+    }
+
+    int CYX::ParseClipAPI(std::string& data){
+        if (data.compare(0, 4, "CYX:")!=0) return 1;
+        if (!wasClipAPIused) wasClipAPIused = true;
+        StringVector arglist;
+        u32 index = 4; u32 newidx;
+        while (index && index < data.length()){
+            newidx = data.find(":", index);
+            arglist.push_back(data.substr(index, newidx-index));
+            index = ++newidx;
+        }
+        data = "";
+        if (arglist.size()) {
+            strupper(arglist[0]);
+            if (arglist[0] == "OSD") {
+                int type; data = "";
+                for (u32 i=1; i<arglist.size(); i++) {
+                    if (i == 1 && arglist[i].length()==1){
+                        if (arglist[i] == "W"){
+                            type = 1; continue;
+                        } else if (arglist[i] == "N"){
+                            type = 2; continue;
+                        } else if (arglist[i] == "E"){
+                            type = 3; continue;
+                        } else if (arglist[i] == "S"){
+                            type = 4; continue;
+                        } else if (arglist[i] == "M"){
+                            type = 0; continue;
+                        }
+                    }
+                    data += arglist.at(i);
+                    if (i+1 != arglist.size()) data += ":";
+                }
+                switch (type){
+                case 1:
+                    OSD::Notify(data, Color::White, Color::Olive);
+                    break;
+                case 2:
+                    OSD::Notify(data, Color::Cyan, Color::Navy);
+                    break;
+                case 3:
+                    OSD::Notify(data, Color::White, Color::Maroon);
+                    break;
+                case 4:
+                    OSD::Notify(data, Color::White, Color::Green);
+                    break;
+                default:
+                    OSD::Notify(data, Color::White, Color::Teal);
+                    break;
+                }
+                return 0;
+            } else if (arglist[0] == "FILES") {
+                if (arglist.size()<2) {
+                    data = "Error: Missing arguments for FILES";
+                    return 1;
+                }
+                Directory dir(arglist[1]);
+                StringVector vec;
+                dir.ListDirectories(vec);
+                for (u32 i=0; i<vec.size(); i++) data += ":/"+vec[i];
+                vec.clear();
+                dir.ListFiles(vec);
+                for (u32 i=0; i<vec.size(); i++) data += ":*"+vec[i];
+                vec.clear();
+                dir.Close();
+                data.erase(0, 1);
+                return 1;
+            } else {
+                data = "Error: Unknown API call \""+arglist[0]+"\"";
+            }
+        }
+        
+        return 0;
+    }
+
+    // Editor strings are merely buffers, so the string has to be crafted
+    // with a given length parameter.
+    void CYX::UTF16toUTF8(std::string& out, u16* str, u32 len){
+        string16 s16 = str; s16.resize(len);
+        Utils::ConvertUTF16ToUTF8(out, s16);
     }
 
     void CYX::LoadSettings(){} // To be used soon
@@ -113,7 +279,4 @@ namespace CTRPluginFramework {
         }
         return (c);
     }
-
-    u32 CYX::currentVersion = 0;
-    BASICEditorData* editorInstance = NULL;
 }

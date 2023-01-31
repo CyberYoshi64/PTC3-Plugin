@@ -2,6 +2,7 @@
 #include <CTRPluginFramework.hpp>
 #include "rt.h"
 #include "plgldr.h"
+#include "commonFuncs.hpp"
 #include <csvc.h>
 
 #include "_Utils.hpp"

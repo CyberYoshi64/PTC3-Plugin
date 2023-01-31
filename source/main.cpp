@@ -42,35 +42,15 @@ namespace CTRPluginFramework {
         return;
     }
 
+    void menuTick(){
+        PluginMenu* menu = PluginMenu::GetRunningInstance();
+        //if (menu->IsOpen() && (CYX::soundThreadFunc))
+        //    CYX::soundThreadFunc();
+    } 
+
     bool drawOSD(const Screen& scr){
-        std::string str;
-        string16 s16;
         switch (scr.IsTop){
             case true:
-                /*Utils::ConvertUTF16ToUTF8(str, (u16*)0x01B14B00);
-                scr.Draw("Active project: "+str,0,0); str = "";
-                Utils::ConvertUTF16ToUTF8(str, (u16*)0x01B14B1E);
-                scr.Draw("Currently in  : "+str,0,10); str = "";
-
-                s16 = (u16*)0x0135DCBC;
-                s16.resize(*(u32*)0x0135DCD8);
-                Utils::ConvertUTF16ToUTF8(str, s16);
-                scr.Draw("0x0135DCBC: "+str,200,0); str = "";
-
-                s16 = (u16*)0x0155DCF0;
-                s16.resize(*(u32*)0x0155DD0C);
-                Utils::ConvertUTF16ToUTF8(str, s16);
-                scr.Draw("0x0155DCF0: "+str,200,10); str = "";
-
-                s16 = (u16*)0x0175dd24;
-                s16.resize(*(u32*)0x0175DD40);
-                Utils::ConvertUTF16ToUTF8(str, s16);
-                scr.Draw("0x0175dd24: "+str,200,20); str = "";
-
-                s16 = (u16*)0x0195dd58;
-                s16.resize(*(u32*)0x0195DD74);
-                Utils::ConvertUTF16ToUTF8(str, s16);
-                scr.Draw("0x0195dd58: "+str,200,30); str = "";*/
                 break;
             case false:
                 break;
@@ -459,11 +439,13 @@ namespace CTRPluginFramework {
 
     void InitMenu(PluginMenu &menu) {
         menu += new MenuFolder("Miscellaneous", std::vector<MenuEntry *>({
-            new MenuEntry("Change server…", nullptr, serverAdrChg, ""),
-            new MenuEntry("Spoof version", nullptr, versionSpoof, ""),
-            //new MenuEntry("123456789012345678901234567890123456789012345678901234567890", nullptr, dummyEntry, "Lorem ipsum dolor sit amet, consetetur sadipscing elitr, sed diam nonumy eirmod tempor invidunt ut labore et dolore magna aliquyam erat, sed diam voluptua."),
+            new MenuEntry("Change server…", nullptr, serverAdrChg),
+            new MenuEntry("Spoof version", nullptr, versionSpoof),
         }));
-        menu += new MenuEntry("Details", nullptr, pluginDetails, "");
+        menu += new MenuFolder(Color::Orange << "[!] Experimental features", std::vector<MenuEntry *>({
+            new MenuEntry("Clipboard hook & CYX API", nullptr, clipboardHooking),
+        }));
+        menu += new MenuEntry("Plugin Details", nullptr, pluginDetails, "");
     }
 
     const std::string about =

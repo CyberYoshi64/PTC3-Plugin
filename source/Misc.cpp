@@ -74,8 +74,69 @@ namespace CTRPluginFramework {
             (
                 Utils::Format("Base application: %s ",g_regionString)+
                 CYX::PTCVersionString(CYX::currentVersion)+
-                Utils::Format("\nCYX %s",STRING_VERSION)
+                Utils::Format("\nCYX %s",STRING_VERSION)+"\n"+
+                Utils::Format("\nEditor data @ 0x%08X",(u32)CYX::editorInstance)+
+                Utils::Format("\nClipboard func @ 0x%08X",CYX::clipboardFunc.funcAddr)+
+                Utils::Format("\nScrShot func @ 0x%08X",CYX::scrShotStub.funcAddr)
             ),
             DialogType::DialogOk, ClearScreen::Both)();
+    }
+    void clipboardHooking(MenuEntry* entry){
+        if (!CYX::clipboardFunc.funcAddr) {
+            MessageBox("The clipboard function is not hookable at this time. Check for an updated plugin.")();
+            return;
+        }
+        bool hook = CYX::clipboardFunc.isEnabled;
+        bool api = CYX::GetAPIClipboardAvailability();
+        Keyboard kbd(""); int kres;
+        std::string opt1, opt2;
+        while (true){
+            kbd.DisplayTopScreen = true;
+            kbd.GetMessage() =
+            "Disclaimer:\n"
+            "This feature is experimental and may cause\n"
+            "SmileBASIC to be unstable and/or enable BASIC\n"
+            "programs to use out-of-scope features, such as\n"
+            "accessing the SD Card or check the console type.";
+            if (CYX::WasClipAPIUsed()){
+                kbd.GetMessage() +=
+                    Color(0xFF8800FF) << "\n\nThe CYX API has been utilized.\n" <<
+                    "Disabling the hook and/or the API may cause\n" <<
+                    "unexpected behaviour.";
+            }
+            opt1 =
+                "Hook clipboard\u3000" + (hook ?
+                Color::Lime << "⊂●":
+                Color::Red << "●⊃");
+            if (hook){
+                opt2 = "Enable CYX API\u3000" + (api ?
+                Color::Lime << "⊂●":
+                Color::Red << "●⊃");
+            } else {
+                opt2 = Color::Gray << "Enable CYX API\u3000●⊃";
+            }
+            kbd.Populate(StringVector{opt1, opt2, "\uE072 Back" }, 0);
+            kbd.ChangeEntrySound(0, SoundEngine::Event::DESELECT);
+            kbd.ChangeEntrySound(1, SoundEngine::Event::DESELECT);
+            kbd.ChangeEntrySound(2, SoundEngine::Event::CANCEL);
+            kres = kbd.Open();
+            switch (kres){
+            case 0:
+                if (hook){
+                    rtDisableHook(&CYX::clipboardFunc);
+                    CYX::SetAPIClipboardAvailability(api = false);
+                    CYX::DiscardAPIUse();
+                } else {
+                    rtEnableHook(&CYX::clipboardFunc);
+                }
+                hook = !hook;
+                break;
+            case 1:
+                CYX::SetAPIClipboardAvailability(api = !api & hook);
+                break;
+            default:
+                return;
+            }
+        }
     }
 }

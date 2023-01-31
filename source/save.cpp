@@ -36,39 +36,6 @@ namespace CTRPluginFramework {
         return Directory::Create(name) == 0;
     }
 
-    void strcatu16(u16* dest, char* s1, char* s2) {
-        while (*s1) *dest++ = *s1++;
-        while (*s2) *dest++ = *s2++;
-        *dest = '\0';
-    }
-
-    int strcmpu8u16(char* ptr1, u16* ptr2) {
-        int i = 0;
-        u16 char1, char2;
-        do {
-            char1 = (u16)(ptr1[i]);
-            char2 = ptr2[i++];
-        } while (char2 == char1 && ptr1[i] && ptr2[i] != u':');
-        return char1 - char2;
-    }
-
-    int strcmpdot(char* ptr1, char* ptr2) {
-        int i = 0;
-        char char1, char2;
-        do {
-            char1 = ptr1[i];
-            char2 = ptr2[i++];
-        } while (char2 == char1 && ptr1[i] && ptr2[i] != ':');
-        return char1 - char2;
-    }
-
-    void strcpydot(char* dst, char* src, int n) {
-        while (*src != ':' && n) {
-            *dst++ = *src++;
-            n--;
-        }
-        *dst = '\0';
-    }
 #define PA_PTR(addr)            
     void OnionSave::initDebug() {
         if (ENABLE_DEBUG) {

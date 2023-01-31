@@ -8,6 +8,7 @@ namespace CTRPluginFramework {
     void serverAdrChg(MenuEntry *entry);
     void versionSpoof(MenuEntry *entry);
     void pluginDetails(MenuEntry *entry);
+    void clipboardHooking(MenuEntry* entry);
 }
 
 #endif
