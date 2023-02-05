@@ -9,6 +9,8 @@ namespace CTRPluginFramework {
     void versionSpoof(MenuEntry *entry);
     void pluginDetails(MenuEntry *entry);
     void clipboardHooking(MenuEntry* entry);
+    void grpCorruptor(MenuEntry* entry);
+    void grpFixMe(MenuEntry* entry);
 }
 
 #endif

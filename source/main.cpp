@@ -1,5 +1,6 @@
 #include <CTRPluginFramework.hpp>
 #include "main.hpp"
+#include "BasicAPI.hpp"
 #include "save.hpp"
 #include "ptm.h"
 
@@ -15,7 +16,6 @@ u8 fsObsSetThisSecValPat[] = {0x40, 0x01, 0x65, 0x08};
 u8 fsSetSecValPat[] = {0x80, 0x01, 0x75, 0x08};
 u8 fsCheckPermsPat[] = {0x04, 0x10, 0x12, 0x00, 0x76, 0x46, 0x00, 0xD9};
 namespace CTRPluginFramework {
-    bool ENABLE_DEBUG = false;
     Region g_region;
     char g_regionString[4];
     u32 *fileOperations[NUMBER_FILE_OP] = {nullptr};
@@ -44,8 +44,7 @@ namespace CTRPluginFramework {
 
     void menuTick(){
         PluginMenu* menu = PluginMenu::GetRunningInstance();
-        //if (menu->IsOpen() && (CYX::soundThreadFunc))
-        //    CYX::soundThreadFunc();
+        BasicAPI::MenuTick();
     } 
 
     bool drawOSD(const Screen& scr){
@@ -405,11 +404,15 @@ namespace CTRPluginFramework {
 
     // Patch pre-start of main game code
     void PatchProcess(FwkSettings &settings) {
+        settings.BackgroundBorderColor = Color::DeepSkyBlue;
+        settings.CustomKeyboard.BackgroundBorder = Color::DeepSkyBlue;
+        settings.BackgroundSecondaryColor = Color(0x001010FF);
+        settings.CustomKeyboard.BackgroundSecondary = Color(0x001010FF);
+        settings.CachedDrawMode = true;
         ToggleTouchscreenForceOn();
         if(!Directory::IsExists(TOP_DIR)) Directory::Create(TOP_DIR);
-        if(!Directory::IsExists(TOP_DIR"/config")) Directory::Create(TOP_DIR"/config");
-        if(!Directory::IsExists(TOP_DIR"/resources")) Directory::Create(TOP_DIR"/resources");
-        Directory::ChangeWorkingDirectory(TOP_DIR "/resources");
+        if(!Directory::IsExists(RESOURCES_PATH)) Directory::Create(RESOURCES_PATH);
+        Directory::ChangeWorkingDirectory(RESOURCES_PATH);
         u64 tid = Process::GetTitleID();
         sprintf(g_ProcessTID, "%016lX", tid);
         LightLock_Init(&regLock);
@@ -423,7 +426,7 @@ namespace CTRPluginFramework {
         CYX::Initialize();
         CYX::LoadSettings();
         if (CheckRevision()) {
-            if (File::Exists(TOP_DIR "/config/darkPalette.flag") == 1)
+            if (File::Exists(SAVEDATA_PATH"/darkPalette.flag") == 1)
                 CYX::SetDarkMenuPalette();
             CYX::ChangeBootText("SmileBASIC-CYX " STRING_VERSION "\n2022-2023 CyberYoshi64\n\n");
         } else {
@@ -444,6 +447,8 @@ namespace CTRPluginFramework {
         }));
         menu += new MenuFolder(Color::Orange << "[!] Experimental features", std::vector<MenuEntry *>({
             new MenuEntry("Clipboard hook & CYX API", nullptr, clipboardHooking),
+            new MenuEntry("Corrupt GRP display", grpCorruptor, ""),
+            new MenuEntry("→ Fix GRP display", grpFixMe, "The GRP data is intact, however, the graphic pages have to be cleared/reloaded to flush the display buffer."),
         }));
         menu += new MenuEntry("Plugin Details", nullptr, pluginDetails, "");
     }
@@ -474,7 +479,8 @@ namespace CTRPluginFramework {
         PluginMenu *menu = new PluginMenu("SmileBASIC-CYX", MAJOR_VERSION, MINOR_VERSION, REVISION_VERSION, about);
 
         menu->SynchronizeWithFrame(true);
-        menu->ShowWelcomeMessage(false);
+        menu->ShowWelcomeMessage(ENABLE_DEBUG);
+        if (ENABLE_DEBUG) OSD::Notify(Utils::Format("Build " STRING_BUILD));
         // menu->SetHexEditorState(false);
         menu->OnOpening = menuOpen;
         menu->OnClosing = menuClose;

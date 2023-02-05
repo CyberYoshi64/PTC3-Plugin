@@ -11,10 +11,33 @@ namespace CTRPluginFramework {
     typedef struct BASICActiveProject_s {
         u16 activeProject[15];
         u16 currentProject[15];
-        u16 unk1;
-        u16 unk2;
-        u16 unk3;
+        u16 unk[3];
     } BASICActiveProject;
+
+    typedef struct BASICGraphicPage_s {
+        void* ptr1;
+        u32 unk1;
+        u32 unk2;
+        u16* dispBuf;
+        u16* workBuf;
+        void* dispBuf2; // The pointers are
+        void* workBuf2; // bad though...
+        u32 unk3[5];
+        u32 displayedFormat; // Shown pixel format
+        u32 __unk__sizeX;
+        u32 __unk__sizeY;
+        u32 dispScaleY; // They're more like floats as
+        u32 dispScaleX; // per an OpenGL display matrix
+        u32 unkDbl1[2];
+        u32 unk8[6];
+    } BASICGraphicPage;
+
+    typedef struct BASICGRPStructs_s {
+        BASICGraphicPage grp[6];
+        BASICGraphicPage font;
+        BASICGraphicPage system; // SysUI / SysBASIC
+        BASICGraphicPage unk1;
+    } BASICGRPStructs;
 
     typedef struct BASICProgramSlot_s {
         u16 text[1048576]; // UTF-16 content of slot
@@ -38,7 +61,7 @@ namespace CTRPluginFramework {
         u32 fileOffset;
         u32 lineLength;
         u32 lineNumber;
-        u32 always_one; //?
+        u32 always_one;
     } BASICEditorLine;
 
     typedef struct BASICEditorData_s {
@@ -87,6 +110,7 @@ namespace CTRPluginFramework {
         static void SetAPIClipboardAvailability(bool enabled);
         static bool GetAPIClipboardAvailability();
         static void DiscardAPIUse();
+        static void SetAPIUse(bool enabled);
         static bool WasClipAPIUsed();
         static void LoadSettings(void);
         static void SaveSettings(void);
@@ -104,6 +128,7 @@ namespace CTRPluginFramework {
 
         static u32 currentVersion;
         static BASICEditorData* editorInstance;
+        static BASICGRPStructs* GraphicPage;
         static RT_HOOK clipboardFunc;
         static RT_HOOK scrShotStub;
     private:

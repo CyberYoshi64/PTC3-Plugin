@@ -40,11 +40,11 @@ namespace CTRPluginFramework {
     void OnionSave::initDebug() {
         if (ENABLE_DEBUG) {
             LightLock_Init(&debugLock);
-            std::string debugfile = std::string(TOP_DIR"/") + std::string(g_ProcessTID) + std::string("debug.txt");
+            std::string debugfile = DEBUGLOG_FILE;
             File::Remove(debugfile);
             debugFile = new File(debugfile, File::RWC);
             if (!debugFile->IsOpen()) debugFile = nullptr;
-            debugAppend("OnionFS " STRING_VERSION " debug file, hello! :3\n----------------------------------------\n\n");
+            debugAppend("<Plugin start>\n---------\n\n");
         }
     }
     
@@ -146,12 +146,12 @@ namespace CTRPluginFramework {
     }
 
     void OnionSave::setupPackPaths() {
-        strcatu16(OnionSave::romPath, (char*)"ram:" TOP_DIR, (char*)ROMFS_PATH "/");
-        strcatu16(OnionSave::dataPath, (char*)"ram:" TOP_DIR,(char*)SAVEDATA_PATH "/");
-        strcatu16(OnionSave::extPath, (char*)"ram:" TOP_DIR,(char*)EXTDATA_PATH "/");
-        if (!checkFolderExists(OnionSave::romPath + 4)) Directory::Create(TOP_DIR ROMFS_PATH);
-        if (!checkFolderExists(OnionSave::dataPath + 4)) Directory::Create(TOP_DIR SAVEDATA_PATH);
-        if (!checkFolderExists(OnionSave::extPath + 4)) Directory::Create(TOP_DIR EXTDATA_PATH);
+        strcatu16(OnionSave::romPath, (char*)"ram:", (char*)ROMFS_PATH"/");
+        strcatu16(OnionSave::dataPath, (char*)"ram:", (char*)SAVEDATA_PATH"/");
+        strcatu16(OnionSave::extPath, (char*)"ram:", (char*)EXTDATA_PATH"/");
+        if (!checkFolderExists(OnionSave::romPath + 4)) Directory::Create(ROMFS_PATH);
+        if (!checkFolderExists(OnionSave::dataPath + 4)) Directory::Create(SAVEDATA_PATH);
+        if (!checkFolderExists(OnionSave::extPath + 4)) Directory::Create(EXTDATA_PATH);
     }
     
     bool OnionSave::getArchive(u16 * arch, u8* mode, bool isReadOnly) {

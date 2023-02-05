@@ -1,9 +1,11 @@
 #include "PetitCYX.hpp"
+#include "BasicAPI.hpp"
 #include "main.hpp"
 
 namespace CTRPluginFramework {
     u32 CYX::currentVersion = 0;
     BASICEditorData* CYX::editorInstance = NULL;
+    BASICGRPStructs* CYX::GraphicPage = NULL;
     RT_HOOK CYX::clipboardFunc = {0};
     RT_HOOK CYX::scrShotStub = {0};
     bool CYX::provideClipAPI = false;
@@ -14,19 +16,23 @@ namespace CTRPluginFramework {
             case REGION_JPN:
                 currentVersion = *(u32*)JPN_VERSION_INT;
                 editorInstance = (BASICEditorData*)JPN_EDITORDATA;
+                GraphicPage = (BASICGRPStructs*)JPN_GRPSTRUCTS;
+                rtInitHook(&clipboardFunc, JPN_CLIPBOARDFUNC, (u32)CYX::clipboardFuncHook);
                 break;
             case REGION_USA:
                 currentVersion = *(u32*)USA_VERSION_INT;
                 editorInstance = (BASICEditorData*)USA_EDITORDATA;
+                GraphicPage = (BASICGRPStructs*)USA_GRPSTRUCTS;
+                rtInitHook(&clipboardFunc, USA_CLIPBOARDFUNC, (u32)CYX::clipboardFuncHook);
                 break;
             case REGION_EUR:
                 currentVersion = *(u32*)EUR_VERSION_INT;
                 editorInstance = (BASICEditorData*)EUR_EDITORDATA;
-                //rtInitHook(&scrShotStub, 0x1A7B58, (u32)CYX::scrShotStubFunc);
-                //rtEnableHook(&scrShotStub);
+                GraphicPage = (BASICGRPStructs*)EUR_GRPSTRUCTS;
                 rtInitHook(&clipboardFunc, EUR_CLIPBOARDFUNC, (u32)CYX::clipboardFuncHook);
                 break;
         }
+        BasicAPI::Initialize();
     }
     void CYX::SetAPIClipboardAvailability(bool enabled){
         provideClipAPI = enabled;
@@ -36,6 +42,9 @@ namespace CTRPluginFramework {
     }
     void CYX::DiscardAPIUse(){
         wasClipAPIused = false;
+    }
+    void CYX::SetAPIUse(bool enabled){
+        wasClipAPIused = enabled;
     }
     bool CYX::WasClipAPIUsed(){
         return wasClipAPIused;
@@ -70,7 +79,7 @@ namespace CTRPluginFramework {
                 }
                 apiOut = 1;
                 if (strlen_utf8(newClipData) > 1048576) return 3;
-                if (provideClipAPI) apiOut = ParseClipAPI(newClipData);
+                if (provideClipAPI) apiOut = BasicAPI::ParseClipAPI(newClipData);
                 if (newClipData.length() > 1048576) newClipData.resize(1048576);
                 if (outToClip || apiOut == 0){
                     Process::WriteString((u32)&editorInstance->clipboardData, newClipData, StringFormat::Utf16);
@@ -92,80 +101,6 @@ namespace CTRPluginFramework {
             var->data = editorInstance->clipboardLength;
             var->data2 = &editorInstance->clipboardData;
         }
-        return 0;
-    }
-
-    int CYX::ParseClipAPI(std::string& data){
-        if (data.compare(0, 4, "CYX:")!=0) return 1;
-        if (!wasClipAPIused) wasClipAPIused = true;
-        StringVector arglist;
-        u32 index = 4; u32 newidx;
-        while (index && index < data.length()){
-            newidx = data.find(":", index);
-            arglist.push_back(data.substr(index, newidx-index));
-            index = ++newidx;
-        }
-        data = "";
-        if (arglist.size()) {
-            strupper(arglist[0]);
-            if (arglist[0] == "OSD") {
-                int type; data = "";
-                for (u32 i=1; i<arglist.size(); i++) {
-                    if (i == 1 && arglist[i].length()==1){
-                        if (arglist[i] == "W"){
-                            type = 1; continue;
-                        } else if (arglist[i] == "N"){
-                            type = 2; continue;
-                        } else if (arglist[i] == "E"){
-                            type = 3; continue;
-                        } else if (arglist[i] == "S"){
-                            type = 4; continue;
-                        } else if (arglist[i] == "M"){
-                            type = 0; continue;
-                        }
-                    }
-                    data += arglist.at(i);
-                    if (i+1 != arglist.size()) data += ":";
-                }
-                switch (type){
-                case 1:
-                    OSD::Notify(data, Color::White, Color::Olive);
-                    break;
-                case 2:
-                    OSD::Notify(data, Color::Cyan, Color::Navy);
-                    break;
-                case 3:
-                    OSD::Notify(data, Color::White, Color::Maroon);
-                    break;
-                case 4:
-                    OSD::Notify(data, Color::White, Color::Green);
-                    break;
-                default:
-                    OSD::Notify(data, Color::White, Color::Teal);
-                    break;
-                }
-                return 0;
-            } else if (arglist[0] == "FILES") {
-                if (arglist.size()<2) {
-                    data = "Error: Missing arguments for FILES";
-                    return 1;
-                }
-                Directory dir(arglist[1]);
-                StringVector vec;
-                dir.ListDirectories(vec);
-                for (u32 i=0; i<vec.size(); i++) data += ":/"+vec[i];
-                vec.clear();
-                dir.ListFiles(vec);
-                for (u32 i=0; i<vec.size(); i++) data += ":*"+vec[i];
-                vec.clear();
-                dir.Close();
-                data.erase(0, 1);
-                return 1;
-            } else {
-                data = "Error: Unknown API call \""+arglist[0]+"\"";
-            }
-        }
-        
         return 0;
     }
 

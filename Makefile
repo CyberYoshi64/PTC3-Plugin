@@ -4,6 +4,9 @@ ifeq ($(strip $(DEVKITARM)),)
 $(error "Please set DEVKITARM in your environment. export DEVKITARM=<path to>devkitARM")
 endif
 
+export COMMIT_HASH		:=	$(shell git rev-parse --short=8 HEAD)
+export COMPILE_DATE 	:=  $(shell date -u +"%y%m%d%H%M")
+
 TOPDIR 		?= 	$(CURDIR)
 include $(DEVKITARM)/3ds_rules
 
@@ -24,8 +27,9 @@ ARCH		:=	-march=armv6k -mtune=mpcore -mfloat-abi=hard -mtp=soft
 CFLAGS		:=	$(ARCH) -Os -mword-relocations \
 				-fomit-frame-pointer -ffunction-sections -fno-strict-aliasing
 
-CFLAGS		+=	$(INCLUDE) -D__3DS__
+DEFINES		:= -DBUILD_DATE="\"$(COMPILE_DATE)\"" -DCOMMIT_HASH="\"$(COMMIT_HASH)\""
 
+CFLAGS		+=	$(INCLUDE) -D__3DS__ $(DEFINES)
 CXXFLAGS	:= $(CFLAGS) -fno-rtti -fno-exceptions -std=gnu++11
 
 ASFLAGS		:=	$(ARCH)
