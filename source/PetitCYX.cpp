@@ -7,7 +7,10 @@ namespace CTRPluginFramework {
     BASICEditorData* CYX::editorInstance = NULL;
     BASICGRPStructs* CYX::GraphicPage = NULL;
     RT_HOOK CYX::clipboardFunc = {0};
+    RT_HOOK CYX::basControllerFunc = {0};
     RT_HOOK CYX::scrShotStub = {0};
+    char CYX::introText[512] = "SmileBASIC-CYX " STRING_VERSION "\nBuild " STRING_BUILD "\n\n2022-2023 CyberYoshi64\n\n";
+    char CYX::bytesFreeText[128] = " bytes free\n\n";
     bool CYX::provideClipAPI = false;
     bool CYX::wasClipAPIused = false;
 
@@ -17,23 +20,39 @@ namespace CTRPluginFramework {
                 currentVersion = *(u32*)JPN_VERSION_INT;
                 editorInstance = (BASICEditorData*)JPN_EDITORDATA;
                 GraphicPage = (BASICGRPStructs*)JPN_GRPSTRUCTS;
+                rtInitHook(&basControllerFunc, JPN_BASICCONTROLLERFUNC, (u32)CYX::stubBASICFunction);
                 rtInitHook(&clipboardFunc, JPN_CLIPBOARDFUNC, (u32)CYX::clipboardFuncHook);
+                *(char**)JPN_BOOTTEXT = introText;
+                *(char**)(JPN_BOOTTEXT+4) = bytesFreeText;
                 break;
             case REGION_USA:
                 currentVersion = *(u32*)USA_VERSION_INT;
                 editorInstance = (BASICEditorData*)USA_EDITORDATA;
                 GraphicPage = (BASICGRPStructs*)USA_GRPSTRUCTS;
+                rtInitHook(&basControllerFunc, USA_BASICCONTROLLERFUNC, (u32)CYX::stubBASICFunction);
                 rtInitHook(&clipboardFunc, USA_CLIPBOARDFUNC, (u32)CYX::clipboardFuncHook);
+                *(char**)USA_BOOTTEXT = introText;
+                *(char**)(USA_BOOTTEXT+4) = bytesFreeText;
                 break;
             case REGION_EUR:
                 currentVersion = *(u32*)EUR_VERSION_INT;
                 editorInstance = (BASICEditorData*)EUR_EDITORDATA;
                 GraphicPage = (BASICGRPStructs*)EUR_GRPSTRUCTS;
+                rtInitHook(&basControllerFunc, EUR_BASICCONTROLLERFUNC, (u32)CYX::stubBASICFunction);
                 rtInitHook(&clipboardFunc, EUR_CLIPBOARDFUNC, (u32)CYX::clipboardFuncHook);
+                *(char**)EUR_BOOTTEXT = introText;
+                *(char**)(EUR_BOOTTEXT+4) = bytesFreeText;
                 break;
         }
         BasicAPI::Initialize();
+        if (basControllerFunc.funcAddr) rtEnableHook(&basControllerFunc);
     }
+
+    void CYX::Finalize(){
+        BasicAPI::Finalize();
+        CYX::SaveSettings();
+    }
+
     void CYX::SetAPIClipboardAvailability(bool enabled){
         provideClipAPI = enabled;
     }
@@ -64,6 +83,12 @@ namespace CTRPluginFramework {
         return VARTYPE_NONE;
     }
     
+    // Function stub
+    int CYX::stubBASICFunction(void* ptr, u32 selfPtr, BASICGenericVariable* outv, u8 outc, void* a4, u8 argc, BASICGenericVariable* argv){
+        DEBUG("CYX: Function %08X (%x/%x) %p", selfPtr, argc, outc, a4);
+        return 0;
+    }
+
     int CYX::clipboardFuncHook(void* ptr, u32 selfPtr, BASICGenericVariable* outv, u8 outc, void* a4, u8 argc, BASICGenericVariable* argv){
         BASICGenericVariable* var; int type;
         bool outToClip = true; int apiOut;
@@ -150,14 +175,11 @@ namespace CTRPluginFramework {
         memcpy((void*)ptr[10], buf, strlen(buf)+1);
     }
 
-    void CYX::ChangeBootText(const char* text){
-        char str[BOOT_TEXT_LEN];
-        sprintf(str, "%s", text);
-        switch (g_region) {
-        case REGION_JPN: memcpy((void*)JPN_BOOTTEXT, str, BOOT_TEXT_LEN); break;
-        case REGION_USA: memcpy((void*)USA_BOOTTEXT, str, BOOT_TEXT_LEN); break;
-        case REGION_EUR: memcpy((void*)EUR_BOOTTEXT, str, BOOT_TEXT_LEN); break;
-        }
+    void CYX::ChangeBootText(const char* text, const char* bytfre){
+        if (!text || strlen(text)>1530) return;
+        sprintf(introText, "%s", text);
+        if (!bytfre || strlen(bytfre)>1530) return;
+        sprintf(bytesFreeText, "%s", bytfre);
     }
     void CYX::SetDarkMenuPalette(){
         u32 eurPtr[]={EUR_COLOR_KEYBBG,EUR_COLOR_SEARCHBG,EUR_COLOR_FCREATORBG,EUR_COLOR_FDESCBG,EUR_COLOR_ACTPRJLBL,EUR_COLOR_SETSMBUTF,EUR_COLOR_SETKEYREP,EUR_COLOR_SETKEYTL};
@@ -178,6 +200,14 @@ namespace CTRPluginFramework {
         *(u32*)(ptr[5]) = 0xFF40C000;
         *(u32*)(ptr[6]) = 0xFF80D8FF;
         *(u32*)(ptr[7]) = 0xFFFFA800;
+    }
+
+    std::string CYX::GetProgramSlotFileName(u8 slot){
+        if (slot >= 4) return "";
+        std::string f;
+        UTF16toUTF8(f, editorInstance->programSlot[slot].file_name, editorInstance->programSlot[slot].file_name_len);
+        if (f.length()==0) f = "__NO_NAME__";
+        return f;
     }
 
     std::string CYX::PTCVersionString(u32 ver){

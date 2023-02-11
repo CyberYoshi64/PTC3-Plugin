@@ -33,6 +33,7 @@ namespace CTRPluginFramework {
     class BasicAPI {
     public:
         static void Initialize(void);
+        static void Finalize(void);
         static void MenuTick(void);
         static int ParseClipAPI(std::string& data);
     private:

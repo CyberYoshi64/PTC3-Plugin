@@ -156,6 +156,10 @@ namespace CTRPluginFramework {
         AddEntry("LOAD", Func_LOAD);
         AddEntry("SAVE", Func_SAVE);
     }
+    void BasicAPI::Finalize(){
+        // TODO: Finish queue system to clean up potential
+        // garbage that might result from it.
+    }
 
     void BasicAPI::MenuTick(){
         u32 qsz = Queue.size();

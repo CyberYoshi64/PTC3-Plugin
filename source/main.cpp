@@ -428,7 +428,6 @@ namespace CTRPluginFramework {
         if (CheckRevision()) {
             if (File::Exists(SAVEDATA_PATH"/darkPalette.flag") == 1)
                 CYX::SetDarkMenuPalette();
-            CYX::ChangeBootText("SmileBASIC-CYX " STRING_VERSION "\n2022-2023 CyberYoshi64\n\n");
         } else {
             g_region = REGION_MAX;
         }

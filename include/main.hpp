@@ -14,14 +14,12 @@
 
 #ifndef COMMIT_HASH
 #define COMMIT_HASH "00000000"
-#warning "Commit hash not found; did you 'Download ZIP' instead of 'git clone'?"
 #endif
 #ifndef BUILD_DATE
 #define BUILD_DATE "0000000000"
-#warning "Build date not found. Using dummy."
 #endif
 
-#define ENABLE_DEBUG    false
+#define ENABLE_DEBUG        false
 #define TOP_DIR             "/PTC3PLG"
 #define RESOURCES_PATH      TOP_DIR "/resources"
 #define ROMFS_PATH          TOP_DIR "/datafs"
@@ -34,7 +32,7 @@
 #define NUMBER_FILE_OP      9
 #define MAJOR_VERSION       0
 #define MINOR_VERSION       0
-#define REVISION_VERSION    4
+#define REVISION_VERSION    5
 #define STRINGIFY(x)        #x
 #define TOSTRING(x)         STRINGIFY(x)
 #define STRING_VERSION      TOSTRING(MAJOR_VERSION) "." TOSTRING(MINOR_VERSION) "." TOSTRING(REVISION_VERSION)
