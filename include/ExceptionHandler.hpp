@@ -5,7 +5,17 @@
 
 namespace CTRPluginFramework {
 
+    #define EXCEPTION_SYSDUMP_PATH  TOP_DIR"/ptcsysdump.bin"
     #define EXCEPTSET_VERSION   1
+    
+    #define EXCSYSDMPHDR_MAGIC "CY5%SYSD"
+    typedef struct ExceptionSysDump_s {
+        u64 magic;
+        u16 version;
+        ERRF_ExceptionInfo excep;
+        CpuRegisters regs;
+        u32 potential_stack_trace[16];
+    } ExceptionSysDump;
     
     enum ExceptionRescueBitMask {
         EXCEPRESCUE_PROGRAM = 1,
@@ -14,7 +24,6 @@ namespace CTRPluginFramework {
     };
     
     #define CYXDMPHDR_MAGIC "CYX$DMP0"
-
     typedef struct CYXDumpHeader_s {
         u64 magic;
         u32 version;
@@ -24,8 +33,8 @@ namespace CTRPluginFramework {
         u32 blobBufSize[16];
         u32 blobDataLen[16];
         u8 padding[112];
-    } CYXDumpHeader;
-    #define sdklfgj sizeof(CYXDumpHeader);
+    } PACKED CYXDumpHeader;
+    #define sdklfgj sizeof(ExceptionSysDump);
 
     typedef struct ExceptionSettings_s {
         u32 version;
@@ -39,7 +48,8 @@ namespace CTRPluginFramework {
         static ExceptionSettings excepSet;
     private:
         static CYXDumpHeader mkHeader(u16 type, u16 cnt);
-        static File* excepFile;
+        static void BuildRescueScreen(u8 mode, u32 i, u32 j, std::string& s2);
+        static void BuildScreen(Screen& top, Screen& bot, u64 timer);
     };
 }
 

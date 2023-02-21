@@ -164,12 +164,13 @@ namespace CTRPluginFramework {
     }
     void grpFixMe(MenuEntry* entry){
         if (entry->IsActivated()){
+            u32 dspX = 0xBB000000, dspY = 0x3B000000;
             for (u8 i=0; i<6; i++){
                 CYX::GraphicPage->grp[i].displayedFormat = 2;
                 CYX::GraphicPage->grp[i].__unk__sizeX = 0x200;
                 CYX::GraphicPage->grp[i].__unk__sizeY = 0x200;
-                CYX::GraphicPage->grp[i].dispScaleX = 0xBB000000;
-                CYX::GraphicPage->grp[i].dispScaleY = 0x3B000000;
+                CYX::GraphicPage->grp[i].dispScaleX = *(float*)&dspX;
+                CYX::GraphicPage->grp[i].dispScaleY = *(float*)&dspY;
             }
             CYX::GraphicPage->font.displayedFormat = 2;
             CYX::GraphicPage->system.displayedFormat = 2;

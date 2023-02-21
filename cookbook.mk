@@ -25,7 +25,8 @@ SOURCES 	:= 	source
 ARCH		:=	-march=armv6k -mtune=mpcore -mfloat-abi=hard -mtp=soft
 
 CFLAGS		:=	$(ARCH) -Os -mword-relocations \
-				-fomit-frame-pointer -ffunction-sections -fno-strict-aliasing
+				-fomit-frame-pointer -ffunction-sections -fno-strict-aliasing \
+				-Wno-address-of-packed-member
 
 DEFINES		:= -DBUILD_DATE="\"$(COMPILE_DATE)\"" -DCOMMIT_HASH="\"$(COMMIT_HASH)\""
 
@@ -71,7 +72,7 @@ all: $(BUILD)
 
 $(BUILD):
 	@[ -d $@ ] || mkdir -p $@
-	@$(MAKE) --no-print-directory -C $(BUILD) -f $(CURDIR)/Makefile
+	@$(MAKE) --no-print-directory -C $(BUILD) -f $(CURDIR)/cookbook.mk
 
 #---------------------------------------------------------------------------------
 clean:

@@ -440,23 +440,25 @@ namespace CTRPluginFramework {
     }
 
     void InitMenu(PluginMenu &menu) {
-        menu += new MenuFolder("Miscellaneous", std::vector<MenuEntry *>({
-            new MenuEntry("Change server…", nullptr, serverAdrChg),
-            new MenuEntry("Spoof version", nullptr, versionSpoof),
+        menu += new MenuFolder("Miscellaneous", "→ Change server\n→ Version spoofer", std::vector<MenuEntry *>({
+            new MenuEntry("Change server…", nullptr, serverAdrChg, "Change the server to be connected to from the Network Menu."),
+            new MenuEntry("Spoof version", nullptr, versionSpoof, "[Useless but whatever] Pretend that SmileBASIC is older than it is!"),
         }));
-        menu += new MenuFolder(Color::Orange << "[!] Experimental features", std::vector<MenuEntry *>({
-            new MenuEntry("Clipboard hook & CYX API", nullptr, clipboardHooking),
-            new MenuEntry("Corrupt GRP display", grpCorruptor, ""),
-            new MenuEntry("→ Fix GRP display", grpFixMe, "The GRP data is intact, however, the graphic pages have to be cleared/reloaded to flush the display buffer."),
+        menu += new MenuFolder(Color::Orange << "[!] Experimental features",
+        "These features are freshly implemented or are still work in progress. Use these at your own risk.",
+        std::vector<MenuEntry *>({
+            new MenuEntry("Clipboard hook & CYX API", nullptr, clipboardHooking, "Replace the CLIPBOARD function with a custom implementation. The CYX API also allows BASIC programs access to certain plugin functions."),
+            new MenuEntry("Corrupt GRP display", grpCorruptor, "Glitchy goodness!\nIt corrupts the display buffer; the actual graphics data is untouched."),
+            new MenuEntry("→ Fix GRP display", grpFixMe, "The graphic pages have to be cleared/reloaded to flush the display buffer."),
         }));
-        menu += new MenuEntry("Plugin Details", nullptr, pluginDetails, "");
+        menu += new MenuEntry("Plugin Details", nullptr, pluginDetails, "General details about this plugin");
     }
 
     const std::string about =
         u8"CYX extension for SmileBASIC\n\n"
         u8"2022-2023 CyberYoshi64\n\n"
         u8"Credits:\n"
-        u8"The Pixellizer Group, devkitPro,"
+        u8"The Pixellizer Group, devkitPro, "
         u8"Luma3DS Team";
 
     int main(void) {
@@ -475,7 +477,7 @@ namespace CTRPluginFramework {
             )();
             Process::ReturnToHomeMenu();
         }
-        PluginMenu *menu = new PluginMenu("SmileBASIC-CYX", MAJOR_VERSION, MINOR_VERSION, REVISION_VERSION, about);
+        PluginMenu *menu = new PluginMenu("SmileBASIC-CYX", MAJOR_VERSION, MINOR_VERSION, REVISION_VERSION, about, 1);
 
         menu->SynchronizeWithFrame(true);
         menu->ShowWelcomeMessage(ENABLE_DEBUG);

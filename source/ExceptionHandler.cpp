@@ -7,7 +7,7 @@
 namespace CTRPluginFramework {
     ExceptionSettings Exception::excepSet;
 
-    void ExceptionBuildRescueScreen(u8 mode, u32 i, u32 j, std::string& s2){
+    void Exception::BuildRescueScreen(u8 mode, u32 i, u32 j, std::string& s2){
         std::string s;
         switch (mode){
             case 0: s = Utils::Format("Saving asset %d/%d ...", i+1, j); break;
@@ -30,7 +30,7 @@ namespace CTRPluginFramework {
     }
 
     void Exception::RescueIfRequired(){
-        std::string fname = Utils::Format(DUMP_PATH"/%016X.cyxdmp",osGetTime());
+        std::string fname = Utils::Format(DUMP_PATH"/%016X.cyxdmp",osGetTime()/1000);
         File outf;
         if (!Directory::IsExists(DUMP_PATH)) Directory::Create(DUMP_PATH);
         if (File::Open(outf, fname, File::Mode::RWC | File::Mode::SYNC)==0){
@@ -77,7 +77,7 @@ namespace CTRPluginFramework {
             currentBlob = 0, blobCat = 0, blobCatIdx = 0;
             while ((currentBlob < fcount) && (blobCat < 3)){
                 std::string s = hdr.blobName[currentBlob];
-                ExceptionBuildRescueScreen(0, currentBlob, fcount, s);
+                BuildRescueScreen(0, currentBlob, fcount, s);
                 if (!(excepSet.rescue & (1<<blobCat))){
                     blobCatIdx=0; blobCat++;
                     continue;
@@ -107,12 +107,12 @@ namespace CTRPluginFramework {
         }
         outf.Close();
         if (excepSet.rescue){
-            ExceptionBuildRescueScreen(1, 0, 0, fname);
+            BuildRescueScreen(1, 0, 0, fname);
             Sleep(Seconds(3));
         }
     }
 
-    void ExceptionBuildScreen(Screen& top, Screen& bot, u64 timer){
+    void Exception::BuildScreen(Screen& top, Screen& bot, u64 timer){
         bool flag;
         if (timer < EXCEPTIONSCREEN_DELAY){
             if (timer < 2){
@@ -158,10 +158,8 @@ namespace CTRPluginFramework {
         Screen bot = OSD::GetBottomScreen();
         bool touchP, oldTouchP;
         
-        // Write an exception file here soon
-        // TODO: Find program slot names + project name
-        // MAYBE: Look for common crashes to blame user
-        
+        //File exceptionDump();
+
         while (true) {
             Controller::Update();
             keyP = Controller::GetKeysPressed();
@@ -203,7 +201,7 @@ namespace CTRPluginFramework {
                 }
             }
             OSD::Lock();
-            ExceptionBuildScreen(top, bot, timer++);
+            BuildScreen(top, bot, timer++);
             OSD::SwapBuffers();
             OSD::Unlock();
         }

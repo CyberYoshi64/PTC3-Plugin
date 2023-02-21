@@ -11,8 +11,8 @@ namespace CTRPluginFramework {
     typedef struct BASICActiveProject_s {
         u16 activeProject[15];
         u16 currentProject[15];
-        u16 unk[3];
-    } BASICActiveProject;
+        u32 unk;
+    } PACKED BASICActiveProject;
 
     typedef struct BASICGraphicPage_s {
         void* ptr1;
@@ -26,12 +26,11 @@ namespace CTRPluginFramework {
         u32 displayedFormat; // Shown GSP format, supposed to be 0x2
         u32 __unk__sizeX;
         u32 __unk__sizeY;
-        u32 dispScaleY; // Actually a float32
-        u32 dispScaleX; // Actually a float32
+        float dispScaleY;
+        float dispScaleX;
         u32 unkDbl1[2];
         u32 unk8[6];
-    } BASICGraphicPage;
-    #define sdf sizeof(BASICGraphicPage)
+    } PACKED BASICGraphicPage;
     
     typedef struct BASICGRPStructs_s {
         BASICGraphicPage grp[6];   // GRP0-GRP5
@@ -39,7 +38,7 @@ namespace CTRPluginFramework {
         BASICGraphicPage system;   // SysUI / SysBASIC
         BASICGraphicPage sys_ctpk; // Textures from sys.ctpk
         BASICGraphicPage unk1;     // Unknown data
-    } BASICGRPStructs;
+    } PACKED BASICGRPStructs;
 
     typedef struct BASICProgramSlot_s {
         u16 text[1048576]; // UTF-16 content of slot
@@ -50,21 +49,21 @@ namespace CTRPluginFramework {
         u32 file_name_len; // Length of file name
         u32 unk1;
         u32 cursorPosition;// Used by editor to know where the cursor is
-    } BASICProgramSlot;
+    } PACKED BASICProgramSlot;
 
     typedef struct BASICGenericVariable_s {
         u32 type;
         u32 unk1;
         u32 data;
         void* data2;
-    } BASICGenericVariable;
+    } PACKED BASICGenericVariable;
 
     typedef struct BASICEditorLine_s {
         u32 fileOffset;
         u32 lineLength;
         u32 lineNumber;
         u32 always_one;
-    } BASICEditorLine;
+    } PACKED BASICEditorLine;
 
     typedef struct BASICEditorData_s {
         u16 clipboardData[1048576];
@@ -77,7 +76,7 @@ namespace CTRPluginFramework {
         u32 editorHeight;
         u32 editorWidth;
         BASICEditorLine lines[30];
-    } BASICEditorData;
+    } PACKED BASICEditorData;
 
     enum ProgramSlotName {
         PRGSLOT_0 = 0,
