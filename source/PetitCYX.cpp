@@ -6,6 +6,7 @@ namespace CTRPluginFramework {
     u32 CYX::currentVersion = 0;
     BASICEditorData* CYX::editorInstance = NULL;
     BASICGRPStructs* CYX::GraphicPage = NULL;
+    BASICTextPalette* CYX::textPalette = NULL;
     RT_HOOK CYX::clipboardFunc = {0};
     RT_HOOK CYX::basControllerFunc = {0};
     RT_HOOK CYX::scrShotStub = {0};
@@ -20,6 +21,7 @@ namespace CTRPluginFramework {
                 currentVersion = *(u32*)JPN_VERSION_INT;
                 editorInstance = (BASICEditorData*)JPN_EDITORDATA;
                 GraphicPage = (BASICGRPStructs*)JPN_GRPSTRUCTS;
+                textPalette = (BASICTextPalette*)JPN_CONTXTPAL;
                 rtInitHook(&basControllerFunc, JPN_BASICCONTROLLERFUNC, (u32)CYX::stubBASICFunction);
                 rtInitHook(&clipboardFunc, JPN_CLIPBOARDFUNC, (u32)CYX::clipboardFuncHook);
                 *(char**)JPN_BOOTTEXT = introText;
@@ -29,6 +31,7 @@ namespace CTRPluginFramework {
                 currentVersion = *(u32*)USA_VERSION_INT;
                 editorInstance = (BASICEditorData*)USA_EDITORDATA;
                 GraphicPage = (BASICGRPStructs*)USA_GRPSTRUCTS;
+                textPalette = (BASICTextPalette*)USA_CONTXTPAL;
                 rtInitHook(&basControllerFunc, USA_BASICCONTROLLERFUNC, (u32)CYX::stubBASICFunction);
                 rtInitHook(&clipboardFunc, USA_CLIPBOARDFUNC, (u32)CYX::clipboardFuncHook);
                 *(char**)USA_BOOTTEXT = introText;
@@ -38,6 +41,7 @@ namespace CTRPluginFramework {
                 currentVersion = *(u32*)EUR_VERSION_INT;
                 editorInstance = (BASICEditorData*)EUR_EDITORDATA;
                 GraphicPage = (BASICGRPStructs*)EUR_GRPSTRUCTS;
+                textPalette = (BASICTextPalette*)EUR_CONTXTPAL;
                 rtInitHook(&basControllerFunc, EUR_BASICCONTROLLERFUNC, (u32)CYX::stubBASICFunction);
                 rtInitHook(&clipboardFunc, EUR_CLIPBOARDFUNC, (u32)CYX::clipboardFuncHook);
                 *(char**)EUR_BOOTTEXT = introText;

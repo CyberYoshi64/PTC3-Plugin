@@ -187,7 +187,7 @@ namespace CTRPluginFramework {
                     }
                 }
                 if (keyP & kMask){
-                    Exception::RescueIfRequired();
+                    if (excepSet.rescue) Exception::RescueIfRequired();
                     CYX::Finalize();
                     switch (keyP) {
                     case Key::B:

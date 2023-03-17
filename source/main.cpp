@@ -450,6 +450,7 @@ namespace CTRPluginFramework {
             new MenuEntry("Clipboard hook & CYX API", nullptr, clipboardHooking, "Replace the CLIPBOARD function with a custom implementation. The CYX API also allows BASIC programs access to certain plugin functions."),
             new MenuEntry("Corrupt GRP display", grpCorruptor, "Glitchy goodness!\nIt corrupts the display buffer; the actual graphics data is untouched."),
             new MenuEntry("→ Fix GRP display", grpFixMe, "The graphic pages have to be cleared/reloaded to flush the display buffer."),
+            new MenuEntry("Change editor ruler color", nullptr, editorRulerPalette, "Choose from one of a few palettes for the editor ruler."),
         }));
         menu += new MenuEntry("Plugin Details", nullptr, pluginDetails, "General details about this plugin");
     }
@@ -477,10 +478,10 @@ namespace CTRPluginFramework {
             )();
             Process::ReturnToHomeMenu();
         }
-        PluginMenu *menu = new PluginMenu("SmileBASIC-CYX", MAJOR_VERSION, MINOR_VERSION, REVISION_VERSION, about, 1);
+        PluginMenu *menu = new PluginMenu("SmileBASIC-CYX", MAJOR_VERSION, MINOR_VERSION, REVISION_VERSION, about, 0);
 
         menu->SynchronizeWithFrame(true);
-        menu->ShowWelcomeMessage(ENABLE_DEBUG);
+        menu->ShowWelcomeMessage(false);
         if (ENABLE_DEBUG) OSD::Notify(Utils::Format("Build " STRING_BUILD));
         // menu->SetHexEditorState(false);
         menu->OnOpening = menuOpen;

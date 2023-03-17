@@ -8,10 +8,40 @@ namespace CTRPluginFramework {
 
     #define CYX__COLORVER_NOCOLOR   1
 
-    typedef struct BASICActiveProject_s {
+    typedef struct BASICTextPalette_s { // EUR @ 0x01D027CC
+        u32 conClear;
+        u32 conBlack;
+        u32 conMaroon;
+        u32 conRed;
+        u32 conGreen;
+        u32 conLime;
+        u32 conOlive;
+        u32 conYellow;
+        u32 conNavy;
+        u32 conBlue;
+        u32 conPurple;
+        u32 conMagenta;
+        u32 conTeal;
+        u32 conCyan;
+        u32 conGray;
+        u32 conWhite;
+        u32 editComment;
+        u32 editString;
+        u32 editLabel;
+        u32 editNumeric;
+        u32 editKeywords;
+        u32 editText;
+        u32 editRuler;
+        u32 editRulerSel;
+        u32 editStatement;
+        u32 editSelectFG; // BG is hardcoded to be white
+    } BASICTextPalette;
+
+    typedef struct BASICActiveProject_s { // EUR @ 0x01B14B00
         u16 activeProject[15];
         u16 currentProject[15];
-        u32 unk;
+        u16 unk1;
+        u16 unk2;
     } PACKED BASICActiveProject;
 
     typedef struct BASICGraphicPage_s {
@@ -23,21 +53,21 @@ namespace CTRPluginFramework {
         void* dispBuf2; // Bad pointer though...
         void* workBuf2; // Bad pointer though...
         u32 unk3[5]; // Actively used, avoid writing to these.
-        u32 displayedFormat; // Shown GSP format, supposed to be 0x2
+        u32 displayedFormat; // Shown GSP format, should be 0x2 (RGBA5551)
         u32 __unk__sizeX;
         u32 __unk__sizeY;
-        float dispScaleY;
-        float dispScaleX;
+        float dispScaleY; // Not a standard float/double...
+        float dispScaleX; // Not a standard float/double...
         u32 unkDbl1[2];
         u32 unk8[6];
     } PACKED BASICGraphicPage;
     
-    typedef struct BASICGRPStructs_s {
+    typedef struct BASICGRPStructs_s { // EUR @ 0x01D02A4C
         BASICGraphicPage grp[6];   // GRP0-GRP5
         BASICGraphicPage font;     // GRPF
         BASICGraphicPage system;   // SysUI / SysBASIC
         BASICGraphicPage sys_ctpk; // Textures from sys.ctpk
-        BASICGraphicPage unk1;     // Unknown data
+        BASICGraphicPage unk1;     // Unknown data (Test?)
     } PACKED BASICGRPStructs;
 
     typedef struct BASICProgramSlot_s {
@@ -59,14 +89,21 @@ namespace CTRPluginFramework {
     } PACKED BASICGenericVariable;
 
     typedef struct BASICEditorLine_s {
-        u32 fileOffset;
-        u32 lineLength;
-        u32 lineNumber;
+        u32 offset;
+        u32 lineLen;
+        u32 lineNum;
         u32 always_one;
     } PACKED BASICEditorLine;
 
-    typedef struct BASICEditorData_s {
-        u16 clipboardData[1048576];
+    typedef struct BASICUndoEntry_s {
+        u32 offset;
+        u32 always_zero;
+        u32 len;
+        u16 data[0x1006];
+    } PACKED BASICUndoEntry;
+
+    typedef struct BASICEditorData_s { // EUR @ 0x00F5DC9C
+        u16 clipboardData[0x100000];
         u32 clipboardLength;
         void* ptr1;
         u32 cursorRaw;
@@ -75,7 +112,13 @@ namespace CTRPluginFramework {
         BASICProgramSlot programSlot[4];
         u32 editorHeight;
         u32 editorWidth;
-        BASICEditorLine lines[30];
+        BASICEditorLine editorLine[120];
+        u32 lastShownLineOff;
+        u32 EOFdistance;
+        BASICUndoEntry undo[8];
+        u32 undoIteration;
+        u32 undoTotal;
+        u32 undoCount;
     } PACKED BASICEditorData;
 
     enum ProgramSlotName {
@@ -132,6 +175,7 @@ namespace CTRPluginFramework {
         static u32 currentVersion;
         static BASICEditorData* editorInstance;
         static BASICGRPStructs* GraphicPage;
+        static BASICTextPalette* textPalette;
         static RT_HOOK clipboardFunc;
         static RT_HOOK basControllerFunc;
         static RT_HOOK scrShotStub;

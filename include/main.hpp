@@ -62,6 +62,8 @@ enum fileSystemBits
     RENAME_DIRECTORY_OP
 };
 
+#define SWITCHEND32(a) ((a&0xFF)<<24|(a&0xFF00)<<8|(a&0xFF0000)>>8|(a&0xFF000000)>>24)
+
 typedef u32(*fsRegArchiveTypeDef)(u8*, u32*, u32, u32);
 typedef u32(*userFsTryOpenFileTypeDef)(u32, u16*, u32);
 typedef u32(*fsMountArchiveTypeDef)(u32*, u32);

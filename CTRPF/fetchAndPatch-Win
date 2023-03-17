@@ -1,0 +1,17 @@
+#!/bin/sh
+
+if [ "$1" = "clean" ]; then
+	echo ":: Cleaning ..."
+	rm -rf ctrpluginframework
+	git clone https://gitlab.com/thepixellizeross/ctrpluginframework.git -b develop
+fi
+if [ -e ctrpluginframework ]; then
+	echo ":: Patching..."
+	cp -r __patch__/* ctrpluginframework/
+	echo ":: Building..."
+	cd ctrpluginframework
+	make
+	cd ..
+else
+	echo "FAIL: Do '$0 clean'"
+fi
