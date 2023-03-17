@@ -538,4 +538,8 @@ namespace CTRPluginFramework
         for (;;)
             ;
     }
+    u32 Process::GetMainThreadTLS()
+    {
+        return ProcessImpl::MainThreadTls;
+    }
 } // namespace CTRPluginFramework

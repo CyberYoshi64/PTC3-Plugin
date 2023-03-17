@@ -72,7 +72,7 @@ CFLAGS	:=	-Wall -Werror -Wno-psabi -mword-relocations \
 
 CFLAGS	+=	$(INCLUDE) -D__3DS__ $(DEFINES)
 
-CXXFLAGS 	:= $(CFLAGS) -fno-rtti -fno-exceptions -std=gnu++11
+CXXFLAGS 	:= $(CFLAGS) -fno-rtti -fno-exceptions -std=gnu++20
 
 ASFLAGS	:=	$(G) $(ARCH) $(INCLUDE) -Os -Wl,$(WL)--gc-sections
 

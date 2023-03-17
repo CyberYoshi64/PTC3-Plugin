@@ -25,8 +25,10 @@
 *.a
 *.lib
 
-ctrpluginframework/
+libcwav
 __staging*
-build/
+build
+lib/Library/debug
+lib/Library/release
 *.elf
 *.out

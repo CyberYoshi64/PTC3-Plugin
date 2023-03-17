@@ -9,21 +9,14 @@
 
 namespace CTRPluginFramework
 {
-    static u32 g_textXpos[3] = { 0 };
-
-    // DO NOT REMOVE THIS COPYRIGHT NOTICE
-    //* I didn't; just added my string here ッ
-    static const char g_pluginNameText[] = "SmileBASIC CYX extensions";
-    static const char g_ctrpfText[] = "Powered by CTRPluginFramework";
-    static const char g_copyrightText[] = "(c) The Pixellizer Group, CyberYoshi64";
 
     PluginMenuHome::PluginMenuHome(std::string &name, bool showNoteBottom) :
 
         _noteTB("", "", showNoteBottom ? IntRect(20, 46, 280, 124) : IntRect(40, 30, 320, 180)),
         _gameGuideBtn(Button::Sysfont | Button::Rounded, "Manual", IntRect(35, 95, 120, 30), Icon::DrawGuide),
         _searchBtn(Button::Sysfont | Button::Rounded, "Search", IntRect(160, 95, 120, 30), Icon::DrawSearch),
-        _arBtn(Button::Sysfont | Button::Rounded, "Action Replay", showNoteBottom ? IntRect(35, 172, 120, 30) : IntRect(35, 130, 120, 30)),
-        _toolsBtn(Button::Sysfont | Button::Rounded, "Options", showNoteBottom ? IntRect(160, 172, 120, 30) : IntRect(160, 130, 120, 30), Icon::DrawTools),
+        _arBtn(Button::Sysfont | Button::Rounded, "Action Replay", showNoteBottom ? IntRect(35, 176, 120, 30) : IntRect(35, 130, 120, 30)),
+        _toolsBtn(Button::Sysfont | Button::Rounded, "Options", showNoteBottom ? IntRect(160, 176, 120, 30) : IntRect(160, 130, 120, 30), Icon::DrawTools),
 
         _InfoBtn(Button::Icon | Button::Toggle, IntRect(60, 30, 25, 25), Icon::DrawInfo)
 
@@ -45,11 +38,6 @@ namespace CTRPluginFramework
 
         // Disable Toggle buttons
         _InfoBtn.Disable();
-
-        // Get strings x position
-        g_textXpos[0] = (320 - Renderer::LinuxFontSize(g_pluginNameText)) / 2;
-        g_textXpos[1] = (320 - Renderer::LinuxFontSize(g_ctrpfText)) / 2;
-        g_textXpos[2] = (320 - Renderer::LinuxFontSize(g_copyrightText)) / 2;
 
         if (!Preferences::Settings.AllowActionReplay)
             _arBtn.Lock();
@@ -97,11 +85,11 @@ namespace CTRPluginFramework
         }
 
         if (_toolsBtn()) _toolsBtn_OnClick();
+        if (_arBtn()) _actionReplayBtn_OnClick();
 
         if (!ShowNoteBottom) {
             if (_gameGuideBtn()) _gameGuideBtn_OnClick();
             if (_searchBtn()) _searchBtn_OnClick();
-            if (_arBtn()) _actionReplayBtn_OnClick();
             if (_InfoBtn()) _InfoBtn_OnClick();
         }
 
@@ -512,35 +500,9 @@ namespace CTRPluginFramework
 
     void PluginMenuHome::_RenderBottom(void)
     {
-        const Color& blank = Color::White;
-        static Clock creditClock;
-        static u8 framework = 0;
-
         Renderer::SetTarget(BOTTOM);
 
         Window::BottomWindow.Draw();
-
-        int posY = 205;
-
-        switch (framework){
-            case 0:
-                Renderer::DrawString(g_pluginNameText, g_textXpos[0], posY, blank);
-                break;
-            case 1:
-                Renderer::DrawString(g_ctrpfText, g_textXpos[1], posY, blank);
-                break;
-            case 2:
-                Renderer::DrawString(g_copyrightText, g_textXpos[2], posY, blank);
-                break;
-        }
-
-        if (creditClock.HasTimePassed(Seconds(5)))
-        {
-            creditClock.Restart();
-            framework = (framework + 1) % 3;
-        }
-
-        posY = 35;
 
         // Draw buttons
         if (ShowNoteBottom)

@@ -95,14 +95,10 @@ namespace CTRPluginFramework
             ctx->affinity = AllCores;
 
         if (!SystemImpl::IsNew3DS && ctx->affinity > OldCores)
-            ctx->affinity = AllCores;
+            ctx->affinity = OldCores;
 
         if (ctx->affinity == -1)
             ctx->affinity = AllCores;
-
-        // 2 threads on AppCore
-        if (ctx->affinity & AppCore)
-            ctx->affinity |= AppCore1;
 
         // Ensure memory is updated
         if (!SystemImpl::IsCitra) svcFlushProcessDataCache(Process::GetHandle(), (u32)ctx, sizeof(TaskContext));
@@ -110,6 +106,7 @@ namespace CTRPluginFramework
             if (!SystemImpl::IsCitra) svcFlushProcessDataCache(Process::GetHandle(), (u32)ctx->arg, 0x1000);
 
         // Search for an idle core matching the Task affinity
+        // NewAppCore -> AppCore (0x21) -> AppCore (0x20) -> SysCore
         for (s32 i = 3; i >= 0; --i)
         {
             if (cores[i].state == Core::Idle && cores[i].id & ctx->affinity)
@@ -131,32 +128,32 @@ namespace CTRPluginFramework
         Core *_cores = _singleton._cores;
 
         // Create handler on Core0
-        _cores[0].id = AppCore;
-        _cores[0].thread.affinity = 0;
+        _cores[1].id = AppCore;
+        _cores[1].thread.affinity = 0;
+        _cores[1].thread.priority = 0x20;
+        _cores[1].thread.Start(&_cores[1]);
+
+        // Create another handler on Core0
+        _cores[2].id = AppCore;
+        _cores[2].thread.affinity = 0;
+        _cores[2].thread.priority = 0x21;
+        _cores[2].thread.Start(&_cores[2]);
+
+        // Create handler on Core1
+        _cores[0].id = SysCore;
+        _cores[0].thread.affinity = 1;
         _cores[0].thread.priority = 0x20;
         _cores[0].thread.Start(&_cores[0]);
 
-        // Create handler on Core0
-        _cores[1].id = AppCore1;
-        _cores[1].thread.affinity = 0;
-        _cores[1].thread.priority = 0x21;
-        _cores[1].thread.Start(&_cores[1]);
-
-        // Create handler on Core2 & Core3 (N3DS only)
+        // Create handler on Core2 (N3DS only)
         if (!System::IsNew3DS())
         {
-            _cores[2].state = Core::Exit;
             _cores[3].state = Core::Exit;
         }
         else
         {
-            _cores[2].id = NewAppCore;
-            _cores[2].thread.affinity = 2;
-            _cores[2].thread.priority = 0x18;
-            _cores[2].thread.Start(&_cores[2]);
-
-            _cores[3].id = NewSysCore;
-            _cores[3].thread.affinity = 3;
+            _cores[3].id = NewAppCore;
+            _cores[3].thread.affinity = 2;
             _cores[3].thread.priority = 0x18;
             _cores[3].thread.Start(&_cores[3]);
         }

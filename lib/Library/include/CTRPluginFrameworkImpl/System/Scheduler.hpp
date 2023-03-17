@@ -15,14 +15,14 @@ namespace CTRPluginFramework
         enum
         {
             AppCore = 1 << 0,
-            AppCore1 = 1 << 1,
+            SysCore = 1 << 1,
             NewAppCore = 1 << 2,
-            NewSysCore = 1 << 3,
+            // NewSysCore = 1 << 3,
 
-            AppCores = AppCore | AppCore1 | NewAppCore,
-            SysCores = NewSysCore,
-            OldCores = AppCore | AppCore1,
-            NewCores = NewAppCore | NewSysCore,
+            AppCores = AppCore | NewAppCore,
+            SysCores = SysCore,
+            OldCores = AppCore | SysCore,
+            NewCores = NewAppCore, // | NewSysCore,
             AllCores = AppCores | SysCores
         };
 

@@ -444,7 +444,7 @@ namespace CTRPluginFramework {
             new MenuEntry("Change server…", nullptr, serverAdrChg, "Change the server to be connected to from the Network Menu."),
             new MenuEntry("Spoof version", nullptr, versionSpoof, "[Useless but whatever] Pretend that SmileBASIC is older than it is!"),
         }));
-        menu += new MenuFolder(Color::Orange << "[!] Experimental features",
+        menu += new MenuFolder("[!] Experiments",
         "These features are freshly implemented or are still work in progress. Use these at your own risk.",
         std::vector<MenuEntry *>({
             new MenuEntry("Clipboard hook & CYX API", nullptr, clipboardHooking, "Replace the CLIPBOARD function with a custom implementation. The CYX API also allows BASIC programs access to certain plugin functions."),
@@ -456,11 +456,8 @@ namespace CTRPluginFramework {
     }
 
     const std::string about =
-        u8"CYX extension for SmileBASIC\n\n"
-        u8"2022-2023 CyberYoshi64\n\n"
-        u8"Credits:\n"
-        u8"The Pixellizer Group, devkitPro, "
-        u8"Luma3DS Team";
+        "CYX extension for SmileBASIC\n\n"
+        "2022-2023 CyberYoshi64\n\n";
 
     int main(void) {
         if (g_region == REGION_NONE) {
@@ -478,7 +475,7 @@ namespace CTRPluginFramework {
             )();
             Process::ReturnToHomeMenu();
         }
-        PluginMenu *menu = new PluginMenu("SmileBASIC-CYX", MAJOR_VERSION, MINOR_VERSION, REVISION_VERSION, about, 1);
+        PluginMenu *menu = new PluginMenu("Main Menu", MAJOR_VERSION, MINOR_VERSION, REVISION_VERSION, about, 1);
 
         menu->SynchronizeWithFrame(true);
         menu->ShowWelcomeMessage(false);

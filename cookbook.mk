@@ -29,7 +29,7 @@ CFLAGS		:=	$(ARCH) -Os -mword-relocations \
 DEFINES		:= -DBUILD_DATE="\"$(COMPILE_DATE)\"" -DCOMMIT_HASH="\"$(COMMIT_HASH)\""
 
 CFLAGS		+=	$(INCLUDE) -D__3DS__ $(DEFINES)
-CXXFLAGS	:= $(CFLAGS) -fno-rtti -fno-exceptions -std=gnu++11
+CXXFLAGS	:= $(CFLAGS) -fno-rtti -fno-exceptions -std=gnu++20
 
 ASFLAGS		:=	$(ARCH)
 LDFLAGS		:= -T $(TOPDIR)/3gx.ld $(ARCH) -Os -Wl,--gc-sections,--strip-discarded,--strip-debug
@@ -69,7 +69,7 @@ export LIBPATHS	:=	$(foreach dir,$(LIBDIRS),-L $(dir)/lib)
 all: $(BUILD)
 
 lib:
-	@cd lib && make clean && make && cd ..
+	@cd lib && make clean && make release && cd ..
 
 $(BUILD):
 	@[ -d $@ ] || mkdir -p $@

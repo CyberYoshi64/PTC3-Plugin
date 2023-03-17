@@ -48,6 +48,13 @@ namespace CTRPluginFramework
 
     static int  g_mode = NORMAL;
 
+    // DO NOT REMOVE THIS COPYRIGHT NOTICE
+    //* I didn't; just added my string here ッ
+    static const char g_pluginNameText[] = "SmileBASIC-CYX";
+    static const char g_ctrpfText[] = "Powered by CTRPluginFramework";
+    static const char g_copyrightText[] = "Copyright (c) The Pixellizer Group";
+    static u32 g_textXpos[3] = { 0 };
+
     PluginMenuTools::PluginMenuTools(std::string &about, HexEditor &hexEditor) :
         _about(about),
         _mainMenu("Tools"),
@@ -564,6 +571,11 @@ namespace CTRPluginFramework
 
         if (!System::IsCitra()) _settingsMenu.Append(new MenuEntryTools("Set LCD brightness", EditBacklight, false, false));
         _settingsMenu.Append(new MenuEntryTools("Use floating button", [] { Preferences::Toggle(Preferences::UseFloatingBtn); }, true, Preferences::IsEnabled(Preferences::UseFloatingBtn)));
+
+        // Get strings x position
+        g_textXpos[0] = (320 - Renderer::LinuxFontSize(g_pluginNameText)) / 2;
+        g_textXpos[1] = (320 - Renderer::LinuxFontSize(g_ctrpfText)) / 2;
+        g_textXpos[2] = (320 - Renderer::LinuxFontSize(g_copyrightText)) / 2;
     }
 
     bool    PluginMenuTools::operator()(EventList &eventList, Time &delta)
@@ -736,8 +748,8 @@ namespace CTRPluginFramework
             static const char *compilationDate = COMPILE_DATE;
 
             int posY = 30, posYY = 50;
-            Renderer::DrawString("CTRPF Build:",  30, posY, blank);
-            Renderer::DrawLine(30, posY, 12 * 6, blank); posY += 10;
+            Renderer::DrawString("CTRPluginFramework Build:",  30, posY, blank);
+            Renderer::DrawLine(30, posY, 28 * 6, blank); posY += 10;
             Renderer::DrawString("Version: ",  30, posY, blank);
             Renderer::DrawString(tagVersion,  100, posYY, blank);
             Renderer::DrawString("Commit: ",  30, posY, blank);
@@ -746,11 +758,10 @@ namespace CTRPluginFramework
             Renderer::DrawString(compilationDate,  100, posYY, blank);
 
 
-            /*
-            static const u32 xpos = (320 - Renderer::LinuxFontSize(version)) / 2;
-
-            int posY = 205;
-            Renderer::DrawString(version, xpos, posY, blank);*/
+            posY = 185;
+            Renderer::DrawString(g_pluginNameText, g_textXpos[0], posY, Color::White);
+            Renderer::DrawString(g_ctrpfText, g_textXpos[1], posY, Color::White);
+            Renderer::DrawString(g_copyrightText, g_textXpos[2], posY, Color::White);
         }
     }
 

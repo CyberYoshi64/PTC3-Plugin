@@ -331,6 +331,11 @@ namespace CTRPluginFramework
          * default handler (luma). Default value: false
          */
         static bool ThrowOldExceptionOnCallbackException;
+
+        /**
+         * @brief Gets the main thread TLS address.
+         */
+        static u32 GetMainThreadTLS();
     };
 }
 
