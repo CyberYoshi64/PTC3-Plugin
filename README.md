@@ -1,6 +1,6 @@
 # PTC3-Plugin
 
-This plugin is for use with SmileBASIC 3.
+This [CTRPF](https://gitlab.com/thepixellizeross/ctrpluginframework/) plugin is for use with SmileBASIC 3.
 
 ### Supported versions
 
@@ -33,7 +33,6 @@ Requirements:
 - [bannertool](https://github.com/Steveice10/bannertool/releases/latest)
 - [makerom](https://github.com/3DSGuy/Project_CTR/releases)
 - [3gxtool v1.1+](https://gitlab.com/thepixellizeross/3gxtool/-/releases)
-- [CTRPluginFramework](https://gitlab.com/thepixellizeross/ctrpluginframework/-/releases)
 
 Once you got these requirements, just `make`.
 
