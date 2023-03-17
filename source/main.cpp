@@ -478,7 +478,7 @@ namespace CTRPluginFramework {
             )();
             Process::ReturnToHomeMenu();
         }
-        PluginMenu *menu = new PluginMenu("SmileBASIC-CYX", MAJOR_VERSION, MINOR_VERSION, REVISION_VERSION, about, 0);
+        PluginMenu *menu = new PluginMenu("SmileBASIC-CYX", MAJOR_VERSION, MINOR_VERSION, REVISION_VERSION, about, 1);
 
         menu->SynchronizeWithFrame(true);
         menu->ShowWelcomeMessage(false);

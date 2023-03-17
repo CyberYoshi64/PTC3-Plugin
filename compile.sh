@@ -19,10 +19,4 @@ if [ ! -f cookbook.mk ]; then
 fi
 
 make -f cookbook.mk clean
-if test "$1" = "rectrpf" || test ! -d CTRPF/ctrpluginframework; then
-cd CTRPF
-./fetchAndPatch $2
-cd ..
-fi
-
-make -f cookbook.mk
+make -f cookbook.mk $1
