@@ -4,16 +4,17 @@
 #include <cmath>
 
 #define EXCEPTIONSCREEN_DELAY   30.0
-#define EXCEPTIONSCREENSAD_INT  1800
+#define EXCEPTIONSCREENSAD_INT  450
 #define EXCEPTIONRESCUEWRITEBUF 4096
 
 extern "C" char* __textend;
 
 namespace CTRPluginFramework {
     ExceptionSettings Exception::excepSet;
-    std::string Exception::panicString;
+    std::string Exception::panicString = "";
     qrcodegen::QrCode* Exception::qr;
     u32 Exception::screenSadMessageIndex = 0;
+    u32 Exception::renderState = 0;
 
     bool Exception::dumpAsText = false;
 
@@ -138,7 +139,7 @@ namespace CTRPluginFramework {
             case  3: return "The sand can be eaten.";
             case  4: return "Unterhaltungselektronik, na?";
             case  5: return "I don't give a gold coin!";
-            case  6: return "Help me, Doctor Hasake!";
+            case  6: return "Help me, Doctor Hakase!";
             case  7: return "Wan-Paku has messed up.";
             case  8: return "Syntax Error!";
             case  9: return "I hope you got backups…";
@@ -147,21 +148,28 @@ namespace CTRPluginFramework {
     }
 
     void Exception::BuildScreen(Screen& top, Screen& bot, u64 timer){
-        bool flag; char t[20]={0};
-        if (timer < EXCEPTIONSCREEN_DELAY){
+        
+        bool flag;
+        double startAnimFlt;
+        float qrTexScale, px, _py, py;
+        u32 qrSize, iw, ih, x, y, qrViewPort;
+
+        switch (renderState){
+        case 0:
             if (timer < 2){
                 top.Fade(.5); bot.Fade(.5);
             }
-            double f = sin((timer / EXCEPTIONSCREEN_DELAY) * 1.5707963267948966);
-            top.DrawRect(0, 0, 400, 240*f, Color::Black);
-            bot.DrawRect(0, 241-240*f, 320, 240*f, Color::Black);
-        } else {
+            startAnimFlt = sin((timer / EXCEPTIONSCREEN_DELAY) * 1.5707963267948966);
+            top.DrawRect(0, 0, 400, 240*startAnimFlt, Color::Black);
+            bot.DrawRect(0, 241-240*startAnimFlt, 320, 240*startAnimFlt, Color::Black);
+            if (timer >= EXCEPTIONSCREEN_DELAY) renderState++;
+            break;
+        case 1: case 2: // Render twice because double-buffer
             top.DrawRect(0, 0, 400, 240, Color::Black);
             bot.DrawRect(0, 0, 320, 240, Color::Black);
             top.DrawSysfont("A fatal error has occured", 4, 3, Color::Red);
             top.DrawSysfont("A fatal error has occured", 3, 3, Color::Red);
             top.DrawSysfont("SmileBASIC was shut down.", 6, 20);
-            top.DrawSysfont(SadMessageRnd(), 6, 35);
 
             top.DrawSysfont("This QR is no link, but", 6, 60);
             top.DrawSysfont("contains the info for the", 6, 75);
@@ -173,24 +181,25 @@ namespace CTRPluginFramework {
             top.DrawSysfont("\uE002 Reboot", 4, 160);
             top.DrawSysfont("\uE003 Show details", 4, 175, Color(255, 160, 144));
             
-            u32 x = 208, y = 0, qrSize = 192;
-            
-            top.DrawRect(x, y, qrSize, qrSize, Color::White);
-            int qrs = qr->getSize();
-            float qrscl = (qrSize-12) / (float)qrs;
-            if (qrscl >= 2) qrscl = (u32)qrscl;
-            float px = x+(qrSize - (qrs*qrscl))/2, _py = y+(qrSize - (qrs*qrscl))/2, py;
-            u32 iw, ih;
-            for (u16 ix=0; ix<qrs; ix++){
+            x = 208;
+            y = 0;
+            qrViewPort = 192;
+            qrSize = qr->getSize();
+            top.DrawRect(x, y, qrViewPort, qrViewPort, Color::White);
+            qrTexScale = (qrViewPort-10) / (float)qrSize;
+            if (qrTexScale >= 2) qrTexScale = (u32)qrTexScale;
+            px = x+(qrViewPort - (qrSize*qrTexScale))/2;
+            _py = y+(qrViewPort - (qrSize*qrTexScale))/2;
+            for (u16 ix=0; ix<qrSize; ix++){
                 py=_py;
-                for (u16 iy=0; iy<qrs; iy++){
+                for (u16 iy=0; iy<qrSize; iy++){
                     
-                    iw = (u32)(px+qrscl) - (u32)px;
-                    ih = (u32)(py+qrscl) - (u32)py;
+                    iw = (u32)(px+qrTexScale) - (u32)px;
+                    ih = (u32)(py+qrTexScale) - (u32)py;
                     top.DrawRect(px, py, iw, ih, qr->getModule(ix, iy) ? Color::Black : Color::White);
-                    py += qrscl;
+                    py += qrTexScale;
                 }
-                px += qrscl;
+                px += qrTexScale;
             }
             
             if (PLGGET(PLGFLG_PANIC)){
@@ -218,15 +227,23 @@ namespace CTRPluginFramework {
 
             bot.DrawSysfont("Try rescuing...", 4, 160);
             bot.DrawRect(4, 176, 110, 1, Color::White);
+            bot.Draw("Program slots", 24, 184);
+            bot.Draw("Graphic pages", 24, 204);
+            bot.Draw("Clipboard data", 24, 224);
+            renderState++;
+            break;
+        case 3: // Only render parts that could change
+            top.DrawRect(6, 35, 202, 18, Color::Black);
+            top.DrawSysfont(SadMessageRnd(), 6, 35);
+            
+            bot.DrawRect(0, 180, 22, 60, Color::Black);
             flag = Exception::excepSet.rescue & EXCEPRESCUE_PROGRAM;
             bot.DrawRect(5, 180, 16, 16, flag ? Color::ForestGreen : Color::Gray, flag);
-            bot.Draw("Program slots", 24, 184);
             flag = Exception::excepSet.rescue & EXCEPRESCUE_GRAPHICS;
             bot.DrawRect(5, 200, 16, 16, flag ? Color::ForestGreen : Color::Gray, flag);
-            bot.Draw("Graphic pages", 24, 204);
             flag = Exception::excepSet.rescue & EXCEPRESCUE_CLIPBOARD;
             bot.DrawRect(5, 220, 16, 16, flag ? Color::ForestGreen : Color::Gray, flag);
-            bot.Draw("Clipboard data", 24, 224);
+            break;
         }
     }
     void Exception::BuildExceptionData(ERRF_ExceptionInfo *excep, CpuRegisters *regs){

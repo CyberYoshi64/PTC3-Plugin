@@ -82,6 +82,7 @@ namespace CTRPluginFramework {
         static std::string panicString;
         static qrcodegen::QrCode* qr;
         static u32 screenSadMessageIndex;
+        static u32 renderState;
         static bool dumpAsText;
         static u8 dataBuffer[];
         static u16 dataLength;
