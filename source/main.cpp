@@ -17,6 +17,7 @@ u8 fsSetSecValPat[] = {0x80, 0x01, 0x75, 0x08};
 u8 fsCheckPermsPat[] = {0x04, 0x10, 0x12, 0x00, 0x76, 0x46, 0x00, 0xD9};
 namespace CTRPluginFramework {
     Region g_region;
+    u32 ___pluginFlags;
     char g_regionString[4];
     u32 *fileOperations[NUMBER_FILE_OP] = {nullptr};
     RT_HOOK fileOpHooks[NUMBER_FILE_OP] = {0};
@@ -318,7 +319,7 @@ namespace CTRPluginFramework {
         if (fsSetThisSecValHook.isEnabled || fsObsSetThisSecValHook.isEnabled || fsSetSecValHook.isEnabled) {
             deleteSecureVal();
         }
-        if (!(formatSaveHook.isEnabled && openArchiveHook.isEnabled && regArchiveHook.isEnabled)) {
+        if (!(openArchiveHook.isEnabled && regArchiveHook.isEnabled)) {
             DEBUG("ERROR: Some hooks couldn't be initialized, aborting.\n");
             customBreak(0xab047, 0, 0);
         }
@@ -439,6 +440,9 @@ namespace CTRPluginFramework {
         CYX::SaveSettings();
     }
 
+    void InitMenuFallback(PluginMenu &menu) {
+        menu += new MenuEntry("Could not initialize plugin", nullptr, pluginDetails, "This plugin could not detect SmileBASIC 3 and/or the version you're using is not supported. It will now behave like the blank template.");
+    }
     void InitMenu(PluginMenu &menu) {
         menu += new MenuFolder("Miscellaneous", "→ Change server\n→ Version spoofer", std::vector<MenuEntry *>({
             new MenuEntry("Change server…", nullptr, serverAdrChg, "Change the server to be connected to from the Network Menu."),
@@ -451,6 +455,10 @@ namespace CTRPluginFramework {
             new MenuEntry("Corrupt GRP display", grpCorruptor, "Glitchy goodness!\nIt corrupts the display buffer; the actual graphics data is untouched."),
             new MenuEntry("→ Fix GRP display", grpFixMe, "The graphic pages have to be cleared/reloaded to flush the display buffer."),
             new MenuEntry("Change editor ruler color", nullptr, editorRulerPalette, "Choose from one of a few palettes for the editor ruler."),
+            new MenuEntry("Memory Display", MemDisplayOSD::OSDFunc),
+            new MenuEntry("Memory Display Settings", nullptr, MemDisplayOSD::setup),
+            new MenuEntry("————————————————", nullptr, dummyEntry),
+            new MenuEntry("Unnamed Experiment 1", nullptr, experiment1)
         }));
         menu += new MenuEntry("Plugin Details", nullptr, pluginDetails, "General details about this plugin");
     }
@@ -460,26 +468,12 @@ namespace CTRPluginFramework {
         "2022-2023 CyberYoshi64\n\n";
 
     int main(void) {
-        if (g_region == REGION_NONE) {
-            MessageBox(
-                "This application is not supported.\n"
-                "This plugin is for use with SmileBASIC 3.\n\n"
-                "The game will now be terminated."
-            )();
-            Process::ReturnToHomeMenu();
-        } else if (g_region == REGION_MAX) {
-            MessageBox(
-                "This version of SmileBASIC 3 is not supported by this plugin.\n" +
-                Utils::Format("Detected: %s ", g_regionString) + CYX::PTCVersionString(CYX::currentVersion) +
-                "\n\nThis app will now be terminated."
-            )();
-            Process::ReturnToHomeMenu();
-        }
-        PluginMenu *menu = new PluginMenu("Main Menu", MAJOR_VERSION, MINOR_VERSION, REVISION_VERSION, about, 1);
+
+        PluginMenu *menu = new PluginMenu("Main Menu", VER_MAJOR, VER_MINOR, VER_MICRO, about, false);
 
         menu->SynchronizeWithFrame(true);
         menu->ShowWelcomeMessage(false);
-        if (ENABLE_DEBUG) OSD::Notify(Utils::Format("Build " STRING_BUILD));
+        //if (ENABLE_DEBUG) OSD::Notify(Utils::Format("Build " STRING_BUILD));
         // menu->SetHexEditorState(false);
         menu->OnOpening = menuOpen;
         menu->OnClosing = menuClose;
@@ -487,7 +481,10 @@ namespace CTRPluginFramework {
 
         Process::exceptionCallback = Exception::Handler;
 
-        InitMenu(*menu);
+        if (g_region != REGION_NONE && g_region != REGION_MAX)
+            InitMenu(*menu);
+        else
+            InitMenuFallback(*menu);
         menu->Run();
         delete menu;
         return 0;

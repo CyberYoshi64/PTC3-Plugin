@@ -103,10 +103,11 @@ $(OUTPUT).3gx : $(OFILES)
 
 #---------------------------------------------------------------------------------
 .PRECIOUS: %.elf
-%.3gx: %.elf
+
+%.3gx: .WAIT %.elf
 #---------------------------------------------------------------------------------
 	@echo creating $(notdir $@)
-	@3gxtool -s $(word 1, $^) $(TOPDIR)/$(PLGINFO) $@
+	@3gxtool -d -s $(word 1, $^) $(TOPDIR)/$(PLGINFO) $@
 
 -include $(DEPENDS)
 

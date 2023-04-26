@@ -25,6 +25,12 @@ To do:
 
 A sample of v0.0.5 can be found in [here](https://cyberyoshi64.github.io/assets/data/CY64-CYX-v0.0.5.zip).
 
+## Other sources
+
+- [CTGP-7 Open Source Project](https://github.com/PabloMK7/CTGP-7_Open_Source)
+- [Vapecord-ACNL-Plugin](https://github.com/RedShyGuy/Vapecord-ACNL-Plugin)
+
+
 ## Building
 
 Requirements:

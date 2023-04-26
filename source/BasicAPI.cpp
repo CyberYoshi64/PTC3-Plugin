@@ -14,10 +14,10 @@ namespace CTRPluginFramework {
         Directory dir(args[1]);
         StringVector vec;
         data = Utils::Format("%d",dir.ListDirectories(vec));
-        for (u32 i=0; i<vec.size(); i++) data += ":/"+vec[i];
+        for (u32 i=0; i<vec.size(); i++) data += "\t/"+vec[i];
         vec.clear();
-        data += Utils::Format(":%d",dir.ListFiles(vec));
-        for (u32 i=0; i<vec.size(); i++) data += ":*"+vec[i];
+        data += Utils::Format("\t%d",dir.ListFiles(vec));
+        for (u32 i=0; i<vec.size(); i++) data += "\t*"+vec[i];
         vec.clear();
         dir.Close();
         return 1;
@@ -118,7 +118,7 @@ namespace CTRPluginFramework {
     }
     
     int BasicAPI::ParseClipAPI(std::string& data) {
-        if (data.compare(0, 4, "CYX:")!=0) return 1;
+        if (data.compare(0, 4, "CYX\x1f")!=0) return 1;
         if (!Entries.size()) {
             data = "Error: Bad API state";
             return 0;
@@ -127,7 +127,7 @@ namespace CTRPluginFramework {
         StringVector args;
         u32 index = 4, newidx;
         while (index && index < data.length()){
-            newidx = data.find(":", index);
+            newidx = data.find("\x1f", index);
             args.push_back(data.substr(index, newidx-index));
             index = ++newidx;
         }

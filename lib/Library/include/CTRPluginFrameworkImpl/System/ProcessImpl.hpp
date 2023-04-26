@@ -4,6 +4,7 @@
 #include "3ds.h"
 #include "CTRPluginFrameworkImpl/System/Kernel.hpp"
 #include "CTRPluginFramework/System/Mutex.hpp"
+#include "CTRPluginFramework/System/Process.hpp"
 #include <vector>
 
 namespace CTRPluginFramework
@@ -101,6 +102,12 @@ namespace CTRPluginFramework
         static void         EnableExceptionHandlers();
         static void         DisableExceptionHandlers();
         static void         ReturnFromException(CpuRegisters* regs) NAKED NORETURN;
+
+        static Process::ProcessEventCallback processEventCallback;
+        static void UserProcessEventCallback(Process::Event event) {
+            if (processEventCallback)
+                processEventCallback(event);
+        }
     };
 }
 

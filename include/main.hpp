@@ -7,16 +7,20 @@
 #include "commonFuncs.hpp"
 #include <csvc.h>
 
-#include "_Utils.hpp"
+#include "Utils.hpp"
 #include "PetitCYX.hpp"
 #include "ExceptionHandler.hpp"
 #include "Misc.hpp"
+#include "MemDispOSD.hpp"
+#include "save.hpp"
+
+#include "Experimental.hpp"
 
 #ifndef COMMIT_HASH
 #define COMMIT_HASH "00000000"
 #endif
 #ifndef BUILD_DATE
-#define BUILD_DATE "0000000000"
+#define BUILD_DATE "(unknown)"
 #endif
 
 #define ENABLE_DEBUG        false
@@ -30,13 +34,15 @@
 #define DEBUGLOG_FILE       RESOURCES_PATH "/debug.log"
 
 #define NUMBER_FILE_OP      9
-#define MAJOR_VERSION       0
-#define MINOR_VERSION       0
-#define REVISION_VERSION    5
+#define VER_MAJOR           0
+#define VER_MINOR           0
+#define VER_MICRO           6
+#define VER_REVISION        1
 #define STRINGIFY(x)        #x
 #define TOSTRING(x)         STRINGIFY(x)
-#define STRING_VERSION      TOSTRING(MAJOR_VERSION) "." TOSTRING(MINOR_VERSION) "." TOSTRING(REVISION_VERSION)
+#define STRING_VERSION      TOSTRING(VER_MAJOR) "." TOSTRING(VER_MINOR) "." TOSTRING(VER_MICRO) "-" TOSTRING(VER_REVISION)
 #define STRING_BUILD        BUILD_DATE "-" COMMIT_HASH
+#define VER_INTEGER         ((VER_MAJOR&0xFF)<<24|(VER_MINOR&0xFF)<<16|(VER_MICRO&0xFF)<<8|(VER_REVISION&0xFF))
 
 #define WRITEREMOTE32(addr, val) (*(u32 *)(PA_FROM_VA_PTR(addr)) = (val))
 
@@ -74,6 +80,7 @@ typedef u32(*fsu16u16)(u16*, u16*);
 typedef u32(*fsu16u64)(u16*, u64);
 typedef u32(*fsu32u16)(u32, u16*);
 
+// svcBreak() with r0-r2 set with defined arguments
 extern "C" void customBreak(u32 a1, u32 a2, u32 a3);
 
 typedef struct miniHeap_s {
@@ -96,6 +103,7 @@ namespace CTRPluginFramework {
     extern LightLock openLock;
     extern bool canSaveRedirect;
     extern Region g_region;
+    extern u32 ___pluginFlags;
     extern char g_regionString[];
     void mcuSetSleep(bool on);
     int strlen16(u16* str);
@@ -103,12 +111,25 @@ namespace CTRPluginFramework {
     int Obsoleted_5_0_fsSetSaveDataSecureValue(u64 a1, u32 a2, u32 a3, u8 a4);
     int fsSetSaveDataSecureValue(u64 a1, u32 a2, u64 a3, u8 a4);
 }
-#if ENABLE_DEBUG == true
+#if ENABLE_DEBUG
 #define	DEBUG(str, ...) {u8* cpybuf = new u8[0x300]; sprintf((char*)cpybuf, str, ##__VA_ARGS__); OnionSave::debugAppend((char*)cpybuf); delete[] cpybuf;}
 #define DEBUGU16(str) {std::string out = "\""; Process::ReadString((u32)str, out, 0x200, StringFormat::Utf16); out += "\""; OnionSave::debugAppend(out);}
 #else
 #define	DEBUG(str, ...) {}
 #define DEBUGU16(str) {}
 #endif
+
+enum PluginFlags {
+    PLGFLG_EXPERIMENTS  = BIT(31), // An experiment was used
+    PLGFLG_SPOOFED_VER  = BIT(30), // Version was spoofed
+    PLGFLG_CYX_API      = BIT(24), // CYX API was used
+    PLGFLG_PANIC        = BIT(0), // Panic
+};
+
+#define _FILENAME   strrchr("/" __FILE__, '/')+1
+
+#define PLGFLAGS  ___pluginFlags
+#define PLGSET(n) {PLGFLAGS|=(n);}
+#define PLGGET(n) (PLGFLAGS&(n))
 
 #endif

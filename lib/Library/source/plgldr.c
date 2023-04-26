@@ -325,4 +325,8 @@ void    PLGLDR__Reply(s32 event)
     }
     else if (event == PLG_ABOUT_TO_EXIT)
         svcExitThread();
+    else
+    {
+        __strex__(plgEvent, PLG_OK);
+    }
 }

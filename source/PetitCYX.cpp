@@ -88,40 +88,45 @@ namespace CTRPluginFramework {
     }
     
     // Function stub
-    int CYX::stubBASICFunction(void* ptr, u32 selfPtr, BASICGenericVariable* outv, u8 outc, void* a4, u8 argc, BASICGenericVariable* argv){
+    int CYX::stubBASICFunction(void* ptr, u32 selfPtr, BASICGenericVariable* outv, u32 outc, void* a4, u32 argc, BASICGenericVariable* argv){
         DEBUG("CYX: Function %08X (%x/%x) %p", selfPtr, argc, outc, a4);
         return 0;
     }
 
-    int CYX::clipboardFuncHook(void* ptr, u32 selfPtr, BASICGenericVariable* outv, u8 outc, void* a4, u8 argc, BASICGenericVariable* argv){
+    int CYX::clipboardFuncHook(void* ptr, u32 selfPtr, BASICGenericVariable* outv, u32 outc, void* a4, u32 argc, BASICGenericVariable* argv){
         BASICGenericVariable* var; int type;
-        bool outToClip = true; int apiOut;
-        std::string newClipData;
+        bool outToClip = (argc==1); int apiOut = 1;
+        std::string newClipData = "";
+
+        newClipData = Utils::Format("OUT %p (%d), IN %p (%d)", outv, outc, argv, argc);
+        OSD::Notify(newClipData);
+        
+        newClipData = "";
         for (u32 i=0; i<argc; i++){
-            newClipData = ""; var = argv++;
+            var = argv++;
             type = getSBVariableType(var->type);
             if (type != VARTYPE_NONE){
+                if (i) newClipData += "\x1f";
                 switch (type){
                     case VARTYPE_STRING: UTF16toUTF8(newClipData, (u16*)var->data2, var->data); break;
-                    case VARTYPE_INT: newClipData = Utils::Format("&H%08X", var->data); break;
-                    case VARTYPE_DOUBLE: newClipData = Utils::ToString(*(double*)&var->data,4); break;
+                    case VARTYPE_INT: newClipData += Utils::Format("%d", var->data); break;
+                    case VARTYPE_DOUBLE: newClipData += Utils::ToString(*(double*)&var->data,4); break;
                 }
-                apiOut = 1;
                 if (strlen_utf8(newClipData) > 1048576) return 3;
-                if (provideClipAPI) apiOut = BasicAPI::ParseClipAPI(newClipData);
-                if (newClipData.length() > 1048576) newClipData.resize(1048576);
-                if (outToClip || apiOut == 0){
-                    Process::WriteString((u32)&editorInstance->clipboardData, newClipData, StringFormat::Utf16);
-                    editorInstance->clipboardLength = strlen_utf8(newClipData);
-                    outToClip = false;
-                }
-                switch (apiOut){
-                    case 0: case 1: break;
-                    case 2: return 1; // Silent exit
-                    case 3: return 2; // Non-fatal quit
-                    default: return 3; // Fatal quit
-                }
             }
+        }
+        OSD::Notify(newClipData);
+        if (provideClipAPI) apiOut = BasicAPI::ParseClipAPI(newClipData);
+        if (newClipData.length() > 1048576) newClipData.resize(1048576);
+        if (outToClip || apiOut == 0){
+            Process::WriteString((u32)&editorInstance->clipboardData, newClipData, StringFormat::Utf16);
+            editorInstance->clipboardLength = strlen_utf8(newClipData);
+        }
+        switch (apiOut){
+            case 0: case 1: break;
+            case 2: return 1; // Silent exit
+            case 3: return 2; // Non-fatal quit
+            default: return 3; // Fatal quit
         }
         for (u32 i=0; i<outc; i++){
             var = outv++;

@@ -18,6 +18,17 @@ namespace CTRPluginFramework
     {
     public:
 
+        ///< Event triggered when the state of the process changes.
+        enum class Event {
+            EXIT, ///< The app is closing.
+            SLEEP_ENTER, ///< The app is entering sleep mode (lid closed).
+            SLEEP_EXIT, ///< The app is exiting sleep mode (lid opened).
+            HOME_ENTER, ///< The app is going to home menu.
+            HOME_EXIT, ///< The app is returning from home menu.
+            SWAP_ENTER, ///< The app is going to home menu and swapping.
+            SWAP_EXIT, ///< The app is restored from swap and returning from home menu.
+        };
+
         /**
          * \brief Get current process handle (already open, don't close it)
          * \return Return current process handle (already open, don't close it)
@@ -336,6 +347,15 @@ namespace CTRPluginFramework
          * @brief Gets the main thread TLS address.
          */
         static u32 GetMainThreadTLS();
+
+        using ProcessEventCallback = void(*)(Event event);
+
+        /**
+         * @brief Sets the callback that will be called on a process event (see Process::Event).
+         *
+         * @param callback The callback to be called or nullptr to disable.
+         */
+        static void SetProcessEventCallback(ProcessEventCallback callback);
     };
 }
 

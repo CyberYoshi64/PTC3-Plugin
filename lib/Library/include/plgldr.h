@@ -33,6 +33,8 @@ typedef enum
     PLG_SLEEP_EXIT = 2,
     PLG_ABOUT_TO_SWAP = 3,
     PLG_ABOUT_TO_EXIT = 4,
+    PLG_HOME_ENTER = 5,
+    PLG_HOME_EXIT = 6,
 }   PLG_Event;
 
 typedef struct

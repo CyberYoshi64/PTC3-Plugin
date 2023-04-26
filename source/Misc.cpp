@@ -63,6 +63,7 @@ namespace CTRPluginFramework {
             break;
         case 1:
             kbd.IsHexadecimal(true);
+            PLGSET(PLGFLG_SPOOFED_VER);
             if (kbd.Open(newVersion, oldVersion)==0) *(u32*)offsets[g_region] = newVersion;
             break;
         case -1:
@@ -131,11 +132,14 @@ namespace CTRPluginFramework {
                     CYX::DiscardAPIUse();
                 } else {
                     rtEnableHook(&CYX::clipboardFunc);
+                    PLGSET(PLGFLG_EXPERIMENTS);
                 }
                 hook = !hook;
                 break;
             case 1:
                 CYX::SetAPIClipboardAvailability(api = !api & hook);
+                PLGSET(PLGFLG_EXPERIMENTS);
+                PLGSET(PLGFLG_CYX_API);
                 break;
             default:
                 return;
@@ -144,6 +148,7 @@ namespace CTRPluginFramework {
     }
     void grpCorruptor(MenuEntry* entry){
         if (entry->IsActivated()){
+            PLGSET(PLGFLG_EXPERIMENTS);
             u32 o = Utils::Random(0, 512*512 - 4096);
             for (u16 i=0; i<4096; i++){
                 CYX::GraphicPage->grp[0].dispBuf[o+i] = (u16)Utils::Random();
@@ -167,6 +172,7 @@ namespace CTRPluginFramework {
     }
     void grpFixMe(MenuEntry* entry){
         if (entry->IsActivated()){
+            PLGSET(PLGFLG_EXPERIMENTS);
             u32 dspX = 0xBB000000, dspY = 0x3B000000;
             for (u8 i=0; i<6; i++){
                 CYX::GraphicPage->grp[i].displayedFormat = 2;

@@ -76,7 +76,7 @@ void abort(void)
     if (CTRPluginFramework::System::OnAbort)
         CTRPluginFramework::System::OnAbort();
 
-    CTRPluginFramework::Color c(255, 69, 0);
+    CTRPluginFramework::Color c(255, 96, 0);
     CTRPluginFramework::ScreenImpl::Top->Flash(c);
     CTRPluginFramework::ScreenImpl::Bottom->Flash(c);
 
@@ -136,9 +136,6 @@ namespace CTRPluginFramework
 {
     void WEAK_SYMBOL    PatchProcess(FwkSettings& settings) {}
     void WEAK_SYMBOL    EarlyCallback(u32* savedInstructions);
-    void WEAK_SYMBOL    OnProcessExit(void) {}
-    void WEAK_SYMBOL    OnPluginToSwap(void) {}
-    void WEAK_SYMBOL    OnPluginFromSwap(void) {}
 
     namespace Heap
     {
@@ -357,29 +354,40 @@ namespace CTRPluginFramework
         svcCloseHandle(g_keepEvent);
 
         Handle memLayoutChanged;
+        bool isSleeping = false;
 
         svcControlProcess(CUR_PROCESS_HANDLE, PROCESSOP_GET_ON_MEMORY_CHANGE_EVENT, (u32)&memLayoutChanged, 0);
         while (true)
         {
-            if (svcWaitSynchronization(memLayoutChanged, 100000000ULL) == 0x09401BFE) // 0.1s
+            if (svcWaitSynchronization(memLayoutChanged, 500000000ULL) == 0x09401BFE) // 0.5s
             {
                 s32 event = PLGLDR__FetchEvent();
 
-                if (event == PLG_SLEEP_ENTRY)
+                if (event == PLG_SLEEP_ENTRY || event == PLG_HOME_ENTER)
                 {
-                    SoundEngineImpl::NotifyAptEvent(APT_HookType::APTHOOK_ONSLEEP);
-                    SystemImpl::AptStatus |= BIT(6);
+                    ProcessImpl::UserProcessEventCallback(event == PLG_SLEEP_ENTRY ? Process::Event::SLEEP_ENTER : Process::Event::HOME_ENTER);
+                    if (!isSleeping) {
+                        SystemImpl::AptStatus |= BIT(6);
+                        SoundEngineImpl::NotifyAptEvent(event == PLG_SLEEP_ENTRY ? APT_HookType::APTHOOK_ONSLEEP : APT_HookType::APTHOOK_ONSUSPEND);
+                        ncsndExit();
+                        isSleeping = true;
+                    }
                     PLGLDR__Reply(event);
                 }
-                else if (event == PLG_SLEEP_EXIT)
+                else if (event == PLG_SLEEP_EXIT || event == PLG_HOME_EXIT)
                 {
-                    SystemImpl::WakeUpFromSleep();
-                    SoundEngineImpl::NotifyAptEvent(APT_HookType::APTHOOK_ONWAKEUP);
+                    ProcessImpl::UserProcessEventCallback(event == PLG_SLEEP_EXIT ? Process::Event::SLEEP_EXIT : Process::Event::HOME_EXIT);
+                    if (isSleeping) {
+                        SystemImpl::WakeUpFromSleep();
+                        ncsndInit(false);
+                        SoundEngineImpl::NotifyAptEvent(event == PLG_SLEEP_EXIT ? APT_HookType::APTHOOK_ONWAKEUP : APT_HookType::APTHOOK_ONRESTORE);
+                        isSleeping = false;
+                    }
                     PLGLDR__Reply(event);
                 }
                 else if (event == PLG_ABOUT_TO_SWAP)
                 {
-                    OnPluginToSwap();
+                    ProcessImpl::UserProcessEventCallback(Process::Event::SWAP_ENTER);
 
                     SoundEngineImpl::NotifyAptEvent(APT_HookType::APTHOOK_ONSUSPEND);
 
@@ -406,11 +414,11 @@ namespace CTRPluginFramework
 
                     SoundEngineImpl::NotifyAptEvent(APT_HookType::APTHOOK_ONRESTORE);
 
-                    OnPluginFromSwap();
+                    ProcessImpl::UserProcessEventCallback(Process::Event::SWAP_EXIT);
                 }
                 else if (event == PLG_ABOUT_TO_EXIT)
                 {
-                    OnProcessExit();
+                    ProcessImpl::UserProcessEventCallback(Process::Event::EXIT);
                     ProcessImpl::SignalExit();
 
                     SoundEngineImpl::NotifyAptEvent(APT_HookType::APTHOOK_ONEXIT);

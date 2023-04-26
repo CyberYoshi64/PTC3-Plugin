@@ -38,6 +38,8 @@ namespace CTRPluginFramework
     LightEvent  ProcessImpl::waitForExitEvent;
     u32         ProcessImpl::exceptionCount = 0;
 
+    Process::ProcessEventCallback ProcessImpl::processEventCallback = nullptr;
+
     void    ProcessImpl::Initialize(void)
     {
         char    kproc[0x100] = {0};

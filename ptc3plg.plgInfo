@@ -6,9 +6,9 @@ Version: # Plugin version
     Revision: 0
 
 Targets: # Low TitleId of games which are compatibles with this plugin (empty for all)
-    - 0x00117200 # JPN
-    - 0x0016DE00 # USA
-    - 0x001A1C00 # EUR
+    #- 0x00117200 # JPN
+    #- 0x0016DE00 # USA
+    #- 0x001A1C00 # EUR
 
 Title: SmileBASIC extension
 
@@ -18,3 +18,4 @@ Description: |
   For use with SmileBASIC
   
 Compatibility: Any
+MemorySize: 10MiB

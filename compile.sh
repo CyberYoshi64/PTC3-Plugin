@@ -19,4 +19,4 @@ if [ ! -f cookbook.mk ]; then
 fi
 
 make -f cookbook.mk clean
-make -f cookbook.mk $1
+make -f cookbook.mk $1 -j4

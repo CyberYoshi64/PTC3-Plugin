@@ -116,13 +116,13 @@ namespace CTRPluginFramework {
             screenshots (Nintendo 3DS Camera).
         */
         if (arch[0] == '$') {
-            DEBUG("Rejected \"%s\"\n", newbuf, (u32)(handle >> 32), (u32)handle);
+            DEBUG("Rejected \"%s\" (%08X%08X)\n", newbuf, (u32)(handle >> 32), (u32)handle);
             return;
         }
         if (existArchiveu8(arch) == -1) {
             int hndpos = existArchiveHnd(handle);
             if (hndpos == -1) {
-                if ((u32)(handle) > 0x100000 && (u32)(handle) < 0x20000000) { // rom archives doesn't have a fsarchive handle, it has a pointer in its place.
+                if (true){ //if ((u32)(handle) > 0x100000 && (u32)(handle) < 0x20000000) { // rom archives doesn't have a fsarchive handle, it has a pointer in its place.
                     DEBUG("Added \"%s\" as romfs archive!\n", newbuf);
                     if (save.numEntries >= MAX_SAVE_ENTRIES) {
                         DEBUG("Archive buffer is full.\n");
