@@ -1,19 +1,25 @@
 #include "PetitCYX.hpp"
 #include "BasicAPI.hpp"
-#include "main.hpp"
 
 namespace CTRPluginFramework {
     u32 CYX::currentVersion = 0;
+    std::tuple<u32, u32*, u32> CYX::soundThreadsInfo[1] = { std::tuple<u32, u32*, u32>(0xFFFFFFFF, nullptr, 0) };
     BASICEditorData* CYX::editorInstance = NULL;
     BASICGRPStructs* CYX::GraphicPage = NULL;
     BASICTextPalette* CYX::textPalette = NULL;
+    BASICActiveProject* CYX::activeProject = NULL;
     RT_HOOK CYX::clipboardFunc = {0};
     RT_HOOK CYX::basControllerFunc = {0};
     RT_HOOK CYX::scrShotStub = {0};
+    Hook CYX::soundHook;
     char CYX::introText[512] = "SmileBASIC-CYX " STRING_VERSION "\nBuild " STRING_BUILD "\n\n2022-2023 CyberYoshi64\n\n";
-    char CYX::bytesFreeText[128] = " bytes free\n\n";
+    char CYX::bytesFreeText[32] = " bytes free\n\n";
     bool CYX::provideClipAPI = false;
     bool CYX::wasClipAPIused = false;
+    u32 CYX::cyxApiOutType = 0;
+    string16 CYX::cyxApiTextOut;
+    double CYX::cyxApiFloatOut = 0;
+    s32 CYX::cyxApiIntOut = 0;
 
     void CYX::Initialize(void) {
         switch (g_region) {
@@ -22,8 +28,8 @@ namespace CTRPluginFramework {
                 editorInstance = (BASICEditorData*)JPN_EDITORDATA;
                 GraphicPage = (BASICGRPStructs*)JPN_GRPSTRUCTS;
                 textPalette = (BASICTextPalette*)JPN_CONTXTPAL;
-                rtInitHook(&basControllerFunc, JPN_BASICCONTROLLERFUNC, (u32)CYX::stubBASICFunction);
-                rtInitHook(&clipboardFunc, JPN_CLIPBOARDFUNC, (u32)CYX::clipboardFuncHook);
+                activeProject = (BASICActiveProject*)JPN_ACTPROJ_STR;
+                rtInitHook(&basControllerFunc, JPN_BASICCONTROLLERFUNC, (u32)CYX::controllerFuncHook);
                 *(char**)JPN_BOOTTEXT = introText;
                 *(char**)(JPN_BOOTTEXT+4) = bytesFreeText;
                 break;
@@ -32,8 +38,8 @@ namespace CTRPluginFramework {
                 editorInstance = (BASICEditorData*)USA_EDITORDATA;
                 GraphicPage = (BASICGRPStructs*)USA_GRPSTRUCTS;
                 textPalette = (BASICTextPalette*)USA_CONTXTPAL;
-                rtInitHook(&basControllerFunc, USA_BASICCONTROLLERFUNC, (u32)CYX::stubBASICFunction);
-                rtInitHook(&clipboardFunc, USA_CLIPBOARDFUNC, (u32)CYX::clipboardFuncHook);
+                activeProject = (BASICActiveProject*)USA_ACTPROJ_STR;
+                rtInitHook(&basControllerFunc, USA_BASICCONTROLLERFUNC, (u32)CYX::controllerFuncHook);
                 *(char**)USA_BOOTTEXT = introText;
                 *(char**)(USA_BOOTTEXT+4) = bytesFreeText;
                 break;
@@ -42,8 +48,11 @@ namespace CTRPluginFramework {
                 editorInstance = (BASICEditorData*)EUR_EDITORDATA;
                 GraphicPage = (BASICGRPStructs*)EUR_GRPSTRUCTS;
                 textPalette = (BASICTextPalette*)EUR_CONTXTPAL;
-                rtInitHook(&basControllerFunc, EUR_BASICCONTROLLERFUNC, (u32)CYX::stubBASICFunction);
-                rtInitHook(&clipboardFunc, EUR_CLIPBOARDFUNC, (u32)CYX::clipboardFuncHook);
+                activeProject = (BASICActiveProject*)EUR_ACTPROJ_STR;
+                rtInitHook(&basControllerFunc, EUR_BASICCONTROLLERFUNC, (u32)CYX::controllerFuncHook);
+                /*soundHook.InitializeForMitm(0x12A318, (u32)SoundThreadHook);
+                soundHook.SetFlags(USE_LR_TO_RETURN|MITM_MODE|EXECUTE_OI_AFTER_CB);
+                soundHook.Enable();*/
                 *(char**)EUR_BOOTTEXT = introText;
                 *(char**)(EUR_BOOTTEXT+4) = bytesFreeText;
                 break;
@@ -75,25 +84,130 @@ namespace CTRPluginFramework {
     int CYX::scrShotStubFunc() {
         return 0;
     }
-    int CYX::getSBVariableType(u32 rawType){
+    void CYX::CYXAPI_Out(s32 i){
+        cyxApiOutType = 2;
+        cyxApiTextOut.clear();
+        cyxApiIntOut = i;
+    }
+    void CYX::CYXAPI_Out(double f){
+        cyxApiOutType = 1;
+        cyxApiTextOut.clear();
+        cyxApiFloatOut = f;
+    }
+    void CYX::CYXAPI_Out(const char* s){
+        cyxApiOutType = 0;
+        cyxApiTextOut.clear();
+        Utils::ConvertUTF8ToUTF16(cyxApiTextOut, s);
+    }
+    void CYX::CYXAPI_Out(const std::string& s){
+        CYX::cyxApiTextOut.clear();
+        Utils::ConvertUTF8ToUTF16(CYX::cyxApiTextOut, s);
+    }
+
+    s32 CYX::argGetInteger(BASICGenericVariable* arg){
+        if (!arg) return 0;
+        if (!arg->type) return 0;
+        switch (arg->type){
+            case SBVARRAW_INTEGER:
+                return *(s32*)&arg->data;
+            case SBVARRAW_DOUBLE:
+                return (s32)(*(double*)&arg->data);
+            case SBVARRAW_STRING:
+                CYXAPI_Out("W: Can't convert string to s32"); break;
+        }
+        return 0;
+    }
+    void CYX::argGetString(string16& out, BASICGenericVariable* arg){
+        out.clear();
+        if (!arg) return;
+        if (!arg->type) return;
+        switch (arg->type){
+            case SBVARRAW_INTEGER:
+                Utils::ConvertUTF8ToUTF16(out, Utils::Format("%ld",*(s32*)&arg->data));
+                break;
+            case SBVARRAW_DOUBLE:
+                Utils::ConvertUTF8ToUTF16(out, Utils::ToString(*(double*)&arg->data));
+                break;
+            case SBVARRAW_STRING:
+                out.append((u16*)arg->data2, arg->data);
+                break;
+        }
+    }
+    double CYX::argGetFloat(BASICGenericVariable* arg){
+        if (!arg) return 0;
+        if (!arg->type) return 0;
+        switch (arg->type){
+            case SBVARRAW_INTEGER:
+                return *(s32*)&arg->data;
+            case SBVARRAW_DOUBLE:
+                return *(double*)&arg->data;
+            case SBVARRAW_STRING:
+                CYXAPI_Out("W: Can't convert string to s32"); break;
+        }
+        return 0;
+    }
+    u8 CYX::getSBVariableType(u32 rawType){
         switch(rawType){
             case SBVARRAW_INTEGER: return VARTYPE_INT;
             case SBVARRAW_DOUBLE: return VARTYPE_DOUBLE;
             case SBVARRAW_STRING: return VARTYPE_STRING;
-            case SBVARRAW_INTARRAY: return VARTYPE_INTARRAY;
             case SBVARRAW_ARRAY: return VARTYPE_DBLARRAY;
             //case SBVARRAW_STRARRAY: return VARTYPE_STRARRAY;
         }
         return VARTYPE_NONE;
     }
-    
     // Function stub
     int CYX::stubBASICFunction(void* ptr, u32 selfPtr, BASICGenericVariable* outv, u32 outc, void* a4, u32 argc, BASICGenericVariable* argv){
         DEBUG("CYX: Function %08X (%x/%x) %p", selfPtr, argc, outc, a4);
         return 0;
     }
+    int CYX::controllerFuncHook(void* ptr, u32 selfPtr, BASICGenericVariable* outv, u32 outc, void* a4, u32 argc, BASICGenericVariable* argv){
+        u8 type; bool isCYX=false;
+        if ((argc < 1) || (outc != 1)) return 3;
+        type = getSBVariableType(argv->type);
+        if (type != VARTYPE_NONE){
+            switch (type){
+                case VARTYPE_STRING: isCYX=true; break;
+                case VARTYPE_INT:
+                    if (argv->data != 0) return 3;
+                    break;
+                case VARTYPE_DOUBLE:
+                    if ((int)(*(double*)&argv->data) != 0) return 3;
+                    break;
+            }
+        }
+        if (isCYX){
+            CYX::cyxApiTextOut.clear();
+            int res=BasicAPI::Parse(argv, argc);
+            switch (res){
+                case 0: case 1: break;
+                case 2: return 1; // Silent exit
+                case 3: return 2; // Non-fatal quit
+                default: return 3; // Fatal quit
+            }
+            switch (cyxApiOutType){
+            case 0:
+                outv->type = SBVARRAW_STRING;
+                outv->data = cyxApiTextOut.size();
+                outv->data2 = (void*)cyxApiTextOut.c_str();
+                break;
+            case 1:
+                outv->type = SBVARRAW_DOUBLE;
+                *(double*)&outv->data = cyxApiFloatOut;
+                break;
+            case 2:
+                outv->type = SBVARRAW_INTEGER;
+                outv->data = cyxApiIntOut;
+                break;
+            }
+        } else {
+            outv->type = SBVARRAW_INTEGER;
+            outv->data = 0x10000001;
+        }
+        return 0;
+    }
 
-    int CYX::clipboardFuncHook(void* ptr, u32 selfPtr, BASICGenericVariable* outv, u32 outc, void* a4, u32 argc, BASICGenericVariable* argv){
+    /*int CYX::clipboardFuncHook(void* ptr, u32 selfPtr, BASICGenericVariable* outv, u32 outc, void* a4, u32 argc, BASICGenericVariable* argv){
         BASICGenericVariable* var; int type;
         bool outToClip = (argc==1); int apiOut = 1;
         std::string newClipData = "";
@@ -136,12 +250,16 @@ namespace CTRPluginFramework {
             var->data2 = &editorInstance->clipboardData;
         }
         return 0;
-    }
+    }*/
 
     // Editor strings are merely buffers, so the string has to be crafted
     // with a given length parameter.
     void CYX::UTF16toUTF8(std::string& out, u16* str, u32 len){
-        string16 s16 = str; s16.resize(len);
+        string16 s16; s16.append(str, len);
+        Utils::ConvertUTF16ToUTF8(out, s16);
+    }
+    void CYX::UTF16toUTF8(std::string& out, u16* str){
+        string16 s16 = str;
         Utils::ConvertUTF16ToUTF8(out, s16);
     }
 
@@ -215,7 +333,6 @@ namespace CTRPluginFramework {
         if (slot >= 4) return "";
         std::string f;
         UTF16toUTF8(f, editorInstance->programSlot[slot].file_name, editorInstance->programSlot[slot].file_name_len);
-        if (f.length()==0) f = "__NO_NAME__";
         return f;
     }
 
@@ -253,4 +370,39 @@ namespace CTRPluginFramework {
         }
         return (c);
     }
+
+    void CYX::SoundThreadHook(){
+        svcGetThreadId(&std::get<0>(soundThreadsInfo[0]), CUR_THREAD_HANDLE);
+        std::get<1>(soundThreadsInfo[0]) = (u32*)getThreadLocalStorage();
+        ctrpfHook__ExecuteOriginalFunction();
+    }
+
+	void CYX::playMusicAlongCTRPF(bool playMusic) {
+		static bool isPlayMusic = false;
+		//if (forceDisableSndOnPause)
+		//	playMusic = false;
+		if (isPlayMusic == playMusic) return;
+		isPlayMusic = playMusic;
+		static u32 tlsBackup;
+		static s32 prioBackup;
+        u32 soundThreadID = std::get<0>(soundThreadsInfo[0]);
+        u32* soundThreadTls = std::get<1>(soundThreadsInfo[0]);
+        Handle soundThreadHandle; bool perf=true;
+        if (R_FAILED(svcOpenThread(&soundThreadHandle, CUR_PROCESS_HANDLE, soundThreadID))) perf=false;
+        if (soundThreadID == 0xFFFFFFFF) perf=false;
+        if (soundThreadHandle == 0) perf=false;
+        if (perf){
+            if (playMusic) {
+                tlsBackup = *soundThreadTls;
+                *soundThreadTls = THREADVARS_MAGIC;
+                svcGetThreadPriority(&prioBackup, soundThreadHandle);
+                svcSetThreadPriority(soundThreadHandle, FwkSettings::Get().ThreadPriority - 1);
+            }
+            else {
+                *soundThreadTls = tlsBackup;
+                svcSetThreadPriority(soundThreadHandle, prioBackup);
+            }
+        }
+        svcCloseHandle(soundThreadHandle);
+	}
 }

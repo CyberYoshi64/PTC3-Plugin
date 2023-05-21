@@ -17,6 +17,14 @@
 #define USA_CONTXTPAL    0x1D027CC
 #define JPN_CONTXTPAL    0x1D027CC
 
+#define EUR_HELPPAGE_PAL    0x15E8E4
+#define USA_HELPPAGE_PAL    0x15E78C
+#define JPN_HELPPAGE_PAL    0x15E774
+
+#define EUR_HELPPAGE_PAL    0x15E8E4
+#define USA_HELPPAGE_PAL    0x15E78C
+#define JPN_HELPPAGE_PAL    0x15E774
+
 #define EUR_GRPSTRUCTS   0x1D02A4C
 #define USA_GRPSTRUCTS   0x1D02A4C
 #define JPN_GRPSTRUCTS   0x1D02A4C
@@ -25,9 +33,21 @@
 #define USA_CLIPBOARDFUNC   0x18A2D8
 #define JPN_CLIPBOARDFUNC   0x18A9D0
 
+#define EUR_CODE_PADDING    0x2C73E0
+#define USA_CODE_PADDING    0x2C7F00
+#define JPN_CODE_PADDING    0x2C7DB0
+
+#define EUR_CODEPAD_LEN     3104
+#define USA_CODEPAD_LEN     256
+#define JPN_CODEPAD_LEN     592
+
 // #define EUR_DSPTHREADFUNC   0x000000 // I don't know, which
 // #define USA_DSPTHREADFUNC   0x000000 // function to exactly
 // #define JPN_DSPTHREADFUNC   0x000000 // look for...
+
+// #define EUR_DSPTHREADFUNC2  0x000000 // I don't know, which
+// #define USA_DSPTHREADFUNC2  0x000000 // function to exactly
+// #define JPN_DSPTHREADFUNC2  0x000000 // look for...
 
 #define EUR_ACTPROJ_STR    0x1B14B00
 #define USA_ACTPROJ_STR    0x1B14B00

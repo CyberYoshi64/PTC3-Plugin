@@ -749,7 +749,7 @@ namespace CTRPluginFramework
 
             int posY = 30, posYY = 50;
             Renderer::DrawString("CTRPluginFramework Build:",  30, posY, blank);
-            Renderer::DrawLine(30, posY, 28 * 6, blank); posY += 10;
+            Renderer::DrawLine(30, posY, 25 * 6, blank); posY += 10;
             Renderer::DrawString("Version: ",  30, posY, blank);
             Renderer::DrawString(tagVersion,  100, posYY, blank);
             Renderer::DrawString("Commit: ",  30, posY, blank);

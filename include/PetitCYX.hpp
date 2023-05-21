@@ -7,6 +7,7 @@
 namespace CTRPluginFramework {
 
     #define CYX__COLORVER_NOCOLOR   1
+    #define THREADVARS_MAGIC  0x21545624 // !TV$
 
     typedef struct BASICTextPalette_s { // EUR @ 0x01D027CC
         u32 conClear; u32 conBlack;
@@ -38,7 +39,8 @@ namespace CTRPluginFramework {
         u32 displayedFormat; // Shown GSP format, should be 0x2 (RGBA5551)
         u32 __unk__sizeX; u32 __unk__sizeY;
         float dispScaleY; float dispScaleX; // Not a standard float/double...
-        u32 unkDbl1[2]; u32 unk8[6];
+        u32 unkDbl1[2]; u32 unk8[5];
+        u32 isResourceProtected; // Used by "Protected Resource" error
     } PACKED BASICGraphicPage;
     
     typedef struct BASICGRPStructs_s { // EUR @ 0x01D02A4C
@@ -102,8 +104,8 @@ namespace CTRPluginFramework {
     #define SBVARRAW_INTEGER    0x305654
     #define SBVARRAW_DOUBLE     0x3056B8
     #define SBVARRAW_STRING     0x30571C
-    #define SBVARRAW_INTARRAY   0x305780
-    #define SBVARRAW_ARRAY      0x3057E4
+    #define SBVARRAW_ARRAY      0x305780
+    #define SBVARRAW_NUMARRAY   0x3057E4
     #define SBVARRAW_NULL       0x305910
 
     enum SBVariableTypes {
@@ -117,6 +119,7 @@ namespace CTRPluginFramework {
     public:
         static void Initialize(void);
         static void Finalize(void);
+        static void UTF16toUTF8(std::string& out, u16* str);
         static void UTF16toUTF8(std::string& out, u16* str, u32 len);
         static void SetAPIClipboardAvailability(bool enabled);
         static bool GetAPIClipboardAvailability();
@@ -130,22 +133,40 @@ namespace CTRPluginFramework {
         static std::string GetProgramSlotFileName(u8 slot);
         static std::string PTCVersionString(u32 ver);
         static bool isPTCVersionValid(u32 ver);
-        static int getSBVariableType(u32 rawType);
+        static u8 getSBVariableType(u32 rawType);
         static int scrShotStubFunc(void);
-        static int clipboardFuncHook(void* ptr, u32 selfPtr, BASICGenericVariable* outv, u32 outc, void* a4, u32 argc, BASICGenericVariable* argv);
+        static int controllerFuncHook(void* ptr, u32 selfPtr, BASICGenericVariable* outv, u32 outc, void* a4, u32 argc, BASICGenericVariable* argv);
         static int stubBASICFunction(void* ptr, u32 selfPtr, BASICGenericVariable* outv, u32 outc, void* a4, u32 argc, BASICGenericVariable* argv);
+
+        static s32 argGetInteger(BASICGenericVariable* arg);
+        static void argGetString(string16& out, BASICGenericVariable* arg);
+        static double argGetFloat(BASICGenericVariable* arg);
+
+        static void CYXAPI_Out(s32 i);
+        static void CYXAPI_Out(double f);
+        static void CYXAPI_Out(const char* s);
+        static void CYXAPI_Out(const std::string& s);
 
         static std::string ColorPTCVerValid(u32 ver, u32 ok, u32 ng);
         static void SetDarkMenuPalette();
-        static int ParseClipAPI(std::string& data);
+
+        static std::tuple<u32, u32*, u32> soundThreadsInfo[];
+	    static void playMusicAlongCTRPF(bool playMusic);
+        static void SoundThreadHook();
 
         static u32 currentVersion;
         static BASICEditorData* editorInstance;
+        static BASICActiveProject* activeProject;
         static BASICGRPStructs* GraphicPage;
         static BASICTextPalette* textPalette;
         static RT_HOOK clipboardFunc;
         static RT_HOOK basControllerFunc;
         static RT_HOOK scrShotStub;
+        static Hook soundHook;
+        static u32 cyxApiOutType;
+        static string16 cyxApiTextOut;
+        static double cyxApiFloatOut;
+        static s32 cyxApiIntOut;
     private:
         static bool provideClipAPI;
         static bool wasClipAPIused;

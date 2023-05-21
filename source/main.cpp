@@ -59,12 +59,10 @@ namespace CTRPluginFramework {
     }
 
     bool menuOpen(){
-        //
         return true;
     }
 
     void menuClose(){
-        //
     }
 
     void deleteSecureVal() {
@@ -410,6 +408,7 @@ namespace CTRPluginFramework {
         settings.BackgroundSecondaryColor = Color(0x001010FF);
         settings.CustomKeyboard.BackgroundSecondary = Color(0x001010FF);
         settings.CachedDrawMode = true;
+		settings.WaitTimeToBoot = Seconds(3);
         ToggleTouchscreenForceOn();
         if(!Directory::IsExists(TOP_DIR)) Directory::Create(TOP_DIR);
         if(!Directory::IsExists(RESOURCES_PATH)) Directory::Create(RESOURCES_PATH);
@@ -425,9 +424,12 @@ namespace CTRPluginFramework {
         DEBUG("\nAll hooks initialized, starting game.\n---\n\n");
         CheckRegion();
         CYX::Initialize();
+        /*Process::OnPauseResume = [](bool isGoingToPause) {
+			CYX::playMusicAlongCTRPF(isGoingToPause);
+		};*/
         CYX::LoadSettings();
         if (CheckRevision()) {
-            if (File::Exists(SAVEDATA_PATH"/darkPalette.flag") == 1)
+            if (File::Exists(CONFIG_PATH"/darkPalette.flag") == 1)
                 CYX::SetDarkMenuPalette();
         } else {
             g_region = REGION_MAX;
@@ -440,9 +442,6 @@ namespace CTRPluginFramework {
         CYX::SaveSettings();
     }
 
-    void InitMenuFallback(PluginMenu &menu) {
-        menu += new MenuEntry("Could not initialize plugin", nullptr, pluginDetails, "This plugin could not detect SmileBASIC 3 and/or the version you're using is not supported. It will now behave like the blank template.");
-    }
     void InitMenu(PluginMenu &menu) {
         menu += new MenuFolder("Miscellaneous", "→ Change server\n→ Version spoofer", std::vector<MenuEntry *>({
             new MenuEntry("Change server…", nullptr, serverAdrChg, "Change the server to be connected to from the Network Menu."),
@@ -452,6 +451,8 @@ namespace CTRPluginFramework {
         "These features are freshly implemented or are still work in progress. Use these at your own risk.",
         std::vector<MenuEntry *>({
             new MenuEntry("Clipboard hook & CYX API", nullptr, clipboardHooking, "Replace the CLIPBOARD function with a custom implementation. The CYX API also allows BASIC programs access to certain plugin functions."),
+            new MenuEntry("Free GRP", grpFreeMe, "Remove GRP protection"),
+            new MenuEntry("Set GRP display format", nullptr, grpSetFormat, "Set GRP display format"),
             new MenuEntry("Corrupt GRP display", grpCorruptor, "Glitchy goodness!\nIt corrupts the display buffer; the actual graphics data is untouched."),
             new MenuEntry("→ Fix GRP display", grpFixMe, "The graphic pages have to be cleared/reloaded to flush the display buffer."),
             new MenuEntry("Change editor ruler color", nullptr, editorRulerPalette, "Choose from one of a few palettes for the editor ruler."),
@@ -479,12 +480,12 @@ namespace CTRPluginFramework {
         menu->OnClosing = menuClose;
         OSD::Run(drawOSD);
 
-        Process::exceptionCallback = Exception::Handler;
-
-        if (g_region != REGION_NONE && g_region != REGION_MAX)
+        if (g_region != REGION_NONE && g_region != REGION_MAX){
             InitMenu(*menu);
-        else
-            InitMenuFallback(*menu);
+            Process::exceptionCallback = Exception::Handler;
+        } else {
+            *menu += new MenuEntry("Could not initialize plugin", nullptr, pluginDetails, "This plugin could not detect SmileBASIC 3 and/or the version you're using is not supported. It will now behave like the blank template.");
+        }
         menu->Run();
         delete menu;
         return 0;

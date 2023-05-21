@@ -13,6 +13,8 @@ namespace CTRPluginFramework {
         kbd.ChangeEntrySound(2, SoundEngine::Event::CANCEL);
         int kbdres = kbd.Open();
         if (kbdres < 0 || kbdres >= 2) return;
+        PLGSET(PLGFLG_EXPERIMENTS);
+        PLGSET(PLGFLG_SBSERVER);
         if (kbdres == 0) {
             srvName = _DEFAULT_SERVERNAME_SAVE;
             std::string srvLoad = _DEFAULT_SERVERNAME_LOAD;
@@ -186,7 +188,46 @@ namespace CTRPluginFramework {
         }
         entry->Disable();
     }
-
+    void grpFreeMe(MenuEntry* entry){
+        if (entry->IsActivated()){
+            PLGSET(PLGFLG_EXPERIMENTS);
+            for (u8 i=0; i<6; i++){
+                CYX::GraphicPage->grp[i].isResourceProtected = 0;
+            }
+        }
+        entry->Disable();
+    }
+    void grpSetFormat(MenuEntry* entry){
+        PLGSET(PLGFLG_EXPERIMENTS);
+        u32 gspFmt, page;
+        Keyboard k1("Select graphic page",{"GRP0","GRP1","GRP2","GRP3","GRP4","GRP5","GRPF"});
+        Keyboard k2("Select GSP format",{"RGB565","RGBA5551 (default)","RGBA4","LA8","HILO8"});
+        int sel1, sel2;
+        while (true){
+            sel1 = k1.Open();
+            if (sel1 < 0) return;
+            sel2 = k2.Open();
+            if (sel2 < 0) continue;
+            break;
+        }
+        u8 md;
+        switch (sel2){
+            case 0: md = 3; break;
+            case 1: md = 2; break;
+            case 2: md = 4; break;
+            case 3: md = 5; break;
+            case 4: md = 6; break;
+        }
+        switch (sel1){
+            case 0: CYX::GraphicPage->grp[0].displayedFormat = md; break;
+            case 1: CYX::GraphicPage->grp[1].displayedFormat = md; break;
+            case 2: CYX::GraphicPage->grp[2].displayedFormat = md; break;
+            case 3: CYX::GraphicPage->grp[3].displayedFormat = md; break;
+            case 4: CYX::GraphicPage->grp[4].displayedFormat = md; break;
+            case 5: CYX::GraphicPage->grp[5].displayedFormat = md; break;
+            case 6: CYX::GraphicPage->font.displayedFormat = md; break;
+        }
+    }
     void editorRulerPalCallback(Keyboard& kbd, KeyboardEvent& ev){
         u32 c; CTRPluginFramework::Render::Interface* r;
         Color c0, c1, c2, c3;

@@ -76,7 +76,7 @@ void abort(void)
     if (CTRPluginFramework::System::OnAbort)
         CTRPluginFramework::System::OnAbort();
 
-    CTRPluginFramework::Color c(255, 96, 0);
+    CTRPluginFramework::Color c(255, 69, 0);
     CTRPluginFramework::ScreenImpl::Top->Flash(c);
     CTRPluginFramework::ScreenImpl::Bottom->Flash(c);
 
@@ -359,7 +359,7 @@ namespace CTRPluginFramework
         svcControlProcess(CUR_PROCESS_HANDLE, PROCESSOP_GET_ON_MEMORY_CHANGE_EVENT, (u32)&memLayoutChanged, 0);
         while (true)
         {
-            if (svcWaitSynchronization(memLayoutChanged, 500000000ULL) == 0x09401BFE) // 0.5s
+            if (svcWaitSynchronization(memLayoutChanged, 250000000ULL) == 0x09401BFE) // 0.25s
             {
                 s32 event = PLGLDR__FetchEvent();
 
@@ -569,6 +569,12 @@ namespace CTRPluginFramework
         ProcessImpl::EnableExceptionHandlers();
         // Check if we are on citra
         SystemImpl::CheckCitra();
+
+        // Populate manifest
+        {
+            volatile PluginHeader* header = (volatile PluginHeader*)PA_FROM_VA_PTR(FwkSettings::Header);
+            header->notifyHomeEvent = true;
+        }
 
         // Create event
         svcCreateEvent(&g_continueGameEvent, RESET_ONESHOT);

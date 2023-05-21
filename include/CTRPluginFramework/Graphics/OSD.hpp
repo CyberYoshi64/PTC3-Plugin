@@ -35,7 +35,7 @@ namespace CTRPluginFramework
          * \param posX The position on screen to draw the string to
          * \param posY The position on screen to draw the string to
          * \param foreground The color of the characters
-         * \param background The color of the background
+         * \param background The color of the background. Set alpha to 0 to disable.
          * \return posY + 10 (line feed)
          */
         u32     Draw(const std::string &str, u32 posX, u32 posY, const Color &foreground = Color::White, const Color &background = Color::Black) const;

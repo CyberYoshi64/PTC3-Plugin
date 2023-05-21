@@ -24,7 +24,6 @@ namespace CTRPluginFramework
     class Utils
     {
     public:
-
         /**
          * \brief Get a string formatted with format specifier from printf
          * \param fmt String to be formatted
@@ -163,6 +162,47 @@ namespace CTRPluginFramework
             return (0);
         }
 
+        enum class ConvertResult {
+            SUCCESS = 0, // Conversion succeeded.
+            PARTIAL = 1, // Conversion succeeded partially, up to the first invalid character in the string.
+            INVALID = 2, // Conversion failed, the string starts with invalid characters.
+            OUT_OF_RANGE = 3 // Conversion failed, the value cannot be represented in the given output type.
+        };
+
+        /**
+         * @brief Converts a string to an integer.
+         *
+         * @tparam T
+         * @param str String to convert, may be surrounded by whitespaces.
+         * @param out Variable to store the result to. Can be int, unsigned int, float or double
+         * @param mode Conversion base to use. Set to 0 for automatic base.
+         * @return Result of the conversion. See ConvertResult.
+         */
+        template <typename T>
+        static ConvertResult ToInteger(const std::string& str, T& out, int base = 0) {
+            return ToInteger(str.c_str(), out, base);
+        }
+
+        /**
+         * @brief Converts a string to an integer.
+         *
+         * @tparam T
+         * @param str String to convert, may be surrounded by whitespaces.
+         * @param out Variable to store the result to. Can be int, unsigned int, float or double
+         * @param mode Conversion base to use. Set to 0 for automatic base.
+         * @return Result of the conversion. See ConvertResult.
+         */
+        template <typename T>
+        static ConvertResult ToInteger(const char* str, T& out, int base = 0) {
+            char* parsed = nullptr;
+            errno = 0;
+            ToIntegerImpl(str, &parsed, base, out);
+            if (errno == ERANGE) {return ConvertResult::OUT_OF_RANGE;}
+            if (parsed == str) {return ConvertResult::INVALID;}
+            while (*parsed) {if (!std::isspace(*parsed++)) return ConvertResult::PARTIAL;}
+            return ConvertResult::SUCCESS;
+        }
+
         template <typename T>
         static u32     Rsearch(const u32 start, const u32 size, const std::vector<T> &pattern)
         {
@@ -192,6 +232,15 @@ namespace CTRPluginFramework
             }
             return (last);
         }
+    private:
+        static void ToIntegerImpl(const char* cstr, char** parsed, int base, int& out) {out = std::strtol(cstr, parsed, base);}
+        static void ToIntegerImpl(const char* cstr, char** parsed, int base, int32_t& out) {out = std::strtol(cstr, parsed, base);}
+        static void ToIntegerImpl(const char* cstr, char** parsed, int base, unsigned int& out) {out = std::strtoul(cstr, parsed, base);}
+        static void ToIntegerImpl(const char* cstr, char** parsed, int base, uint32_t& out) {out = std::strtoul(cstr, parsed, base);}
+        static void ToIntegerImpl(const char* cstr, char** parsed, int base, int64_t& out) {out = std::strtoll(cstr, parsed, base);}
+        static void ToIntegerImpl(const char* cstr, char** parsed, int base, uint64_t& out) {out = std::strtoull(cstr, parsed, base);}
+        static void ToIntegerImpl(const char* cstr, char** parsed, int base, float& out) {out = std::strtof(cstr, parsed);}
+        static void ToIntegerImpl(const char* cstr, char** parsed, int base, double& out) {out = std::strtod(cstr, parsed);}
     };
 }
 

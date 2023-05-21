@@ -1,0 +1,15 @@
+{
+    "files.exclude": {
+        "**/.git": true,
+        "**/.svn": true,
+        "**/.hg": true,
+        "**/CVS": true,
+        "**/.DS_Store": true,
+        "**/lib" : true,
+        "**/debug" : true,
+        "**/release" : true,
+        "**/*.elf" : true,
+        "**/*.3gx" : true,
+        "**/*.tar.bz2" : true
+    }
+}

@@ -1,7 +1,5 @@
 #include "ExceptionHandler.hpp"
-#include "QrCode.hpp"
-#include "base64.hpp"
-#include <cmath>
+#include "BasicAPI.hpp"
 
 #define EXCEPTIONSCREEN_DELAY   30.0
 #define EXCEPTIONSCREENSAD_INT  450
@@ -53,7 +51,7 @@ namespace CTRPluginFramework {
 
     void Exception::RescueIfRequired(){
         std::string fname = Utils::Format(DUMP_PATH"/%016X.cyxdmp",osGetTime()/1000);
-        File outf;
+        File outf; std::string s1;
         if (!Directory::IsExists(DUMP_PATH)) Directory::Create(DUMP_PATH);
         if (File::Open(outf, fname, File::Mode::RWC | File::Mode::SYNC)==0){
             u32 currentBlob = 0; u8 blobCat = 0, blobCatIdx = 0;
@@ -71,9 +69,13 @@ namespace CTRPluginFramework {
                     if (blobCatIdx >= 4){
                         blobCatIdx=0; blobCat++; continue;
                     }
-                    sprintf(hdr.blobName[currentBlob], "PRG%d-%s", blobCatIdx, CYX::GetProgramSlotFileName(blobCatIdx).c_str());
+                    s1 = CYX::GetProgramSlotFileName(blobCatIdx);
+                    if (s1=="")
+                        sprintf(hdr.blobName[currentBlob], "PRG%d", blobCatIdx);
+                    else
+                        sprintf(hdr.blobName[currentBlob], "PRG%d-%s", blobCatIdx, s1.c_str());
                     hdr.blobBufSize[currentBlob] = sizeof(CYX::editorInstance->programSlot[blobCatIdx].text);
-                    hdr.blobDataLen[currentBlob] = CYX::editorInstance->programSlot[blobCatIdx].text_len;
+                    hdr.blobDataLen[currentBlob] = CYX::editorInstance->programSlot[blobCatIdx].text_len * 2;
                     break;
                 case 1: // CLIP
                     if (blobCatIdx){
@@ -81,7 +83,7 @@ namespace CTRPluginFramework {
                     }
                     sprintf(hdr.blobName[currentBlob], "CLP0");
                     hdr.blobBufSize[currentBlob] = sizeof(CYX::editorInstance->clipboardData);
-                    hdr.blobDataLen[currentBlob] = CYX::editorInstance->clipboardLength;
+                    hdr.blobDataLen[currentBlob] = CYX::editorInstance->clipboardLength * 2;
                     break;
                 case 2: // GRP
                     if (blobCatIdx >= 6){
@@ -259,6 +261,7 @@ namespace CTRPluginFramework {
             d.ptcverOrig = CYX::currentVersion;
             d.magic = EXCSYSDMPHDR_MAGIC;
             d.version = EXCSYSDMPTXT_VER;
+            d.type = 0xFF;
             memcpy(dataBuffer, &d, dataLength);
         } else {
             ExceptionSysDump d = {0};
@@ -299,6 +302,9 @@ namespace CTRPluginFramework {
                     }
                 }
             }
+            d.cyxApiFlags = BasicAPI::flags;
+            strcpyu16u8(CYX::activeProject->activeProject, d.activeProject, 15);
+            strcpyu16u8(CYX::activeProject->currentProject, d.currentProject, 15);
             memcpy(dataBuffer, &d, dataLength);
         }
 
@@ -382,7 +388,7 @@ namespace CTRPluginFramework {
         CYXDumpHeader d;
         memset(&d,0,sizeof(d));
         d.magic = *(u64*)CYXDMPHDR_MAGIC;
-        d.version = 1;
+        d.version = 2;
         d.blobCount = cnt;
         d.contType = type;
         return d;

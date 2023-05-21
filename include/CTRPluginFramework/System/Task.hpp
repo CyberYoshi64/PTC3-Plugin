@@ -34,11 +34,14 @@ namespace CTRPluginFramework
         enum Affinity
         {
             AppCore = 1 << 0,
+            SysCore = 1 << 1,
             NewAppCore = 1 << 2,
-            NewSysCore = 1 << 3,
+            // Support for NewSysCore disabled, as spawning threads there
+            // can slow down the system. (Heavily used by 3D head tracking code.)
+            // NewSysCore = 1 << 3,
 
             AppCores = AppCore | NewAppCore,
-            SysCores = NewSysCore,
+            SysCores = SysCore, // | NewSysCore
             AllCores = AppCores | SysCores
         };
 

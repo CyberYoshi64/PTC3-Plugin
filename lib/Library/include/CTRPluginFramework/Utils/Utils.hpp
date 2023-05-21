@@ -24,7 +24,6 @@ namespace CTRPluginFramework
     class Utils
     {
     public:
-
         /**
          * \brief Get a string formatted with format specifier from printf
          * \param fmt String to be formatted

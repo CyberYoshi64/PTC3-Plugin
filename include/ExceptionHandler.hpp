@@ -3,6 +3,8 @@
 
 #include "main.hpp"
 #include "QrCode.hpp"
+#include "base64.hpp"
+#include <cmath>
 
 namespace CTRPluginFramework {
 
@@ -11,7 +13,7 @@ namespace CTRPluginFramework {
     
     #define EXCSYSDMPHDR_MAGIC *(u32*)"CY5%"
     #define EXCSYSDMPTXT_VER    0x0001
-    #define EXCSYSDMPDAT_VER    0x8001
+    #define EXCSYSDMPDAT_VER    0x8002
 
     #define EXCEP_LANG      ((int)System::GetSystemLanguage()&0xF) | ((int)g_region << 4)
 
@@ -27,9 +29,13 @@ namespace CTRPluginFramework {
         u32 lr;
         u32 sp;
         u32 far;
-        u32 callStack[6];
+        u32 callStack[5];
         char prgn[4][15];
+        char activeProject[16];
+        char currentProject[16];
+        u32 cyxApiFlags;
     } PACKED ExceptionSysDump;
+    #define kjlgdhfjghdkgjdhgkj sizeof(ExceptionSysDump);
     
     typedef struct ExceptionSysDumpTxt_s {
         u32 magic;

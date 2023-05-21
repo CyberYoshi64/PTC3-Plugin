@@ -17,6 +17,16 @@ namespace CTRPluginFramework {
         } while (char2 == char1 && ptr1[i] && ptr2[i] != u':');
         return char1 - char2;
     }
+    
+    int strcpyu16u8(u16* ptr1, char* ptr2, int n) {
+        int i = 0;
+        u8 c;
+        while (*ptr1++ && i++<n) {
+            c = (u8)(*ptr1);
+            *ptr2++ = c;
+        }
+        return i;
+    }
 
     int strcmpdot(char* ptr1, char* ptr2) {
         int i = 0;

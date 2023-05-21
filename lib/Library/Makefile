@@ -63,7 +63,7 @@ DEFINES	:=	-DCTRPF_VERSION_MAJOR="\"$(CTRPF_VERSION_MAJOR)\"" -DCTRPF_VERSION_MI
 			-DCTRPF_VERSION_BUILD="\"$(CTRPF_VERSION_BUILD)\"" -DCOMMIT_HASH="\"$(COMMIT)\"" -DCOMPILE_DATE="\"$(COMPILE_DATE)\""
 
 GCC11_FALSEPOSITIVES := -Wno-array-bounds -Wno-stringop-overflow -Wno-stringop-overread
-CFLAGS	:=	-Wall -Werror -Wno-psabi -mword-relocations \
+CFLAGS	:=	-Wall -Wno-psabi -mword-relocations \
 			-ffunction-sections \
 			-fdata-sections \
 			$(GCC11_FALSEPOSITIVES) \

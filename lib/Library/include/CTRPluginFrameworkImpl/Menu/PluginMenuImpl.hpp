@@ -37,9 +37,11 @@ namespace CTRPluginFramework
         static void    Close(MenuFolderImpl *menuFolderImpl);
 
         static void LoadEnabledCheatsFromFile(const Preferences::Header &header, File &settings);
+        static void LoadFavoritesFromFile(const Preferences::Header &header, File &settings);
         static void LoadHotkeysFromFile(const Preferences::Header &header, File &settings);
 
         static void WriteEnabledCheatsToFile(Preferences::Header &header, File &settings);
+        static void WriteFavoritesToFile(Preferences::Header &header, File &settings);
         static void ExtractHotkeys(HotkeysVector &hotkeys, MenuFolderImpl *folder, u32 &size);
         static void WriteHotkeysToFile(Preferences::Header &header, File &file);
         static void GetRegionsList(std::vector<Region> &list);
@@ -47,6 +49,7 @@ namespace CTRPluginFramework
         static void ForceExit(void);
         static void ForceOpen(void);
 
+        static void UnStar(MenuItem *item);
         static void Refresh(void);
 
         static PluginMenuImpl* GetRunningInstance();

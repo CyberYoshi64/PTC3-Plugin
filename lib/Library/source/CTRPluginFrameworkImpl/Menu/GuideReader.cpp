@@ -55,7 +55,7 @@ namespace CTRPluginFramework
     BMPImage *PostProcess(BMPImage *img, int maxX, int maxY);
 
     GuideReader::GuideReader(void):
-    _isOpen(false), _menu(CreateFolder("Manual"), Icon::DrawFile), _guideTB("", "", Window::TopWindow.GetRect()), _text(""), _last(nullptr)
+    _isOpen(false), _menu(CreateFolder("Guide"), Icon::DrawFile), _guideTB("", "", Window::TopWindow.GetRect()), _text(""), _last(nullptr)
     //_closeBtn(*this, nullptr, IntRect(275, 24, 20, 20), Icon::DrawClose)
     {
         _isOpen = false;

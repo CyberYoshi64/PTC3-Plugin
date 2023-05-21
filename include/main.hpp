@@ -6,15 +6,15 @@
 #include "plgldr.h"
 #include "commonFuncs.hpp"
 #include <csvc.h>
+#include <cmath>
 
 #include "Utils.hpp"
-#include "PetitCYX.hpp"
-#include "ExceptionHandler.hpp"
 #include "Misc.hpp"
 #include "MemDispOSD.hpp"
 #include "save.hpp"
-
 #include "Experimental.hpp"
+#include "PetitCYX.hpp"
+#include "ExceptionHandler.hpp"
 
 #ifndef COMMIT_HASH
 #define COMMIT_HASH "00000000"
@@ -24,14 +24,20 @@
 #endif
 
 #define ENABLE_DEBUG        false
-#define TOP_DIR             "/PTC3PLG"
+#define TOP_DIR             "/PTC3PLG" // Top directory (sdmc:/[TOP_DIR])
+#define CONFIG_PATH         TOP_DIR "/config" // 
 #define RESOURCES_PATH      TOP_DIR "/resources"
-#define ROMFS_PATH          TOP_DIR "/datafs"
-#define SAVEDATA_PATH       TOP_DIR "/config"
-#define EXTDATA_PATH        TOP_DIR "/savefs"
 #define CACHE_PATH          TOP_DIR "/cache"
 #define DUMP_PATH           TOP_DIR "/dumps"
 #define DEBUGLOG_FILE       RESOURCES_PATH "/debug.log"
+
+#define ROMFS_PATH          TOP_DIR "/datafs" // Directory containing RomFS edits
+#define HOMEFS_PATH         TOP_DIR "/homefs" // Limited folder for BASIC projects using the CYX API
+
+// Both savedata and extdata use the same folder to be in-line with PetitCom BIG :)
+#define SAVEDATA_PATH       TOP_DIR "/savefs" // In SB3, save:/config.dat
+#define EXTDATA_PATH        TOP_DIR "/savefs" // In SB3, data:/[projects]
+
 
 #define NUMBER_FILE_OP      9
 #define VER_MAJOR           0
@@ -123,6 +129,7 @@ enum PluginFlags {
     PLGFLG_EXPERIMENTS  = BIT(31), // An experiment was used
     PLGFLG_SPOOFED_VER  = BIT(30), // Version was spoofed
     PLGFLG_CYX_API      = BIT(24), // CYX API was used
+    PLGFLG_SBSERVER     = BIT(23), // Server addresses were changed
     PLGFLG_PANIC        = BIT(0), // Panic
 };
 

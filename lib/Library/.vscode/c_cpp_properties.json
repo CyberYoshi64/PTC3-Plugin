@@ -1,0 +1,31 @@
+{
+  "env": {
+    "devkitpro" : "/opt/devkitpro",
+    "devkitarm" : "${devkitpro}/devkitARM",
+    "ctrulib" : "${devkitpro}/libctru"
+  },
+  "configurations": [
+    {
+      "name": "Library - Unix",
+      "includePath":
+      [
+          "${workspaceFolder}/include/**",
+          "${ctrulib}/include/**"
+      ],
+      "defines": ["ARM11", "_3DS"],
+      "browse": {
+        "path": [
+            "${workspaceFolder}/include/**",
+            "${ctrulib}/include/**"
+        ],
+        "limitSymbolsToIncludedHeaders": true,
+        "databaseFilename": ""
+      },
+      "cStandard": "c11",
+      "cppStandard": "c++11",
+      "compilerPath": "${devkitarm}/bin/arm-none-eabi-g++",
+      "intelliSenseMode": "gcc-arm"
+    }
+  ],
+  "version": 4
+}

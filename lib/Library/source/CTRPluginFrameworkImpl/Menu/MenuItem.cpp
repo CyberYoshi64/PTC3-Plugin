@@ -38,6 +38,10 @@ namespace CTRPluginFramework
             if (!item)
                 break;
 
+            // If the item is starred
+            if (item->_IsStarred())
+                PluginMenuImpl::UnStar(item);
+
             // If it's a folder, call this function again
             if (item->_type == MenuType::Folder)
             {
@@ -60,6 +64,10 @@ namespace CTRPluginFramework
             return;
 
         Flags.isVisible = false;
+
+        // If the item is starred
+        if (Flags.isStarred)
+            PluginMenuImpl::UnStar(this);
 
         // If it's an entry, disable it
         if (_type == MenuType::Entry)

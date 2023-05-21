@@ -16,21 +16,17 @@ namespace CTRPluginFramework {
 
     static thread_local u16 *g_buffers[2] = { nullptr, nullptr };
 
-    u16     *GetBuffer(bool secondary = false) {
+    u16* GetBuffer(bool secondary = false) {
         if (g_buffers[secondary] == nullptr)
             g_buffers[secondary] = static_cast<u16 *>(::operator new(0x200));
         return g_buffers[secondary];
     }
 
     static void concatFileName(u16* dest, u16* s1, u16* s2) {
-        while (*s1)    *dest++ = *s1++; //Copy the default file path
-
+        while (*s1) *dest++ = *s1++; //Copy the default file path
         while (*s2++ != u'/'); //Skip the archive lowpath
-
         while (*s2 == u'/') ++s2; // Skip any remaining  /
-
         while (*s2) *dest++ = *s2++; //Copy the rest of the filename
-
         *dest = '\0';
     }
 
@@ -103,7 +99,7 @@ namespace CTRPluginFramework {
     }
 
     u32  fsOpenDirectoryFunc(u32 a1, u16* path) {
-        //customBreak(0xbaca, 1, 0);
+        //PANIC("fsOpenDirectoryFunc Test", _FILENAME, __LINE__);
         u16* newPath = calculateNewPath(path, 1);
         if (newPath != path) {
             int res = checkFileExistsWithDir(newPath);
@@ -114,14 +110,14 @@ namespace CTRPluginFramework {
     }
 
     u32  fsDeleteFileFunc(u16* path) {
-        //customBreak(0xbaca, 2, 0);
+        //PANIC("fsDeleteFileFunc Test", _FILENAME, __LINE__);
         u16* newPath = calculateNewPath(path, 1);
         int ret = ((fsu16)fileOpHooks[DELETE_FILE_OP].callCode)(newPath);
         return ret;
     }
 
     u32  fsRenameFileFunc(u16* path1, u16* path2) {
-        //customBreak(0xbaca, 3, 0);
+        //PANIC("fsRenameFileFunc Test", _FILENAME, __LINE__);
         u16* newPath1 = calculateNewPath(path1, 1);
         u16* newPath2 = calculateNewPath(path2, 1, true);
         int ret = ((fsu16u16)fileOpHooks[RENAME_FILE_OP].callCode)(newPath1, newPath2);
@@ -129,33 +125,33 @@ namespace CTRPluginFramework {
     }
 
     u32  fsDeleteDirectoryFunc(u16* path) {
-        //customBreak(0xbaca, 4, 0);
+        //PANIC("fsDeleteDirectoryFunc Test", _FILENAME, __LINE__);
         u16* newPath = calculateNewPath(path, 1);
         int ret = ((fsu16)fileOpHooks[DELETE_DIRECTORY_OP].callCode)(newPath);
         return ret;
     }
     u32  fsDeleteDirectoryRecFunc(u16* path) {
-        //customBreak(0xbaca, 5, 0);
+        //PANIC("fsDeleteDirectoryRecFunc Test", _FILENAME, __LINE__);
         u16* newPath = calculateNewPath(path, 1);
         int ret = ((fsu16)fileOpHooks[DELETE_DIRECTORY_RECURSIVE_OP].callCode)(newPath);
         return ret;
     }
     u32  fsCreateFileFunc(u16* path, u64 a2) {
-        //customBreak(0xbaca, 6, 0);
+        //PANIC("fsCreateFileFunc Test", _FILENAME, __LINE__);
         u16* newPath = calculateNewPath(path, 1);
         int ret = ((fsu16u64)fileOpHooks[CREATE_FILE_OP].callCode)(newPath, a2);
         return ret;
     }
 
     u32  fsCreateDirectoryFunc(u16* path) {
-        //customBreak(0xbaca, 7, 0);
+        //PANIC("fsCreateDirectoryFunc Test", _FILENAME, __LINE__);
         u16* newPath = calculateNewPath(path, 1);
         int ret = ((fsu16)fileOpHooks[CREATE_DIRECTORY_OP].callCode)(newPath);
         return ret;
     }
 
     u32  fsRenameDirectoryFunc(u16* path1, u16* path2) {
-        //customBreak(0xbaca, 8, 0);
+        //PANIC("fsRenameDirectoryFunc Test", _FILENAME, __LINE__);
         u16* newPath1 = calculateNewPath(path1, 1);
         u16* newPath2 = calculateNewPath(path2, 1, true);
         int ret = ((fsu16u16)fileOpHooks[RENAME_DIRECTORY_OP].callCode)(newPath1, newPath2);

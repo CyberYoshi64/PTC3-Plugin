@@ -77,7 +77,12 @@ namespace CTRPluginFramework
 
             for (int xx = 6; xx > 0; --xx)
             {
-                PrivColor::ToFramebuffer(fb, (charPos >> xx) & 1 ? fg : bg);
+                if ((charPos >> xx) & 1) {
+                    PrivColor::ToFramebuffer(fb, fg);
+                } else if (bg.a != 0) {
+                    PrivColor::ToFramebuffer(fb, bg);
+                }
+
                 fb += stride;
             }
         }
@@ -93,7 +98,11 @@ namespace CTRPluginFramework
 
                 for (int xx = 6; xx > 0; --xx)
                 {
-                    PrivColor::ToFramebuffer(fb, (charPos >> xx) & 1 ? fg : bg);
+                    if ((charPos >> xx) & 1) {
+                        PrivColor::ToFramebuffer(fb, fg);
+                    } else if (bg.a != 0) {
+                        PrivColor::ToFramebuffer(fb, bg);
+                    }
                     fb += stride;
                 }
             }
@@ -138,25 +147,27 @@ namespace CTRPluginFramework
         u32 bpp = screen->GetBytesPerPixel();
         Color bak = fg;
 
-        for (int i = 0; i < 2; i++)
-        {
-            u8 *fb = screen->GetLeftFrameBuffer(posX + i, posY);
-            for (int y = 0; y < 10; y++)
-            {
-                PrivColor::ToFramebuffer(fb, bg);
-                fb -= bpp;
-            }
-        }
-
-        if (screen->Is3DEnabled())
-        {
+        if (bg.a != 0) {
             for (int i = 0; i < 2; i++)
             {
-                u8 *fb = screen->GetRightFrameBuffer(posX - 10 + i, posY);
+                u8 *fb = screen->GetLeftFrameBuffer(posX + i, posY);
                 for (int y = 0; y < 10; y++)
                 {
                     PrivColor::ToFramebuffer(fb, bg);
                     fb -= bpp;
+                }
+            }
+
+            if (screen->Is3DEnabled())
+            {
+                for (int i = 0; i < 2; i++)
+                {
+                    u8 *fb = screen->GetRightFrameBuffer(posX - 10 + i, posY);
+                    for (int y = 0; y < 10; y++)
+                    {
+                        PrivColor::ToFramebuffer(fb, bg);
+                        fb -= bpp;
+                    }
                 }
             }
         }
