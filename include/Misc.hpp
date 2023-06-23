@@ -8,7 +8,7 @@ namespace CTRPluginFramework {
     void serverAdrChg(MenuEntry *entry);
     void versionSpoof(MenuEntry *entry);
     void pluginDetails(MenuEntry *entry);
-    void clipboardHooking(MenuEntry* entry);
+    void cyxAPItoggle(MenuEntry* entry);
     void grpCorruptor(MenuEntry* entry);
     void grpFixMe(MenuEntry* entry);
     void grpFreeMe(MenuEntry* entry);

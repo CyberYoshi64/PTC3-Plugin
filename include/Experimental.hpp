@@ -6,6 +6,7 @@
 
 namespace CTRPluginFramework {
     void experiment1(MenuEntry *entry);
+    void testOSD(MenuEntry *entry);
 }
 
 #endif

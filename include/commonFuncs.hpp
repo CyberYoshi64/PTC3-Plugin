@@ -12,5 +12,6 @@ namespace CTRPluginFramework {
     u32 strlen_utf8(const std::string& str);
     void strlower(std::string& str);
     void strupper(std::string& str);
+    u32 osGetUnixTime();
 }
 #endif

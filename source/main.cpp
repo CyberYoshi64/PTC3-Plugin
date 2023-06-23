@@ -42,10 +42,18 @@ namespace CTRPluginFramework {
         mcuHwcExit();
         return;
     }
+    bool mcuIsSleepEnabled(){
+        u8 reg;
+        if (R_FAILED(mcuHwcInit())) return false;
+        MCUHWC_ReadRegister(0x18, &reg, 1);
+        mcuHwcExit();
+        return !(reg & 0x6C);
+    }
 
     void menuTick(){
         PluginMenu* menu = PluginMenu::GetRunningInstance();
         BasicAPI::MenuTick();
+        CYX::MenuTick();
     } 
 
     bool drawOSD(const Screen& scr){
@@ -408,7 +416,7 @@ namespace CTRPluginFramework {
         settings.BackgroundSecondaryColor = Color(0x001010FF);
         settings.CustomKeyboard.BackgroundSecondary = Color(0x001010FF);
         settings.CachedDrawMode = true;
-		settings.WaitTimeToBoot = Seconds(3);
+		settings.WaitTimeToBoot = Seconds(3+(!System::IsNew3DS()*2));
         ToggleTouchscreenForceOn();
         if(!Directory::IsExists(TOP_DIR)) Directory::Create(TOP_DIR);
         if(!Directory::IsExists(RESOURCES_PATH)) Directory::Create(RESOURCES_PATH);
@@ -423,14 +431,17 @@ namespace CTRPluginFramework {
         initOnionFSHooks(Process::GetTextSize());
         DEBUG("\nAll hooks initialized, starting game.\n---\n\n");
         CheckRegion();
-        CYX::Initialize();
-        /*Process::OnPauseResume = [](bool isGoingToPause) {
-			CYX::playMusicAlongCTRPF(isGoingToPause);
-		};*/
-        CYX::LoadSettings();
-        if (CheckRevision()) {
-            if (File::Exists(CONFIG_PATH"/darkPalette.flag") == 1)
-                CYX::SetDarkMenuPalette();
+        if R_SUCCEEDED(CYX::Initialize()){
+            /*Process::OnPauseResume = [](bool isGoingToPause) {
+                CYX::playMusicAlongCTRPF(isGoingToPause);
+            };*/
+            CYX::LoadSettings();
+            if (CheckRevision()) {
+                if (File::Exists(CONFIG_PATH"/darkPalette.flag") == 1)
+                    CYX::SetDarkMenuPalette();
+            } else {
+                g_region = REGION_MAX;
+            }
         } else {
             g_region = REGION_MAX;
         }
@@ -450,7 +461,7 @@ namespace CTRPluginFramework {
         menu += new MenuFolder("[!] Experiments",
         "These features are freshly implemented or are still work in progress. Use these at your own risk.",
         std::vector<MenuEntry *>({
-            new MenuEntry("Clipboard hook & CYX API", nullptr, clipboardHooking, "Replace the CLIPBOARD function with a custom implementation. The CYX API also allows BASIC programs access to certain plugin functions."),
+            new MenuEntry("CYX API", nullptr, cyxAPItoggle, "Replace the CLIPBOARD function with a custom implementation. The CYX API also allows BASIC programs access to certain plugin functions."),
             new MenuEntry("Free GRP", grpFreeMe, "Remove GRP protection"),
             new MenuEntry("Set GRP display format", nullptr, grpSetFormat, "Set GRP display format"),
             new MenuEntry("Corrupt GRP display", grpCorruptor, "Glitchy goodness!\nIt corrupts the display buffer; the actual graphics data is untouched."),
@@ -459,6 +470,7 @@ namespace CTRPluginFramework {
             new MenuEntry("Memory Display", MemDisplayOSD::OSDFunc),
             new MenuEntry("Memory Display Settings", nullptr, MemDisplayOSD::setup),
             new MenuEntry("————————————————", nullptr, dummyEntry),
+            new MenuEntry("TEST OSD", testOSD, "Nothing that special, just prints the last stuff during development."),
             new MenuEntry("Unnamed Experiment 1", nullptr, experiment1)
         }));
         menu += new MenuEntry("Plugin Details", nullptr, pluginDetails, "General details about this plugin");
@@ -474,6 +486,7 @@ namespace CTRPluginFramework {
 
         menu->SynchronizeWithFrame(true);
         menu->ShowWelcomeMessage(false);
+        menu->Callback(menuTick);
         //if (ENABLE_DEBUG) OSD::Notify(Utils::Format("Build " STRING_BUILD));
         // menu->SetHexEditorState(false);
         menu->OnOpening = menuOpen;

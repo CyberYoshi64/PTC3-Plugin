@@ -3,74 +3,183 @@
 
 namespace CTRPluginFramework {
     u32 CYX::currentVersion = 0;
+    CYX::Offsets CYX::offsets = {0};
+    CYX::MirroredVars CYX::mirror = {0};
     std::tuple<u32, u32*, u32> CYX::soundThreadsInfo[1] = { std::tuple<u32, u32*, u32>(0xFFFFFFFF, nullptr, 0) };
     BASICEditorData* CYX::editorInstance = NULL;
     BASICGRPStructs* CYX::GraphicPage = NULL;
     BASICTextPalette* CYX::textPalette = NULL;
     BASICActiveProject* CYX::activeProject = NULL;
+    std::string CYX::g_currentProject = "";
     RT_HOOK CYX::clipboardFunc = {0};
     RT_HOOK CYX::basControllerFunc = {0};
     RT_HOOK CYX::scrShotStub = {0};
     Hook CYX::soundHook;
     char CYX::introText[512] = "SmileBASIC-CYX " STRING_VERSION "\nBuild " STRING_BUILD "\n\n2022-2023 CyberYoshi64\n\n";
     char CYX::bytesFreeText[32] = " bytes free\n\n";
-    bool CYX::provideClipAPI = false;
+    bool CYX::provideCYXAPI = false;
     bool CYX::wasClipAPIused = false;
     u32 CYX::cyxApiOutType = 0;
     string16 CYX::cyxApiTextOut;
     double CYX::cyxApiFloatOut = 0;
     s32 CYX::cyxApiIntOut = 0;
 
-    void CYX::Initialize(void) {
+    Result CYX::Initialize(void) {
         switch (g_region) {
             case REGION_JPN:
-                currentVersion = *(u32*)JPN_VERSION_INT;
-                editorInstance = (BASICEditorData*)JPN_EDITORDATA;
-                GraphicPage = (BASICGRPStructs*)JPN_GRPSTRUCTS;
-                textPalette = (BASICTextPalette*)JPN_CONTXTPAL;
-                activeProject = (BASICActiveProject*)JPN_ACTPROJ_STR;
-                rtInitHook(&basControllerFunc, JPN_BASICCONTROLLERFUNC, (u32)CYX::controllerFuncHook);
-                *(char**)JPN_BOOTTEXT = introText;
-                *(char**)(JPN_BOOTTEXT+4) = bytesFreeText;
+                offsets.activeProjectStrings    = JPN_ACTPROJ_STR;
+                offsets.basicInterpreterFlag    = JPN_BASIC_INT_FLAG;
+                offsets.basicIsDirectMode       = JPN_BASIC_DIRECT_MODE;
+                offsets.basicIsRunning          = JPN_BASIC_CMD_FLAG;
+                offsets.bootText                = JPN_BOOTTEXT;
+                offsets.clipboardFuncAddr       = JPN_CLIPBOARDFUNC;
+                offsets.consoleTextPalette      = JPN_CONTXTPAL;
+                offsets.controllerFuncAddr      = JPN_CONTROLLERFUNC;
+                offsets.editorData              = JPN_EDITORDATA;
+                offsets.grpStructs              = JPN_GRPSTRUCTS;
+                offsets.helpPageDefaultColors   = JPN_HELPPAGE_DEF;
+                offsets.helpPagePalette         = JPN_HELPPAGE_PAL;
+                offsets.versionInt              = JPN_VERSION_INT;
                 break;
             case REGION_USA:
-                currentVersion = *(u32*)USA_VERSION_INT;
-                editorInstance = (BASICEditorData*)USA_EDITORDATA;
-                GraphicPage = (BASICGRPStructs*)USA_GRPSTRUCTS;
-                textPalette = (BASICTextPalette*)USA_CONTXTPAL;
-                activeProject = (BASICActiveProject*)USA_ACTPROJ_STR;
-                rtInitHook(&basControllerFunc, USA_BASICCONTROLLERFUNC, (u32)CYX::controllerFuncHook);
-                *(char**)USA_BOOTTEXT = introText;
-                *(char**)(USA_BOOTTEXT+4) = bytesFreeText;
+                offsets.activeProjectStrings    = USA_ACTPROJ_STR;
+                offsets.basicInterpreterFlag    = USA_BASIC_INT_FLAG;
+                offsets.basicIsDirectMode       = USA_BASIC_DIRECT_MODE;
+                offsets.basicIsRunning          = USA_BASIC_CMD_FLAG;
+                offsets.bootText                = USA_BOOTTEXT;
+                offsets.clipboardFuncAddr       = USA_CLIPBOARDFUNC;
+                offsets.consoleTextPalette      = USA_CONTXTPAL;
+                offsets.controllerFuncAddr      = USA_CONTROLLERFUNC;
+                offsets.editorData              = USA_EDITORDATA;
+                offsets.grpStructs              = USA_GRPSTRUCTS;
+                offsets.helpPageDefaultColors   = USA_HELPPAGE_DEF;
+                offsets.helpPagePalette         = USA_HELPPAGE_PAL;
+                offsets.versionInt              = USA_VERSION_INT;
                 break;
             case REGION_EUR:
-                currentVersion = *(u32*)EUR_VERSION_INT;
-                editorInstance = (BASICEditorData*)EUR_EDITORDATA;
-                GraphicPage = (BASICGRPStructs*)EUR_GRPSTRUCTS;
-                textPalette = (BASICTextPalette*)EUR_CONTXTPAL;
-                activeProject = (BASICActiveProject*)EUR_ACTPROJ_STR;
-                rtInitHook(&basControllerFunc, EUR_BASICCONTROLLERFUNC, (u32)CYX::controllerFuncHook);
+                offsets.activeProjectStrings    = EUR_ACTPROJ_STR;
+                offsets.basicInterpreterFlag    = EUR_BASIC_INT_FLAG;
+                offsets.basicIsDirectMode       = EUR_BASIC_DIRECT_MODE;
+                offsets.basicIsRunning          = EUR_BASIC_CMD_FLAG;
+                offsets.bootText                = EUR_BOOTTEXT;
+                offsets.clipboardFuncAddr       = EUR_CLIPBOARDFUNC;
+                offsets.consoleTextPalette      = EUR_CONTXTPAL;
+                offsets.controllerFuncAddr      = EUR_CONTROLLERFUNC;
+                offsets.editorData              = EUR_EDITORDATA;
+                offsets.grpStructs              = EUR_GRPSTRUCTS;
+                offsets.helpPageDefaultColors   = EUR_HELPPAGE_DEF;
+                offsets.helpPagePalette         = EUR_HELPPAGE_PAL;
+                offsets.versionInt              = EUR_VERSION_INT;
                 /*soundHook.InitializeForMitm(0x12A318, (u32)SoundThreadHook);
                 soundHook.SetFlags(USE_LR_TO_RETURN|MITM_MODE|EXECUTE_OI_AFTER_CB);
                 soundHook.Enable();*/
-                *(char**)EUR_BOOTTEXT = introText;
-                *(char**)(EUR_BOOTTEXT+4) = bytesFreeText;
                 break;
         }
+        if(!offsets.versionInt) return BIT(31)|1;
+        if(!offsets.bootText) return BIT(31)|2;
+        if(!offsets.controllerFuncAddr) return BIT(31)|3;
+        if(!offsets.clipboardFuncAddr) return BIT(31)|4;
+        if(!offsets.editorData) return BIT(31)|5;
+        if(!offsets.grpStructs) return BIT(31)|6;
+        if(!offsets.activeProjectStrings) return BIT(31)|7;
+        if(!offsets.basicInterpreterFlag) return BIT(31)|8;
+        if(!offsets.basicIsDirectMode) return BIT(31)|9;
+        if(!offsets.basicIsRunning) return BIT(31)|10;
+        if(!offsets.consoleTextPalette) return BIT(31)|11;
+        if(!offsets.helpPageDefaultColors) return BIT(31)|12;
+        if(!offsets.helpPagePalette) return BIT(31)|13;
+
+        currentVersion = *(u32*)offsets.versionInt;
+        editorInstance = (BASICEditorData*)offsets.editorData;
+        GraphicPage = (BASICGRPStructs*)offsets.grpStructs;
+        textPalette = (BASICTextPalette*)offsets.consoleTextPalette;
+        activeProject = (BASICActiveProject*)offsets.activeProjectStrings;
+        rtInitHook(&basControllerFunc, offsets.controllerFuncAddr, (u32)CYX::controllerFuncHook);
+        rtEnableHook(&basControllerFunc);
+        *(char**)offsets.bootText = introText;
+        *(char**)(offsets.bootText+4) = bytesFreeText;
+        LoadSettings();
         BasicAPI::Initialize();
-        if (basControllerFunc.funcAddr) rtEnableHook(&basControllerFunc);
+        return 0;
     }
 
     void CYX::Finalize(){
         BasicAPI::Finalize();
-        CYX::SaveSettings();
+        SaveProjectSettings();
+        SaveSettings();
+    }
+    void CYX::SaveProjectSettings(){
+        if (g_currentProject=="") return;
+        File f;
+        std::string path=PROJECTSET_PATH"/P"+g_currentProject+".bin";
+        if (!Directory::IsExists(CONFIG_PATH)) Directory::Create(CONFIG_PATH);
+        if (!Directory::IsExists(PROJECTSET_PATH)) Directory::Create(PROJECTSET_PATH);
+        if (File::Open(f, path, File::RWC | File::TRUNCATE) == File::SUCCESS){
+            ProjectSettings p; memset(&p, 0xFF, sizeof(p));
+            p.magic = PRJSETFILEMAGIC;
+            p.apiUsed = provideCYXAPI;
+            p.apiFlags = BasicAPI::flags;
+            f.Write(&p, sizeof(p));
+        }
+        f.Close();
+    }
+    void CYX::LoadProjectSettings(){
+        File f;
+        std::string path=PROJECTSET_PATH"/P"+g_currentProject+".bin";
+        if (File::Exists(path)){
+            ProjectSettings p; memset(&p, 0xFF, sizeof(p));
+            if (File::Open(f, path, File::READ) == File::SUCCESS)
+                f.Read(&p, sizeof(p));
+            f.Close();
+            if (p.magic != PRJSETFILEMAGIC){
+                MessageBox("The project settings for "+g_currentProject+" is invalid.\n\nThe settings will be reset for this project.")();
+                File::Remove(path);
+                provideCYXAPI = false;
+                BasicAPI::flags = APIFLAG_DEFAULT;
+            } else {
+                provideCYXAPI = p.apiUsed;
+                BasicAPI::flags = p.apiFlags;
+            }
+        }
+        if (BasicAPI::flags & APIFLAG_FS_ACC_SAFE) CreateHomeFolder();
+    }
+    void CYX::MenuTick(){
+        UpdateMirror();
+        if (mirror.diff.currentProject || !g_currentProject.size()){
+            SaveProjectSettings();
+            UTF16toUTF8(g_currentProject="", activeProject->currentProject);
+            if (g_currentProject==""||g_currentProject=="###") g_currentProject="$DEFAULT";
+            OSD::Notify(g_currentProject);
+            LoadProjectSettings();
+        }
+        if (mirror.diff.isDirectMode){
+            OSD::Notify(Utils::Format("isDirectMode: %d", mirror.isDirectMode));
+        }
+        if (mirror.isInBasic && mirror.isBasicRunningTime == 3 && mirror.isBasicRunning2 != mirror.isBasicRunning){
+            mirror.isBasicRunning2 = mirror.isBasicRunning;
+            OSD::Notify(Utils::Format("isBasicRunning: %d", mirror.isBasicRunning));
+        }
+        if (mirror.diff.isInBasic){
+            OSD::Notify(Utils::Format("isInBasic: %d", mirror.isInBasic));
+        }
+    }
+    void CYX::UpdateMirror(){
+        mirror.diff.currentProject = memcmp(activeProject->currentProject, mirror.currentProject, sizeof(mirror.currentProject))!=0;
+        memcpy(mirror.currentProject, activeProject->currentProject, sizeof(mirror.currentProject));
+        mirror.diff.isDirectMode = mirror.isDirectMode != *(u8*)offsets.basicIsDirectMode;
+        mirror.isDirectMode = *(u8*)offsets.basicIsDirectMode;
+        mirror.diff.isInBasic = mirror.isInBasic != *(u8*)offsets.basicInterpreterFlag;
+        mirror.isInBasic = *(u8*)offsets.basicInterpreterFlag;
+        mirror.diff.isBasicRunning = mirror.isBasicRunning != *(u8*)offsets.basicIsRunning;
+        mirror.isBasicRunning = *(u8*)offsets.basicIsRunning;
+        ++mirror.isBasicRunningTime *= !(mirror.diff.isBasicRunning);
     }
 
-    void CYX::SetAPIClipboardAvailability(bool enabled){
-        provideClipAPI = enabled;
+    void CYX::SetAPIAvailability(bool enabled){
+        provideCYXAPI = enabled;
     }
-    bool CYX::GetAPIClipboardAvailability(){
-        return provideClipAPI;
+    bool CYX::GetAPIAvailability(){
+        return provideCYXAPI;
     }
     void CYX::DiscardAPIUse(){
         wasClipAPIused = false;
@@ -78,11 +187,15 @@ namespace CTRPluginFramework {
     void CYX::SetAPIUse(bool enabled){
         wasClipAPIused = enabled;
     }
-    bool CYX::WasClipAPIUsed(){
+    bool CYX::WasCYXAPIUsed(){
         return wasClipAPIused;
     }
     int CYX::scrShotStubFunc() {
         return 0;
+    }
+    void CYX::CYXAPI_Out(){
+        cyxApiOutType = 3;
+        cyxApiTextOut.clear();
     }
     void CYX::CYXAPI_Out(s32 i){
         cyxApiOutType = 2;
@@ -100,6 +213,7 @@ namespace CTRPluginFramework {
         Utils::ConvertUTF8ToUTF16(cyxApiTextOut, s);
     }
     void CYX::CYXAPI_Out(const std::string& s){
+        cyxApiOutType = 0;
         CYX::cyxApiTextOut.clear();
         Utils::ConvertUTF8ToUTF16(CYX::cyxApiTextOut, s);
     }
@@ -133,6 +247,16 @@ namespace CTRPluginFramework {
                 break;
         }
     }
+    void CYX::argGetString(u16** ptr, u32* len, BASICGenericVariable* arg){
+        *ptr = NULL;
+        *len = 0;
+        if (!arg) return;
+        if (!arg->type) return;
+        if (arg->type == SBVARRAW_STRING){
+            *ptr = (u16*)arg->data2;
+            *len = arg->data;
+        }
+    }
     double CYX::argGetFloat(BASICGenericVariable* arg){
         if (!arg) return 0;
         if (!arg->type) return 0;
@@ -163,7 +287,7 @@ namespace CTRPluginFramework {
     }
     int CYX::controllerFuncHook(void* ptr, u32 selfPtr, BASICGenericVariable* outv, u32 outc, void* a4, u32 argc, BASICGenericVariable* argv){
         u8 type; bool isCYX=false;
-        if ((argc < 1) || (outc != 1)) return 3;
+        if (argc<1) return 0;
         type = getSBVariableType(argv->type);
         if (type != VARTYPE_NONE){
             switch (type){
@@ -176,7 +300,7 @@ namespace CTRPluginFramework {
                     break;
             }
         }
-        if (isCYX){
+        if (provideCYXAPI && isCYX){
             CYX::cyxApiTextOut.clear();
             int res=BasicAPI::Parse(argv, argc);
             switch (res){
@@ -185,72 +309,36 @@ namespace CTRPluginFramework {
                 case 3: return 2; // Non-fatal quit
                 default: return 3; // Fatal quit
             }
-            switch (cyxApiOutType){
-            case 0:
-                outv->type = SBVARRAW_STRING;
-                outv->data = cyxApiTextOut.size();
-                outv->data2 = (void*)cyxApiTextOut.c_str();
-                break;
-            case 1:
-                outv->type = SBVARRAW_DOUBLE;
-                *(double*)&outv->data = cyxApiFloatOut;
-                break;
-            case 2:
-                outv->type = SBVARRAW_INTEGER;
-                outv->data = cyxApiIntOut;
-                break;
+            if (outc){
+                switch (cyxApiOutType){
+                case 0:
+                    outv->type = SBVARRAW_STRING;
+                    outv->data = cyxApiTextOut.size();
+                    outv->data2 = (void*)cyxApiTextOut.c_str();
+                    break;
+                case 1:
+                    outv->type = SBVARRAW_DOUBLE;
+                    *(double*)&outv->data = cyxApiFloatOut;
+                    break;
+                case 2:
+                    outv->type = SBVARRAW_INTEGER;
+                    outv->data = cyxApiIntOut;
+                    break;
+                case 3:
+                    outv->type = SBVARRAW_STRING;
+                    outv->data = editorInstance->clipboardLength;
+                    outv->data2 = editorInstance->clipboardData;
+                    break;
+                }
             }
         } else {
-            outv->type = SBVARRAW_INTEGER;
-            outv->data = 0x10000001;
+            if (outc){
+                outv->type = SBVARRAW_INTEGER;
+                outv->data = 0x10000001;
+            }
         }
         return 0;
     }
-
-    /*int CYX::clipboardFuncHook(void* ptr, u32 selfPtr, BASICGenericVariable* outv, u32 outc, void* a4, u32 argc, BASICGenericVariable* argv){
-        BASICGenericVariable* var; int type;
-        bool outToClip = (argc==1); int apiOut = 1;
-        std::string newClipData = "";
-
-        newClipData = Utils::Format("OUT %p (%d), IN %p (%d)", outv, outc, argv, argc);
-        OSD::Notify(newClipData);
-        
-        newClipData = "";
-        for (u32 i=0; i<argc; i++){
-            var = argv++;
-            type = getSBVariableType(var->type);
-            if (type != VARTYPE_NONE){
-                if (i) newClipData += "\x1f";
-                switch (type){
-                    case VARTYPE_STRING: UTF16toUTF8(newClipData, (u16*)var->data2, var->data); break;
-                    case VARTYPE_INT: newClipData += Utils::Format("%d", var->data); break;
-                    case VARTYPE_DOUBLE: newClipData += Utils::ToString(*(double*)&var->data,4); break;
-                }
-                if (strlen_utf8(newClipData) > 1048576) return 3;
-            }
-        }
-        OSD::Notify(newClipData);
-        if (provideClipAPI) apiOut = BasicAPI::ParseClipAPI(newClipData);
-        if (newClipData.length() > 1048576) newClipData.resize(1048576);
-        if (outToClip || apiOut == 0){
-            Process::WriteString((u32)&editorInstance->clipboardData, newClipData, StringFormat::Utf16);
-            editorInstance->clipboardLength = strlen_utf8(newClipData);
-        }
-        switch (apiOut){
-            case 0: case 1: break;
-            case 2: return 1; // Silent exit
-            case 3: return 2; // Non-fatal quit
-            default: return 3; // Fatal quit
-        }
-        for (u32 i=0; i<outc; i++){
-            var = outv++;
-            if (!var->type) break;
-            var->type = SBVARRAW_STRING;
-            var->data = editorInstance->clipboardLength;
-            var->data2 = &editorInstance->clipboardData;
-        }
-        return 0;
-    }*/
 
     // Editor strings are merely buffers, so the string has to be crafted
     // with a given length parameter.
@@ -266,7 +354,7 @@ namespace CTRPluginFramework {
     void CYX::LoadSettings(){} // To be used soon
     void CYX::SaveSettings(){} // Not needed for now
 
-    void CYX::ReplaceServerName(std::string& saveURL, std::string& loadURL){
+    void CYX::ReplaceServerName(const  std::string& saveURL, const std::string& loadURL){
         u32 jpnPtr[]={JPN_SERVERNAME_LOAD2_1, JPN_SERVERNAME_LOAD2_2, JPN_SERVERNAME_SAVE3_1, JPN_SERVERNAME_SAVE3_2, JPN_SERVERNAME_SHOW2, JPN_SERVERNAME_LIST2, JPN_SERVERNAME_INFO2, JPN_SERVERNAME_DELETE2, JPN_SERVERNAME_SHOPLIST2, JPN_SERVERNAME_PREPURCHASE2, JPN_SERVERNAME_PURCHASE2};
         u32 usaPtr[]={USA_SERVERNAME_LOAD2_1, USA_SERVERNAME_LOAD2_2, USA_SERVERNAME_SAVE3_1, USA_SERVERNAME_SAVE3_2, USA_SERVERNAME_SHOW2, USA_SERVERNAME_LIST2, USA_SERVERNAME_INFO2, USA_SERVERNAME_DELETE2, USA_SERVERNAME_SHOPLIST2, USA_SERVERNAME_PREPURCHASE2, USA_SERVERNAME_PURCHASE2};
         u32 eurPtr[]={EUR_SERVERNAME_LOAD2_1, EUR_SERVERNAME_LOAD2_2, EUR_SERVERNAME_SAVE3_1, EUR_SERVERNAME_SAVE3_2, EUR_SERVERNAME_SHOW2, EUR_SERVERNAME_LIST2, EUR_SERVERNAME_INFO2, EUR_SERVERNAME_DELETE2, EUR_SERVERNAME_SHOPLIST2, EUR_SERVERNAME_PREPURCHASE2, EUR_SERVERNAME_PURCHASE2};
@@ -369,6 +457,21 @@ namespace CTRPluginFramework {
             }
         }
         return (c);
+    }
+
+    void CYX::CreateHomeFolder(const std::string& s){
+        std::string path = HOMEFS_PATH"/P"+s;
+        if (!Directory::IsExists(HOMEFS_PATH)) Directory::Create(HOMEFS_PATH);
+        if (!Directory::IsExists(path)) Directory::Create(path);
+    }
+    void CYX::CreateHomeFolder(){
+        CreateHomeFolder(g_currentProject);
+    }
+    std::string CYX::GetHomeFolder(){
+        return HOMEFS_PATH"/P"+g_currentProject;
+    }
+    std::string CYX::GetHomeFolder(std::string project){
+        return HOMEFS_PATH"/P"+project;
     }
 
     void CYX::SoundThreadHook(){

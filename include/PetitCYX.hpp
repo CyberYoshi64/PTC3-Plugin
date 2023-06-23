@@ -7,7 +7,8 @@
 namespace CTRPluginFramework {
 
     #define CYX__COLORVER_NOCOLOR   1
-    #define THREADVARS_MAGIC  0x21545624 // !TV$
+    #define PRJSETFILEMAGIC     0x0054455325585943ULL
+    #define THREADVARS_MAGIC    0x21545624 // !TV$
 
     typedef struct BASICTextPalette_s { // EUR @ 0x01D027CC
         u32 conClear; u32 conBlack;
@@ -116,19 +117,90 @@ namespace CTRPluginFramework {
     };
 
     class CYX {
+    typedef struct Offsets {
+        u32 versionInt;
+        u32 bootText;
+        u32 editorData;
+        u32 consoleTextPalette;
+        u32 helpPagePalette;
+        u32 helpPageDefaultColors; // Assuming u32 bg,txt; there
+        u32 grpStructs;
+        u32 clipboardFuncAddr;
+        u32 controllerFuncAddr;
+        u32 basicInterpreterFlag;
+        u32 basicIsDirectMode;
+        u32 basicIsRunning;
+        u32 activeProjectStrings;
+    } Offsets;
+    typedef struct MirroredVars {
+        u8 isDirectMode;
+        u8 isInBasic;
+        u8 isBasicRunning;
+        u8 isBasicRunning2;
+        u16 currentProject[15];
+        struct diff {
+            bool isDirectMode;
+            bool isInBasic;
+            bool isBasicRunning;
+            bool currentProject;
+        } diff;
+        u32 isBasicRunningTime;
+    } MirroredVars;
+    typedef struct ProjectSettings {
+        u64 magic;
+        u8 apiUsed;
+        u32 apiFlags;
+    } PACKED ProjectSettings;
     public:
-        static void Initialize(void);
+
+        /**
+         * @brief Initialize plugin hooks and structure references and loads settings
+         */
+        static Result Initialize(void);
+
+        /**
+         * @brief Remove plugin hooks and structure references and saves settings
+         */
         static void Finalize(void);
+
+        /**
+         * @brief Wrapper for buffered strings
+         */
         static void UTF16toUTF8(std::string& out, u16* str);
         static void UTF16toUTF8(std::string& out, u16* str, u32 len);
-        static void SetAPIClipboardAvailability(bool enabled);
-        static bool GetAPIClipboardAvailability();
+        
+        /**
+         * @brief Enable/Disable CYX API
+         * @param[in] enabled Whether to enable or not
+         */
+        static void SetAPIAvailability(bool enabled);
+
+        /**
+         * @brief Gets CYX API status
+         * @return true if API is available, false otherwise
+         */
+        static bool GetAPIAvailability();
+
+        /**
+         * @brief [Internal] Removes the API use flag
+         */
         static void DiscardAPIUse();
+
+        /**
+         * @brief [Internal] Set the API Use flag
+         * @param[in] enabled Whether to enable or not
+         */
         static void SetAPIUse(bool enabled);
-        static bool WasClipAPIUsed();
+
+        /**
+         * @brief [Internal] Get the API Use flag
+         * @return true if API was used, false otherwise
+         */
+        static bool WasCYXAPIUsed();
+
         static void LoadSettings(void);
         static void SaveSettings(void);
-        static void ReplaceServerName(std::string& saveURL, std::string& loadURL);
+        static void ReplaceServerName(const std::string& saveURL, const std::string& loadURL);
         static void ChangeBootText(const char* text, const char* bytfre);
         static std::string GetProgramSlotFileName(u8 slot);
         static std::string PTCVersionString(u32 ver);
@@ -138,14 +210,27 @@ namespace CTRPluginFramework {
         static int controllerFuncHook(void* ptr, u32 selfPtr, BASICGenericVariable* outv, u32 outc, void* a4, u32 argc, BASICGenericVariable* argv);
         static int stubBASICFunction(void* ptr, u32 selfPtr, BASICGenericVariable* outv, u32 outc, void* a4, u32 argc, BASICGenericVariable* argv);
 
+        static void MenuTick();
+        static void UpdateMirror();
+
         static s32 argGetInteger(BASICGenericVariable* arg);
         static void argGetString(string16& out, BASICGenericVariable* arg);
+        static void argGetString(u16** ptr, u32* len, BASICGenericVariable* arg);
         static double argGetFloat(BASICGenericVariable* arg);
 
+        static void CYXAPI_Out();
         static void CYXAPI_Out(s32 i);
         static void CYXAPI_Out(double f);
         static void CYXAPI_Out(const char* s);
         static void CYXAPI_Out(const std::string& s);
+
+        static void CreateHomeFolder(const std::string& s);
+        static void CreateHomeFolder();
+        static std::string GetHomeFolder();
+        static std::string GetHomeFolder(std::string project);
+
+        static void LoadProjectSettings();
+        static void SaveProjectSettings();
 
         static std::string ColorPTCVerValid(u32 ver, u32 ok, u32 ng);
         static void SetDarkMenuPalette();
@@ -155,10 +240,12 @@ namespace CTRPluginFramework {
         static void SoundThreadHook();
 
         static u32 currentVersion;
+        static Offsets offsets;
         static BASICEditorData* editorInstance;
         static BASICActiveProject* activeProject;
         static BASICGRPStructs* GraphicPage;
         static BASICTextPalette* textPalette;
+        static std::string g_currentProject;
         static RT_HOOK clipboardFunc;
         static RT_HOOK basControllerFunc;
         static RT_HOOK scrShotStub;
@@ -168,7 +255,8 @@ namespace CTRPluginFramework {
         static double cyxApiFloatOut;
         static s32 cyxApiIntOut;
     private:
-        static bool provideClipAPI;
+        static MirroredVars mirror;
+        static bool provideCYXAPI;
         static bool wasClipAPIused;
         static char introText[];
         static char bytesFreeText[];

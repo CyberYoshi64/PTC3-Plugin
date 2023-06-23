@@ -25,7 +25,7 @@
 
 #define ENABLE_DEBUG        false
 #define TOP_DIR             "/PTC3PLG" // Top directory (sdmc:/[TOP_DIR])
-#define CONFIG_PATH         TOP_DIR "/config" // 
+#define CONFIG_PATH         TOP_DIR "/config"
 #define RESOURCES_PATH      TOP_DIR "/resources"
 #define CACHE_PATH          TOP_DIR "/cache"
 #define DUMP_PATH           TOP_DIR "/dumps"
@@ -38,6 +38,7 @@
 #define SAVEDATA_PATH       TOP_DIR "/savefs" // In SB3, save:/config.dat
 #define EXTDATA_PATH        TOP_DIR "/savefs" // In SB3, data:/[projects]
 
+#define PROJECTSET_PATH     CONFIG_PATH "/prjSet"
 
 #define NUMBER_FILE_OP      9
 #define VER_MAJOR           0
@@ -112,6 +113,7 @@ namespace CTRPluginFramework {
     extern u32 ___pluginFlags;
     extern char g_regionString[];
     void mcuSetSleep(bool on);
+    bool mcuIsSleepEnabled();
     int strlen16(u16* str);
     int fsSetThisSaveDataSecureValue(u32 a1, u64 a2);
     int Obsoleted_5_0_fsSetSaveDataSecureValue(u64 a1, u32 a2, u32 a3, u8 a4);

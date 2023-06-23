@@ -1,5 +1,5 @@
 #include "Misc.hpp"
-#include "main.hpp"
+#include "BasicAPI.hpp"
 
 namespace CTRPluginFramework {
 
@@ -17,8 +17,7 @@ namespace CTRPluginFramework {
         PLGSET(PLGFLG_SBSERVER);
         if (kbdres == 0) {
             srvName = _DEFAULT_SERVERNAME_SAVE;
-            std::string srvLoad = _DEFAULT_SERVERNAME_LOAD;
-            CYX::ReplaceServerName(srvName, srvLoad);
+            CYX::ReplaceServerName(srvName, _DEFAULT_SERVERNAME_LOAD);
             return;
         } else {
             Keyboard kbd("Enter the server name to which to connect to:\n\n The domain name must be " TOSTRING(_LEN_SERVERNAME_URL) " characters\n long or less.");
@@ -82,70 +81,168 @@ namespace CTRPluginFramework {
                 CYX::PTCVersionString(CYX::currentVersion)+
                 Utils::Format("\nCYX %s",STRING_VERSION)+"\n"+
                 Utils::Format("\nEditor data @ 0x%08X",(u32)CYX::editorInstance)+
-                Utils::Format("\nClipboard func @ 0x%08X",CYX::clipboardFunc.funcAddr)+
+                Utils::Format("\nCONTROLLER func @ 0x%08X",CYX::basControllerFunc.funcAddr)+
                 Utils::Format("\nScrShot func @ 0x%08X",CYX::scrShotStub.funcAddr)
             ),
             DialogType::DialogOk, ClearScreen::Both)();
     }
-    void clipboardHooking(MenuEntry* entry){
-        if (!CYX::clipboardFunc.funcAddr) {
-            MessageBox("The clipboard function is not hookable at this time. Check for an updated plugin.")();
+    u8 cyxAPItoggle_handleSeverity(int index, u8 mode){
+        switch (index){
+        case 1: // SysInfo
+            break;
+        case 2: // FWInfo
+            break;
+        case 3: // HWInfo
+            break;
+        case 4: // SafeDir
+            break;
+        case 5: // XREF
+            if (mode == 3 && !MessageBox("You're about to enable write access to other projects.\nOnly enable this setting if you trust the programs in this project.\n\nContinue anyway?", DialogType::DialogYesNo, ClearScreen::Both)())
+                return 0;
+            break;
+        case 6: // SDAccess
+            if (mode == 3 && !MessageBox("You're about to enable write access to the SD Card.\nOnly enable this setting if you trust the programs in this project.\n\nContinue anyway?", DialogType::DialogYesNo, ClearScreen::Both)())
+                return 0;
+            break;
+        }
+        return mode;
+    }
+    void cyxAPItoggle_getMsg(std::string& out, int index, u8 mode){
+        switch (index){
+        case -1:
+            out = "";
+            break;
+        case 0:
+            switch (mode){
+                case 0: out="Disabled access to the CYX API."; break;
+                case 1: out="Enabled access to the CYX API."; break;
+            }
+            break;
+        case 1:
+            switch (mode){
+                case 0: out="Disabled access to system info."; break;
+                case 1: out="Enabled access to system info."; break;
+            }
+            break;
+        case 2:
+            switch (mode){
+                case 0: out="Disabled access to firmware info."; break;
+                case 1: out="Enabled access to firmware info."; break;
+            }
+            break;
+        case 3:
+            switch (mode){
+                case 0: out="Disabled access to hardware info."; break;
+                case 1: out="Enabled access to hardware info."; break;
+            }
+            break;
+        case 4:
+            switch (mode){
+                case 0: out="Disabled access to the current project's safe folder."; break;
+                case 1:
+                    CYX::CreateHomeFolder();
+                    out="Enabled access to the current project's safe folder.";
+                    break;
+            }
+            break;
+        case 5:
+            switch (mode){
+                case 0: out="Disabled access to other projects."; break;
+                case 1: out="Enabled read access to other projects."; break;
+                case 3: out="Enabled read/write access to other projects."; break;
+            }
+            break;
+        case 6:
+            switch (mode){
+                case 0: out="Disabled access to the SD Card."; break;
+                case 1: out="Enabled read access to the SD Card."; break;
+                case 3: out="Enabled read/write access to the SD Card."; break;
+            }
+            break;
+        }
+    }
+    void cyxAPItoggle(MenuEntry* entry){
+        if (!CYX::basControllerFunc.funcAddr) {
+            MessageBox("The CONTROLLER function was not hooked. Check for an updated plugin.")();
             return;
         }
-        bool hook = CYX::clipboardFunc.isEnabled;
-        bool api = CYX::GetAPIClipboardAvailability();
+        bool api = CYX::GetAPIAvailability();
+        std::string staticMsg =
+            "CYX API settings for \""+CYX::g_currentProject+
+            "\"\nDisclaimer:\n"
+            "This feature is experimental and may cause\n"
+            "instability.\nSelect the below options with care.";
         Keyboard kbd(""); int kres;
-        std::string opt1, opt2;
+        StringVector opt; opt.resize(8);
+        opt[7] = "\uE072 Back";
+        std::string _2w[3] = {"●⊃", Color::Red << "●⊃", Color::Lime << "⊂●"};
+        std::string _3w[5] = {"●\u3000⊃", Color::Red << "●\u3000⊃", Color::Orange << "⊂●⊃", "", Color::Lime << "⊂\u3000●"};
+        std::string message = "";
+        bool w[7] = {0,0,0,0,0,1,1};
+        u8 b[7] = {0,0,1,2,16,17,19};
+        u8 __tmp;
         while (true){
             kbd.DisplayTopScreen = true;
-            kbd.GetMessage() =
-            "Disclaimer:\n"
-            "This feature is experimental and may cause\n"
-            "SmileBASIC to be unstable and/or enable BASIC\n"
-            "programs to use out-of-scope features, such as\n"
-            "accessing the SD Card or check the console type.";
-            if (CYX::WasClipAPIUsed()){
+            kbd.GetMessage() = staticMsg + "\n\n" << Color(0x60FF00FF) << message;
+            if (CYX::WasCYXAPIUsed()){
                 kbd.GetMessage() +=
                     Color(0xFF8800FF) << "\n\nThe CYX API has been utilized.\n" <<
                     "Disabling the hook and/or the API may cause\n" <<
-                    "unexpected behaviour.";
+                    "unexpected behaviour." + ResetColor();
             }
-            opt1 =
-                "Hook clipboard\u3000" + (hook ?
-                Color::Lime << "⊂●":
-                Color::Red << "●⊃");
-            if (hook){
-                opt2 = "Enable CYX API\u3000" + (api ?
-                Color::Lime << "⊂●":
-                Color::Red << "●⊃");
+            opt[0] = "Enable API  " + _2w[1+api];
+            opt[1] = "Read SysInfo  ";
+            opt[2] = "Read Firmware Info  ";
+            opt[3] = "Read Hardware Info  ";
+            opt[4] = "Allow safe dir  ";
+            opt[5] = "Cross-project access  ";
+            opt[6] = "SD Card access  ";
+            if (api){
+                for (int i=1; i<7; i++){
+                    opt[i] = opt[i] + (
+                        w[i] ? _3w[1+((BasicAPI::flags>>b[i])&3)] : _2w[1+((BasicAPI::flags>>b[i])&1)]
+                    );
+                }
             } else {
-                opt2 = Color::Gray << "Enable CYX API\u3000●⊃";
+                for (int i=1; i<7; i++){
+                    opt[i] = Color::Gray << opt[i] + (
+                        w[i] ? _3w[0] : _2w[0]
+                    );
+                }
             }
-            kbd.Populate(StringVector{opt1, opt2, "\uE072 Back" }, 0);
-            kbd.ChangeEntrySound(0, SoundEngine::Event::DESELECT);
-            kbd.ChangeEntrySound(1, SoundEngine::Event::DESELECT);
-            kbd.ChangeEntrySound(2, SoundEngine::Event::CANCEL);
+            kbd.Populate(opt, 0);
+            for (int i=0; i<7; i++)
+                kbd.ChangeEntrySound(i, SoundEngine::Event::DESELECT);
+            kbd.ChangeEntrySound(7, SoundEngine::Event::CANCEL);
             kres = kbd.Open();
             switch (kres){
             case 0:
-                if (hook){
-                    rtDisableHook(&CYX::clipboardFunc);
-                    CYX::SetAPIClipboardAvailability(api = false);
-                    CYX::DiscardAPIUse();
-                } else {
-                    rtEnableHook(&CYX::clipboardFunc);
-                    PLGSET(PLGFLG_EXPERIMENTS);
-                }
-                hook = !hook;
+                CYX::SetAPIAvailability(__tmp = api = !api);
+                CYX::DiscardAPIUse();
                 break;
-            case 1:
-                CYX::SetAPIClipboardAvailability(api = !api & hook);
-                PLGSET(PLGFLG_EXPERIMENTS);
-                PLGSET(PLGFLG_CYX_API);
+            case 1: case 2: case 3: case 4:
+            case 5: case 6:
+                if (api){
+                    if (w[kres]){
+                        __tmp = (BasicAPI::flags>>b[kres])&3;
+                        __tmp = (__tmp + 1 + (__tmp==1)) & 3;
+                        __tmp = cyxAPItoggle_handleSeverity(kres, __tmp);
+                        BasicAPI::flags &= ~(3<<b[kres]);
+                        BasicAPI::flags |= (__tmp<<b[kres]);
+                        
+                    } else {
+                        __tmp = (BasicAPI::flags>>b[kres])&1;
+                        __tmp = cyxAPItoggle_handleSeverity(kres, !__tmp);
+                        BasicAPI::flags &= ~(1<<b[kres]);
+                        BasicAPI::flags |= (__tmp<<b[kres]);
+                    }
+                }
                 break;
             default:
                 return;
             }
+            if (!api) kres=-1;
+            cyxAPItoggle_getMsg(message, kres, __tmp);
         }
     }
     void grpCorruptor(MenuEntry* entry){

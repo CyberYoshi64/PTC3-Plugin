@@ -63,4 +63,9 @@ namespace CTRPluginFramework {
             if(c > 96 && c <= 122) str[i] = c-0x20;
         }
     }
+    u32 osGetUnixTime(){
+        // osGetTime returns in millisec
+        // 2208988800 -> 70 years
+        return ((osGetTime()/1000)-2208988800);
+    }
 }
