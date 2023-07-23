@@ -2275,7 +2275,7 @@ namespace CTRPluginFramework
     void KeyboardImpl::_ClearKeyboardEvent()
     {
         _KeyboardEvent.codepoint = 0;
-        _KeyboardEvent.selectedIndex = 0;
+        _KeyboardEvent.selectedIndex = -1;
         _KeyboardEvent.affectedKey = (Key)0;
         _KeyboardEvent.renderInterface = nullptr;
     }

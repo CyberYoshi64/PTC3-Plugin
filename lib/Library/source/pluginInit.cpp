@@ -355,6 +355,7 @@ namespace CTRPluginFramework
 
         Handle memLayoutChanged;
         bool isSleeping = false;
+        bool ncsndInitialised = true;
 
         svcControlProcess(CUR_PROCESS_HANDLE, PROCESSOP_GET_ON_MEMORY_CHANGE_EVENT, (u32)&memLayoutChanged, 0);
         while (true)
@@ -369,7 +370,10 @@ namespace CTRPluginFramework
                     if (!isSleeping) {
                         SystemImpl::AptStatus |= BIT(6);
                         SoundEngineImpl::NotifyAptEvent(event == PLG_SLEEP_ENTRY ? APT_HookType::APTHOOK_ONSLEEP : APT_HookType::APTHOOK_ONSUSPEND);
-                        ncsndExit();
+                        if (ncsndInitialised) {
+                            ncsndInitialised = false;
+                            ncsndExit();
+                        }
                         isSleeping = true;
                     }
                     PLGLDR__Reply(event);
@@ -379,7 +383,10 @@ namespace CTRPluginFramework
                     ProcessImpl::UserProcessEventCallback(event == PLG_SLEEP_EXIT ? Process::Event::SLEEP_EXIT : Process::Event::HOME_EXIT);
                     if (isSleeping) {
                         SystemImpl::WakeUpFromSleep();
-                        ncsndInit(false);
+                        if (!ncsndInitialised) {
+                            ncsndInitialised = true;
+                            ncsndInit(false);
+                        }
                         SoundEngineImpl::NotifyAptEvent(event == PLG_SLEEP_EXIT ? APT_HookType::APTHOOK_ONWAKEUP : APT_HookType::APTHOOK_ONRESTORE);
                         isSleeping = false;
                     }
@@ -392,7 +399,10 @@ namespace CTRPluginFramework
                     SoundEngineImpl::NotifyAptEvent(APT_HookType::APTHOOK_ONSUSPEND);
 
                     // Close csnd as it may be needed by other processes (4 sessions max.)
-                    ncsndExit();
+                    if (ncsndInitialised) {
+                        ncsndInitialised = false;
+                        ncsndExit();
+                    }
 
                     // Un-map hook memory
                     HookManager::Lock();
@@ -410,7 +420,10 @@ namespace CTRPluginFramework
                     HookManager::Unlock();
 
                     // Init csnd again.
-                    ncsndInit(false);
+                    if (!ncsndInitialised) {
+                        ncsndInitialised = true;
+                        ncsndInit(false);
+                    }
 
                     SoundEngineImpl::NotifyAptEvent(APT_HookType::APTHOOK_ONRESTORE);
 
@@ -431,7 +444,10 @@ namespace CTRPluginFramework
                     PluginMenuImpl::ForceExit();
 
                     // Close some handles
-                    ncsndExit();
+                    if (ncsndInitialised) {
+                        ncsndInitialised = false;
+                        ncsndExit();
+                    }
                     if (settings.UseGameHidMemory)
                         hidExitFake();
                     else

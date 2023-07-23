@@ -13,6 +13,13 @@ namespace CTRPluginFramework
         PrivColor::ToFramebuffer(screen->GetLeftFrameBuffer(posX, posY), color);
     }
 
+    void Renderer::ReadPixel(int posX, int posY, Color &colorOut)
+    {
+        ScreenImpl  *screen = GetContext()->screen;
+
+        colorOut = PrivColor::FromFramebuffer(screen->GetLeftFrameBuffer(posX, posY));
+    }
+
     // Draw Character without background
     void     Renderer::DrawCharacter(int c, int posX, int posY, const Color &fg)
     {

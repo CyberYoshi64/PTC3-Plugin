@@ -40,11 +40,13 @@
 
 #define PROJECTSET_PATH     CONFIG_PATH "/prjSet"
 
+#define CLIPBOARDCACHE_PATH CACHE_PATH"/clip.raw"
+
 #define NUMBER_FILE_OP      9
 #define VER_MAJOR           0
 #define VER_MINOR           0
 #define VER_MICRO           6
-#define VER_REVISION        1
+#define VER_REVISION        3
 #define STRINGIFY(x)        #x
 #define TOSTRING(x)         STRINGIFY(x)
 #define STRING_VERSION      TOSTRING(VER_MAJOR) "." TOSTRING(VER_MINOR) "." TOSTRING(VER_MICRO) "-" TOSTRING(VER_REVISION)

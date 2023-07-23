@@ -11,7 +11,7 @@ HookContext&    HookContext::GetCurrent(void)
         reinterpret_cast<u32 *>(getThreadLocalStorage())[15]);
 }
 
-extern "C" void *__ctrpfHookCtx__GetCallerCode(HookContext *ctx)
+extern "C" __attribute__((__used__)) void *__ctrpfHookCtx__GetCallerCode(HookContext *ctx)
 {
     if (ctx->flags & MITM_MODE)
     {

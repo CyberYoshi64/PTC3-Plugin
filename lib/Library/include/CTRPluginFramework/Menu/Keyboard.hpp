@@ -30,7 +30,7 @@ namespace CTRPluginFramework
 
         EventType   type{};       ///< Type of the event
         u32         codepoint{0};  ///< The codepoint of the character that thrown the event (used for CharacterAdded and CharacterRemoved, 0 otherwise)
-        u32         selectedIndex{0}; ///< The entry index in a custom keyboard being selected (used for SelectionChanged, 0 otherwise)
+        s32         selectedIndex{-1}; ///< The entry index in a custom keyboard being selected (used for SelectionChanged, -1 otherwise)
         Key         affectedKey{(Key)0}; ///< Button affected not mapped to any keyboard feature (used for ButtonPressed, ButtonHold and ButtonReleased, 0 otherwise)
         Render::Interface* renderInterface{nullptr}; ///< Interface to render to the screen (used for FrameTop and FrameBottom, nullptr otherwise)
     };

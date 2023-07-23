@@ -24,7 +24,16 @@ struct _reent* __SYSCALL(getreent)()
 	return tv->reent;
 }
 
-void*     __getThreadLocalStorage(void)
+void* __attribute__((__used__)) __attribute__((__naked__)) __aeabi_read_tp() {
+	__asm__ __volatile__
+    (
+        "stmfd sp!, {r1-r3, lr}        \n"
+        "bl	__getThreadLocalStorage    \n"
+        "ldmfd sp!, {r1-r3, pc}        \n"
+    );
+}
+
+void* __attribute__((__used__)) __getThreadLocalStorage(void)
 {
 	ThreadVars* tv = getThreadVars();
 

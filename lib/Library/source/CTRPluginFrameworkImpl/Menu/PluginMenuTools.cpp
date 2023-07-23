@@ -48,11 +48,9 @@ namespace CTRPluginFramework
 
     static int  g_mode = NORMAL;
 
-    // DO NOT REMOVE THIS COPYRIGHT NOTICE
-    //* I didn't; just added my string here ッ
-    static const char g_pluginNameText[] = "SmileBASIC-CYX";
+    static const char g_cyxText[] = "SmileBASIC-CYX";
     static const char g_ctrpfText[] = "Powered by CTRPluginFramework";
-    static const char g_copyrightText[] = "Copyright (c) The Pixellizer Group";
+    static const char g_copyrightText[] = "(c) The Pixellizer Group, CyberYoshi64";
     static u32 g_textXpos[3] = { 0 };
 
     PluginMenuTools::PluginMenuTools(std::string &about, HexEditor &hexEditor) :
@@ -80,39 +78,7 @@ namespace CTRPluginFramework
             Preferences::MenuHotkeys = keys;
     }
 
-    void    PluginMenuTools::UpdateSettings(void)
-    {
-        //using MenuItemIter =  MenuFolderImpl::MenuItemIter;
-
-        // Settings
-        auto item = _settingsMenu.begin() + 2;
-
-        if (Preferences::IsEnabled(Preferences::UseFloatingBtn)) (*item++)->AsMenuEntryImpl().Enable();
-        else (*item++)->AsMenuEntryImpl().Disable();
-
-        item = _miscellaneousMenu.begin();
-
-        // Misc.
-
-
-        if (Preferences::IsEnabled(Preferences::DisplayLoadedFiles)) (*item++)->AsMenuEntryTools().Enable();
-        else (*item++)->AsMenuEntryTools().Disable();
-
-        if (Preferences::IsEnabled(Preferences::WriteLoadedFiles)) (*item++)->AsMenuEntryTools().Enable();
-        else (*item++)->AsMenuEntryTools().Disable();
-
-        if (Preferences::IsEnabled(Preferences::DrawTouchCursor)) (*item++)->AsMenuEntryTools().Enable();
-        else (*item++)->AsMenuEntryTools().Disable();
-
-        if (Preferences::IsEnabled(Preferences::DrawTouchPosition)) (*item++)->AsMenuEntryTools().Enable();
-        else (*item++)->AsMenuEntryTools().Disable();
-
-        if (Preferences::IsEnabled(Preferences::ShowTopFps)) (*item++)->AsMenuEntryTools().Enable();
-        else (*item++)->AsMenuEntryTools().Disable();
-
-        if (Preferences::IsEnabled(Preferences::ShowBottomFps)) (*item)->AsMenuEntryTools().Enable();
-        else (*item)->AsMenuEntryTools().Disable();
-    }
+    void    PluginMenuTools::UpdateSettings(void) {}
 
     using   FsTryOpenFileType = u32(*)(u32, u16*, u32);
 
@@ -343,7 +309,7 @@ namespace CTRPluginFramework
 
     static void      GetScreenShotMode(void)
     {
-        Keyboard    kb(Color::LimeGreen << "Screenshot settings\x18\n\n Which screen(s) would you like to capture?", {"Top screen", "Bottom screen", "Both screens"});
+        Keyboard    kb(Color::LimeGreen << "Screenshot settings\x18\n\n Which screen(s) would you like to capture ?", {"Top screen", "Bottom screen", "Both screens"});
 
         int mode = kb.Open();
         if (mode != -1)
@@ -505,8 +471,7 @@ namespace CTRPluginFramework
             message += "  - Bottom screen: " + std::to_string(Preferences::Backlights[1].value) + ", " + (Preferences::Backlights[1].isEnabled ?
                             (std::string)Color::LimeGreen + "Enabled\n"
                           : (std::string)Color::Red + "Disabled\n") + ResetColor();
-            
-            message += "\n\n For New3DS: Remember to turn off\n \"Auto-Brightness\" in the \uE073HOME Menu.";
+            message += "\n\n Remember to turn off \"Auto-Brightness\"\n in the \uE073HOME Menu.";
 
             kb.Populate({triggerTop, "Top screen", triggerBottom, "Bottom screen"});
             userchoice = kb.Open();
@@ -544,15 +509,14 @@ namespace CTRPluginFramework
 
         _hexEditorEntry = new MenuEntryTools("Hex Editor", [] { g_mode = HEXEDITOR; }, Icon::DrawGrid);
         _mainMenu.Append(_hexEditorEntry);
-        _mainMenu.Append(new MenuEntryTools("Gateway RAM Dumper", [] { g_mode = GWRAMDUMP; }, Icon::DrawRAM));
-        _mainMenu.Append(new MenuEntryTools("Screenshots", nullptr, Icon::DrawSettings, new u32(SCREENSHOT)));
-        _mainMenu.Append(new MenuEntryTools("Miscellaneous", nullptr, Icon::DrawMore, new u32(MISCELLANEOUS)));
+        // _mainMenu.Append(new MenuEntryTools("Gateway RAM Dumper", [] { g_mode = GWRAMDUMP; }, Icon::DrawRAM));
+        // _mainMenu.Append(new MenuEntryTools("Screenshots", nullptr, Icon::DrawUnsplash, new u32(SCREENSHOT)));
+        // _mainMenu.Append(new MenuEntryTools("Miscellaneous", nullptr, Icon::DrawMore, new u32(MISCELLANEOUS)));
         _mainMenu.Append(new MenuEntryTools("Settings", nullptr, Icon::DrawSettings, this));
-        if (!System::IsCitra()){
-            _mainMenu.Append(new MenuEntryTools("Shutdown Console", Shutdown, Icon::DrawShutdown));
-            _mainMenu.Append(new MenuEntryTools("Reboot Console", Reboot, Icon::DrawRestart));
+        if (!System::IsCitra()) {
+            _mainMenu.Append(new MenuEntryTools("Shutdown", Shutdown, Icon::DrawShutdown));
+            _mainMenu.Append(new MenuEntryTools("Reboot", Reboot, Icon::DrawRestart));
         }
-
         // Screenshots menu
         _screenshotMenu.Append(new MenuEntryTools("Change screenshot settings", ScreenshotMenuCallback, Icon::DrawSettings));
         _screenshotMenu.Append((g_screenshotEntry = new MenuEntryTools( "Screenshot: " << Color::LimeGreen << KeysToString(Screenshot::Hotkeys)
@@ -567,13 +531,20 @@ namespace CTRPluginFramework
         _miscellaneousMenu.Append(new MenuEntryTools("Display bottom screen FPS", [] { Preferences::Toggle(Preferences::ShowBottomFps); }, true, Preferences::IsEnabled(Preferences::ShowBottomFps)));
 
         // Settings menu
-        _settingsMenu.Append(new MenuEntryTools("Change menu hotkeys", MenuHotkeyModifier, Icon::DrawSettings));
+        _settingsMenu.Append(new MenuEntryTools("Change menu hotkeys", MenuHotkeyModifier, Icon::DrawGameController));
 
-        if (!System::IsCitra()) _settingsMenu.Append(new MenuEntryTools("Set LCD brightness", EditBacklight, false, false));
+        _settingsMenu.Append(new MenuEntryTools("Set backlight (Experimental)", EditBacklight, false, false));
         _settingsMenu.Append(new MenuEntryTools("Use floating button", [] { Preferences::Toggle(Preferences::UseFloatingBtn); }, true, Preferences::IsEnabled(Preferences::UseFloatingBtn)));
 
+        // _settingsMenu.Append(new MenuEntryTools("Auto-save enabled cheats", [] { Preferences::Toggle(Preferences::AutoSaveCheats); }, true, Preferences::IsEnabled(Preferences::AutoSaveCheats)));
+        // _settingsMenu.Append(new MenuEntryTools("Auto-save favorites", [] { Preferences::Toggle(Preferences::AutoSaveFavorites); }, true, Preferences::IsEnabled(Preferences::AutoSaveFavorites)));
+        // _settingsMenu.Append(new MenuEntryTools("Auto-load enabled cheats at starts", [] { Preferences::Toggle(Preferences::AutoLoadCheats); }, true, Preferences::IsEnabled(Preferences::AutoLoadCheats)));
+        // _settingsMenu.Append(new MenuEntryTools("Auto-load favorites at starts", [] { Preferences::Toggle(Preferences::AutoLoadFavorites); }, true, Preferences::IsEnabled(Preferences::AutoSaveFavorites)));
+        // _settingsMenu.Append(new MenuEntryTools("Load enabled cheats now", [] { Preferences::LoadSavedEnabledCheats(); }, nullptr));
+        // _settingsMenu.Append(new MenuEntryTools("Load favorites now", [] { Preferences::LoadSavedFavorites(); }, nullptr));
+
         // Get strings x position
-        g_textXpos[0] = (320 - Renderer::LinuxFontSize(g_pluginNameText)) / 2;
+        g_textXpos[0] = (320 - Renderer::LinuxFontSize(g_cyxText)) / 2;
         g_textXpos[1] = (320 - Renderer::LinuxFontSize(g_ctrpfText)) / 2;
         g_textXpos[2] = (320 - Renderer::LinuxFontSize(g_copyrightText)) / 2;
     }
@@ -747,19 +718,13 @@ namespace CTRPluginFramework
             static const char *commit = COMMIT_HASH;
             static const char *compilationDate = COMPILE_DATE;
 
-            int posY = 30, posYY = 50;
-            Renderer::DrawString("CTRPluginFramework Build:",  30, posY, blank);
-            Renderer::DrawLine(30, posY, 25 * 6, blank); posY += 10;
-            Renderer::DrawString("Version: ",  30, posY, blank);
-            Renderer::DrawString(tagVersion,  100, posYY, blank);
-            Renderer::DrawString("Commit: ",  30, posY, blank);
-            Renderer::DrawString(commit,  100, posYY, blank);
-            Renderer::DrawString("Compiled: ",  30, posY, blank);
-            Renderer::DrawString(compilationDate,  100, posYY, blank);
-
+            int posY = 30, posYY = 30;
+            Renderer::DrawString("Version: ",  30, posY, blank);    Renderer::DrawString(tagVersion,  100, posYY, blank);
+            Renderer::DrawString("Commit: ",  30, posY, blank);     Renderer::DrawString(commit,  100, posYY, blank);
+            Renderer::DrawString("Compiled: ",  30, posY, blank);   Renderer::DrawString(compilationDate,  100, posYY, blank);
 
             posY = 185;
-            Renderer::DrawString(g_pluginNameText, g_textXpos[0], posY, Color::White);
+            Renderer::DrawString(g_cyxText, g_textXpos[0], posY, Color::White);
             Renderer::DrawString(g_ctrpfText, g_textXpos[1], posY, Color::White);
             Renderer::DrawString(g_copyrightText, g_textXpos[2], posY, Color::White);
         }

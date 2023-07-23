@@ -8,6 +8,8 @@ namespace CTRPluginFramework {
     u32 BasicAPI::queueOffset = 0;
     u32 BasicAPI::flags = APIFLAG_DEFAULT;
 
+    #define RGBA8_to_5551(r,g,b,a)  ((((b)>>3)&0x1f)<<1)|((((g)>>2)&0x1f)<<6)|((((r)>>3)&0x1f)<<11)|((a / 255)&1)
+
     #define APIOUT(s)       CYX::CYXAPI_Out(s)
     #define APIGETCLIP(s)   s.append(CYX::editorInstance->clipboardData, CYX::editorInstance->clipboardLength)
 
@@ -138,6 +140,20 @@ namespace CTRPluginFramework {
         return 1;
     }
 
+    int BasicAPI::FileRead(BasicAPI::FileStruct f, u16* buf, u32* len, u32 size, u32 bytesLeft){
+        if (!f.f) return File::UNEXPECTED_ERROR;
+        if (f.flags & APIFSTRUCT_UTF16) size *= 2;
+        u32 l = (size > bytesLeft) ? bytesLeft : size;
+        *len = l;
+        if (f.flags & APIFSTRUCT_UTF16) *len = l/2;
+        return f.f->Read(buf, l);
+    }
+    int BasicAPI::FileWrite(BasicAPI::FileStruct f, u16* buf, u32 size){
+        if (!f.f) return File::UNEXPECTED_ERROR;
+        if (f.flags & APIFSTRUCT_UTF16) size *= 2;
+        return f.f->Write(buf, size);
+    }
+
     int BasicAPI::Func_FOPEN(BASICGenericVariable* argv, u32 argc){
         if (argc < 2){
             APIOUT("EMISSING_ARGS");
@@ -149,7 +165,7 @@ namespace CTRPluginFramework {
         }
         string16 argTmp;
         std::string path, mode$;
-        u32 fflags; int res;
+        u32 fflags = APIFSTRUCT_UTF16; int res;
         s32 mode = CYX::argGetInteger(argv+1);
         CYX::argGetString(argTmp, argv);
         if (!argTmp.size()) APIGETCLIP(argTmp);
@@ -167,18 +183,14 @@ namespace CTRPluginFramework {
         if (mode == 0){
             CYX::argGetString(argTmp, argv+1);
             Utils::ConvertUTF16ToUTF8(mode$, argTmp); strupper(mode$);
-            mode = 0;
+            mode = File::SYNC;
             if (mode$.find('R')!=-1) mode |= (File::READ);
             if (mode$.find('W')!=-1) mode |= (File::WRITE | File::TRUNCATE | File::CREATE);
             if (mode$.find('A')!=-1) mode |= (File::WRITE | File::APPEND);
             if (mode$.find('C')!=-1) mode |= (File::WRITE | File::CREATE);
             if (mode$.find('X')!=-1) mode |= (File::WRITE);
-            if (mode$.find('S')!=-1) mode |= (File::SYNC);
             if (mode$.find('+')!=-1) mode |= (File::RWC);
-            if (mode$.find('1')!=-1) fflags = APIFSTRUCT_UTF8;
-            if (mode$.find('2')!=-1) fflags = APIFSTRUCT_UTF16;
-            if (mode$.find('3')!=-1) fflags = APIFSTRUCT_ANSI;
-            if (!(fflags & APIFSTRUCT_ENCODINGS)) fflags |= APIFSTRUCT_UTF8;
+            if (mode$.find('B')!=-1) fflags = APIFSTRUCT_ANSI;
         }
         if (mode == 0){
             APIOUT("EBAD_FILE_MODE");
@@ -187,12 +199,13 @@ namespace CTRPluginFramework {
         FileStruct f;
         f.flags = fflags;
         f.handle = handleIDCounter++;
-        res = File::Open(f.f, path, mode);
-        if (res != File::SUCCESS){
-            if (res == File::INVALID_PATH) APIOUT("EINVALID_PATH");
-            if (res == File::INVALID_MODE) APIOUT("EBAD_FILE_MODE");
-            if (res == File::UNEXPECTED_ERROR) APIOUT("EUNKNOWN");
-            f.f.Close();
+        f.f = new File(path, mode);
+        APIOUT("EINTERNAL");
+        if (!f.f) return 1;
+        if (!f.f->IsOpen()){
+            APIOUT("ECANNOT_OPEN");
+            f.f->Close();
+            delete f.f;
             return 1;
         }
         Files.push_back(f);
@@ -205,19 +218,18 @@ namespace CTRPluginFramework {
             return 1;
         }
         u32 handle = CYX::argGetInteger(argv);
-        u32 fflags = 0;
+        u32 fflags = APIFSTRUCT_UTF16;
         string16 flagstr;
-        CYX::argGetString(flagstr, argv+1);
-        if (flagstr.find('1')!=-1) fflags = APIFSTRUCT_UTF8;
-        if (flagstr.find('2')!=-1) fflags = APIFSTRUCT_UTF16;
-        if (flagstr.find('3')!=-1) fflags = APIFSTRUCT_ANSI;
+        u32 mode = CYX::argGetInteger(argv+1);
+        if (mode == 1) fflags = APIFSTRUCT_UTF16;
+        if (mode == 2) fflags = APIFSTRUCT_ANSI;
         if (!handle){
             APIOUT("EBAD_HANDLE");
             return 1;
         }
-        for (auto i : Files){
-            if (i.handle == handle){
-                i.flags = fflags;
+        for (int i=0; i<Files.size(); i++){
+            if (Files[i].handle == handle){
+                Files[i].flags = fflags;
                 APIOUT("SUCCESS");
                 return 0;
             }
@@ -231,16 +243,17 @@ namespace CTRPluginFramework {
             return 1;
         }
         u32 handle = CYX::argGetInteger(argv);
-        u32 length = 0x10000;
+        u32 length = 272144;
         if (argc > 1) length = CYX::argGetInteger(argv+1);
-        if (length > 1048576) length = 1048576;
+        if (length > 272144) length = 272144;
         for (int i=0; i<Files.size(); i++){
             if (Files[i].handle == handle){
                 basicapi__ClearClipboard();
-                u32 t=(Files[i].f.GetSize() - Files[i].f.Tell())/2;
-                u32 l = length>t ? t : length;
-                int res = Files[i].f.Read((void*)CYX::editorInstance->clipboardData, l*2);
-                CYX::editorInstance->clipboardLength = l;
+                u32 t=(Files[i].f->GetSize() - Files[i].f->Tell());
+                int res = FileRead(Files[i], CYX::editorInstance->clipboardData, &CYX::editorInstance->clipboardLength, length, t);
+                if (Files[i].flags & APIFSTRUCT_ANSI){
+                    strncpyu8u16((u8*)CYX::editorInstance->clipboardData, CYX::editorInstance->clipboardData, CYX::editorInstance->clipboardLength);
+                }
                 switch (res){
                 case File::NOT_OPEN:
                     APIOUT("EFILE_NOT_OPEN");
@@ -268,16 +281,23 @@ namespace CTRPluginFramework {
             return 1;
         }
         u32 handle = CYX::argGetInteger(argv);
+        bool allowANSI = false;
         u16* stringData = NULL; u32 stringLength;
         if (argc>1)
             CYX::argGetString(&stringData, &stringLength, argv+1);
-        if (!stringData){
+        if (!stringData || !stringLength){
+            allowANSI = true;
             stringData = CYX::editorInstance->clipboardData;
             stringLength = CYX::editorInstance->clipboardLength;
         }
         for (int i=0; i<Files.size(); i++){
             if (Files[i].handle == handle){
-                int res = Files[i].f.Write((void*)stringData, stringLength*2);
+                if (allowANSI && Files[i].flags & APIFSTRUCT_ANSI){
+                    strncpyu16u8(stringData, (u8*)stringData, stringLength);
+                    if (stringData == CYX::editorInstance->clipboardData)
+                        CYX::editorInstance->clipboardLength /= 2;
+                } 
+                int res = FileWrite(Files[i], stringData, stringLength);
                 switch (res){
                 case File::NOT_OPEN:
                     APIOUT("EFILE_NOT_OPEN");
@@ -309,14 +329,14 @@ namespace CTRPluginFramework {
         s32 seek = 0, whence = 0;
         if (argc>1){
             doSeek = true;
-            whence = CYX::argGetInteger(argv+1);
+            seek = CYX::argGetInteger(argv+1);
         }
         if (argc>2)
-            seek = CYX::argGetInteger(argv+2);
+            whence = CYX::argGetInteger(argv+2);
         for (int i=0; i<Files.size(); i++){
             if (Files[i].handle == handle){
-                if (doSeek) Files[i].f.Seek(seek, (File::SeekPos)whence);
-                seek = Files[i].f.Tell();
+                if (doSeek) Files[i].f->Seek(seek, (File::SeekPos)whence);
+                seek = Files[i].f->Tell();
                 APIOUT(seek);
                 return 0;
             }
@@ -332,7 +352,7 @@ namespace CTRPluginFramework {
         u32 handle = CYX::argGetInteger(argv);
         for (int i=0; i<Files.size(); i++){
             if (Files[i].handle == handle){
-                Files[i].f.Close();
+                Files[i].f->Close();
                 Files.erase(Files.begin()+i);
                 APIOUT("SUCCESS");
                 return 0;
@@ -528,17 +548,11 @@ namespace CTRPluginFramework {
         return 0;
     }
     int BasicAPI::Func_INIT(BASICGenericVariable* argv, u32 argc){
-        for (int i=0; i<Files.size(); i++){
-            Files[i].f.Close();
-        }
-        Files.clear();
+        Cleanup();
         return 0;
     }
     int BasicAPI::Func_EXIT(BASICGenericVariable* argv, u32 argc){
-        for (int i=0; i<Files.size(); i++){
-            Files[i].f.Close();
-        }
-        Files.clear();
+        Cleanup();
         return 0;
     }
 
@@ -553,10 +567,6 @@ namespace CTRPluginFramework {
         Utils::ConvertUTF16ToUTF8(arg1, arg1_16); arg1_16.clear();
         std::string data = ""; strupper(arg1);
 
-        if (arg1 == "UNIXTIME"){
-            APIOUT((s32)osGetUnixTime());
-            return 0;
-        }
         if (flags & APIFLAG_READ_HWINFO){
             if (arg1 == "3DSLIDER"){
                 APIOUT(osGet3DSliderState());
@@ -566,19 +576,11 @@ namespace CTRPluginFramework {
                 APIOUT((s32)osIsHeadsetConnected());
                 return 0;
             }
-            if (arg1 == "SIGNAL"){
-                APIOUT((s32)osGetWifiStrength());
-                return 0;
-            }
-            if (arg1 == "BAT_LEVEL"){
-                mcuHwcInit();
-                u8 out;
-                MCUHWC_GetBatteryLevel(&out);
-                mcuHwcExit();
-                APIOUT((s32)out);
-                return 0;
-            }
             if (arg1 == "VOLSLIDER"){
+                if (System::IsCitra()) {
+                    APIOUT((s32)63);
+                    return 0;
+                }
                 mcuHwcInit();
                 u8 out;
                 MCUHWC_GetSoundSliderLevel(&out);
@@ -586,7 +588,31 @@ namespace CTRPluginFramework {
                 APIOUT((s32)out);
                 return 0;
             }
+            if (arg1 == "SIGNAL"){
+                if (System::IsCitra()) {
+                    APIOUT((s32)0);
+                    return 0;
+                }
+                APIOUT((s32)osGetWifiStrength());
+                return 0;
+            }
+            if (arg1 == "BAT_LEVEL"){
+                if (System::IsCitra()) {
+                    APIOUT((s32)100);
+                    return 0;
+                }
+                mcuHwcInit();
+                u8 out;
+                MCUHWC_GetBatteryLevel(&out);
+                mcuHwcExit();
+                APIOUT((s32)out);
+                return 0;
+            }
             if (arg1 == "CHARGE"){
+                if (System::IsCitra()) {
+                    APIOUT((s32)1);
+                    return 0;
+                }
                 mcuHwcInit();
                 u8 out;
                 MCUHWC_ReadRegister(0xf,&out,1);
@@ -595,6 +621,10 @@ namespace CTRPluginFramework {
                 return 0;
             }
             if (arg1 == "CANSLEEP"){
+                if (System::IsCitra()) {
+                    APIOUT((s32)0);
+                    return 0;
+                }
                 APIOUT((s32)mcuIsSleepEnabled());
                 return 0;
             }
@@ -728,6 +758,60 @@ namespace CTRPluginFramework {
         }
         return 0;
     }
+    int BasicAPI::Func_FILLGRP(BASICGenericVariable* argv, u32 argc){
+        if (argc < 2) {
+            APIOUT("EMISSING_ARGS");
+            return 1;
+        }
+        s32 num=CYX::argGetInteger(argv);
+        u32 color=CYX::argGetInteger(argv+1);
+        u8* colorv = (u8*)&color;
+
+        u16* target = NULL;
+        u16 color16 = RGBA8_to_5551(colorv[2],colorv[1],colorv[0],colorv[3]);
+
+        if (num == -1){
+            target = CYX::GraphicPage->font.dispBuf;
+        } else if (num>=0&&num<6) {
+            target = CYX::GraphicPage->grp[num].dispBuf;
+        }
+        if (!target) return 0;
+
+        u32 i=0;
+        while (i < 262144) target[i++] = color16;
+
+        return 0;
+    }
+    int BasicAPI::Func_SYSGCOPY(BASICGenericVariable* argv, u32 argc){
+        if (argc < 2) {
+            APIOUT("EMISSING_ARGS");
+            return 1;
+        }
+        s32 mode=CYX::argGetInteger(argv);
+        s32 slot=CYX::argGetInteger(argv+1);
+        BASICGraphicPage* target = NULL;
+
+        if (slot == -1){
+            target = &CYX::GraphicPage->font;
+        } else if (slot>=0&&slot<6) {
+            target = &CYX::GraphicPage->grp[slot];
+        }
+        if (!target) return 0;
+
+        if (mode){
+            memcpy(CYX::GraphicPage->system.dispBuf, target->workBuf, 524288);
+        } else {
+            memcpy(target->dispBuf, CYX::GraphicPage->system.dispBuf, 524288);
+            memcpy(target->workBuf, CYX::GraphicPage->system.dispBuf, 524288);
+        }
+
+        return 0;
+    }
+    int BasicAPI::Func_UNIXTIME(BASICGenericVariable* argv, u32 argc){
+        APIOUT((s32)osGetUnixTime());
+        return 0;
+    }
+
     u32 basicapi__getDataPtr(){
         return (u32)CYX::editorInstance->clipboardData;
     }
@@ -766,6 +850,7 @@ namespace CTRPluginFramework {
         AddEntry("FREAD", Func_FREAD);
         AddEntry("FWRITE", Func_FWRITE);
         AddEntry("OSD", Func_OSD);
+        AddEntry("UNIXTIME", Func_UNIXTIME);
         AddEntry("FSEEK", Func_FSEEK);
         AddEntry("FMODE", Func_FMODE);
         AddEntry("FOPEN", Func_FOPEN);
@@ -778,14 +863,27 @@ namespace CTRPluginFramework {
         AddEntry("RMDIR", Func_RMDIR);
         AddEntry("MVDIR", Func_MVDIR);
         AddEntry("SETUP_CLIP", Func_SETUP_CLIP);
+        AddEntry("FILLGRP", Func_FILLGRP);
+        AddEntry("SYSGCOPY", Func_SYSGCOPY);
         AddEntry("INIT", Func_INIT);
         AddEntry("EXIT", Func_EXIT);
     }
     void BasicAPI::Finalize(){
-        // TODO: Finish queue system to clean up potential
-        // garbage that might result from it.
+        for (int i=0; i<Files.size(); i++){
+            if (!Files[i].f) continue;
+            Files[i].f->Close();
+            delete Files[i].f;
+        }
+        Files.clear();
     }
-
+    void BasicAPI::Cleanup(){
+        for (int i=0; i<Files.size(); i++){
+            if (!Files[i].f) continue;
+            Files[i].f->Close();
+            delete Files[i].f;
+        }
+        Files.clear();
+    }
     void BasicAPI::MenuTick(){
         u32 qsz = Queue.size();
         if (!qsz) return;

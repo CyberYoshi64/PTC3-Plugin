@@ -53,6 +53,10 @@ namespace CTRPluginFramework
         Renderer::DrawPixel(posX, posY, color);
     }
 
+    void Render::Interface::ReadPixel(int posX, int posY, Color &outColor) {
+        Renderer::ReadPixel(posX, posY, outColor);
+    }
+
     void Render::Interface::DrawHLine(int posX, int posY, int length, const Color &color, int thickness, bool stippled) {
         if (stippled)
             Renderer::DrawStippledLine(posX, posY, length, color, thickness);

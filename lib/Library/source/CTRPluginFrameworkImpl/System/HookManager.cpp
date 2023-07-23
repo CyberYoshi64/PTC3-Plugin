@@ -19,7 +19,7 @@ HookManager::HookManager(void)
 #define PA_PTR(addr)            (void *)((u32)(addr) | 1 << 31)
 #define REG32(addr)             (*(vu32 *)(PA_PTR(addr)))
 
-extern "C"  void    __hook__CheckTlsValue(u32 value)
+extern "C" __attribute__((__used__))  void    __hook__CheckTlsValue(u32 value)
 {
     if (value && (value < 0x06000000 || value > 0x07000000))
     {

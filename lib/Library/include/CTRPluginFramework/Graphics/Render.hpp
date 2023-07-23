@@ -62,6 +62,15 @@ namespace CTRPluginFramework
             void     DrawPixel(int posX, int posY, const Color &color);
 
             /**
+             * @brief Reads a pixel
+             *
+             * @param posX X position of the pixel
+             * @param posY Y position of the pixel
+             * @param color Output color of the pixel
+             */
+            void     ReadPixel(int posX, int posY, Color &outColor);
+
+            /**
              * @brief Draws an horizontal line.
              *
              * @param posX X position of the line

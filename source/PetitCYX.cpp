@@ -149,18 +149,19 @@ namespace CTRPluginFramework {
             SaveProjectSettings();
             UTF16toUTF8(g_currentProject="", activeProject->currentProject);
             if (g_currentProject==""||g_currentProject=="###") g_currentProject="$DEFAULT";
-            OSD::Notify(g_currentProject);
+            //OSD::Notify(g_currentProject);
             LoadProjectSettings();
         }
         if (mirror.diff.isDirectMode){
-            OSD::Notify(Utils::Format("isDirectMode: %d", mirror.isDirectMode));
+            //OSD::Notify(Utils::Format("isDirectMode: %d", mirror.isDirectMode));
         }
         if (mirror.isInBasic && mirror.isBasicRunningTime == 3 && mirror.isBasicRunning2 != mirror.isBasicRunning){
             mirror.isBasicRunning2 = mirror.isBasicRunning;
-            OSD::Notify(Utils::Format("isBasicRunning: %d", mirror.isBasicRunning));
+            //OSD::Notify(Utils::Format("isBasicRunning: %d", mirror.isBasicRunning));
         }
         if (mirror.diff.isInBasic){
-            OSD::Notify(Utils::Format("isInBasic: %d", mirror.isInBasic));
+            if (!mirror.isInBasic) SaveProjectSettings();
+            //OSD::Notify(Utils::Format("isInBasic: %d", mirror.isInBasic));
         }
     }
     void CYX::UpdateMirror(){

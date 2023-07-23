@@ -78,7 +78,7 @@ namespace CTRPluginFramework
 
     static PluginMenuActionReplay *__pmARinstance = nullptr;
     PluginMenuActionReplay::PluginMenuActionReplay() :
-        _topMenu{ "Action Replay" },
+        _topMenu{ "ActionReplay" },
         _noteBtn(Button::Icon | Button::Toggle, IntRect(90, 30, 25, 25), Icon::DrawInfo),
         _editorBtn(Button::Icon, IntRect(130, 30, 25, 25), Icon::DrawEdit),
         _newBtn(Button::Icon, IntRect(165, 30, 25, 25), Icon::DrawPlus),

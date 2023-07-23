@@ -17,11 +17,10 @@ namespace CTRPluginFramework {
     };
 
     enum BasicAPI_FileStructFlag {
-        APIFSTRUCT_UTF8     = BIT( 8), // Input data is UTF-8 (Text)
-        APIFSTRUCT_ANSI     = BIT( 9), // Input data is ANSI (truncated UTF-16)
-        APIFSTRUCT_UTF16    = BIT(10), // Input data is UTF-16 (Data)
+        APIFSTRUCT_UTF16    = BIT( 9), // Input data is UTF-16 (Data)
+        APIFSTRUCT_ANSI     = BIT(10), // Input data is ANSI (truncated UTF-16)
 
-        APIFSTRUCT_ENCODINGS = (APIFSTRUCT_UTF8|APIFSTRUCT_ANSI|APIFSTRUCT_UTF16)
+        APIFSTRUCT_ENCODINGS = (APIFSTRUCT_ANSI|APIFSTRUCT_UTF16)
     };
 
     enum BasicAPI_Flags { // Project flags
@@ -48,7 +47,7 @@ namespace CTRPluginFramework {
     typedef struct FileStruct {
         u32 handle;
         u32 flags;
-        File f;
+        File* f;
     } FileStruct;
 
     typedef struct QueueEntry_s {
@@ -68,11 +67,13 @@ namespace CTRPluginFramework {
     public:
         static void Initialize(void);
         static void Finalize(void);
+        static void Cleanup(void);
         static void MenuTick(void);
         static int Parse(BASICGenericVariable* argv, u32 argc);
+        static int FileRead(BasicAPI::FileStruct f, u16* buf, u32* len, u32 size, u32 bytesLeft);
+        static int FileWrite(BasicAPI::FileStruct f, u16* buf, u32 size);
         static u32 flags;
     private:
-        
         static int Func_FILES(BASICGenericVariable* argv, u32 argc);
         static int Func_FOPEN(BASICGenericVariable* argv, u32 argc);
         static int Func_FMODE(BASICGenericVariable* argv, u32 argc);
@@ -92,6 +93,9 @@ namespace CTRPluginFramework {
         static int Func_CFGSET(BASICGenericVariable* argv, u32 argc);
         static int Func_OSD(BASICGenericVariable* argv, u32 argc);
         static int Func_SETUP_CLIP(BASICGenericVariable* argv, u32 argc);
+        static int Func_FILLGRP(BASICGenericVariable* argv, u32 argc);
+        static int Func_SYSGCOPY(BASICGenericVariable* argv, u32 argc);
+        static int Func_UNIXTIME(BASICGenericVariable* argv, u32 argc);
         
         static void AddEntry(const char* id, BasicAPIFunction func);
         static std::vector<Entry> Entries;

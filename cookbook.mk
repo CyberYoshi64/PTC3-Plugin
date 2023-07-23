@@ -4,6 +4,8 @@ ifeq ($(strip $(DEVKITARM)),)
 $(error "Please set DEVKITARM in your environment. export DEVKITARM=<path to>devkitARM")
 endif
 
+ENABLE_LINK_TIME_OPTIMIZATIONS = 1
+
 export COMMIT_HASH		:=	$(shell git rev-parse --short=8 HEAD)
 export COMPILE_DATE 	:=  $(shell date -u +"%y%m%d%H%M")
 
@@ -29,10 +31,15 @@ CFLAGS		:=	$(ARCH) -Os -mword-relocations \
 DEFINES		:= -DBUILD_DATE="\"$(COMPILE_DATE)\"" -DCOMMIT_HASH="\"$(COMMIT_HASH)\""
 
 CFLAGS		+=	$(INCLUDE) -D__3DS__ $(DEFINES)
-CXXFLAGS	:= $(CFLAGS) -fno-rtti -fno-exceptions -std=gnu++20
 
 ASFLAGS		:=	$(ARCH)
 LDFLAGS		:= -T $(TOPDIR)/3gx.ld $(ARCH) -Os -Wl,--gc-sections,--strip-discarded,--strip-debug
+
+ifneq ($(ENABLE_LINK_TIME_OPTIMIZATIONS), 0)
+	CFLAGS += -flto=auto -ffat-lto-objects
+	ASFLAGS += -flto=auto -ffat-lto-objects
+endif
+CXXFLAGS	:= $(CFLAGS) -fno-rtti -fno-exceptions -std=gnu++20
 
 LIBS		:= -lctrpf -lctru
 LIBDIRS		:=  $(TOPDIR) $(CTRULIB) $(PORTLIBS)
@@ -80,7 +87,7 @@ clean:
 	@echo clean ... 
 	@rm -rf $(BUILD) $(OUTPUT).3gx $(OUTPUT).elf
 
-re: clean lib all
+re: clean lib .WAIT all
 
 #---------------------------------------------------------------------------------
 

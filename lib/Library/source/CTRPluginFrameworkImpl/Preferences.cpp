@@ -21,6 +21,7 @@ namespace CTRPluginFramework
     std::string Preferences::ScreenshotPrefix;
 
     bool        Preferences::_cheatsAlreadyLoaded = false;
+    bool        Preferences::_favoritesAlreadyLoaded = false;
     bool        Preferences::_bmpCanBeLoaded = true;
 
     static const char *g_signature = "CTRPF\0\0";
@@ -150,6 +151,44 @@ namespace CTRPluginFramework
             MenuHotkeys = Key::Select;
     }
 
+    void    Preferences::LoadSavedEnabledCheats(void)
+    {
+        File    settings;
+        Header  header = { 0 };
+
+        if (_cheatsAlreadyLoaded)
+        {
+            MessageBox("Error\nCheats already loaded")();
+            return;
+        }
+
+        if (OpenConfigFile(settings, header) == 0)
+        {
+            if (header.enabledCheatsCount != 0)
+                PluginMenuImpl::LoadEnabledCheatsFromFile(header, settings);
+            _cheatsAlreadyLoaded = true;
+        }
+    }
+
+    void    Preferences::LoadSavedFavorites(void)
+    {
+        File    settings;
+        Header  header = { 0 };
+
+        if (_favoritesAlreadyLoaded)
+        {
+            MessageBox("Error\nFavorites already loaded")();
+            return;
+        }
+
+        if (OpenConfigFile(settings, header) == 0)
+        {
+            if (header.favoritesCount != 0)
+                PluginMenuImpl::LoadFavoritesFromFile(header, settings);
+            _favoritesAlreadyLoaded = true;
+        }
+    }
+
     void    Preferences::LoadHotkeysFromFile(void)
     {
         File    settings;
@@ -255,6 +294,11 @@ namespace CTRPluginFramework
         if (File::Open(settings, "CTRPFData.bin", mode) == 0)
         {
             if (settings.Write(&header, sizeof(Header)) != 0) goto error;
+
+            if (IsEnabled(AutoSaveCheats))
+                PluginMenuExecuteLoop::WriteEnabledCheatsToFile(header, settings);
+            if (IsEnabled(AutoSaveFavorites))
+                PluginMenuImpl::WriteFavoritesToFile(header, settings);
 
             PluginMenuImpl::WriteHotkeysToFile(header, settings);
 

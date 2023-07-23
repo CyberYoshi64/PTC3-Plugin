@@ -68,4 +68,19 @@ namespace CTRPluginFramework {
         // 2208988800 -> 70 years
         return ((osGetTime()/1000)-2208988800);
     }
+    void strncpyu8u16(u8* str, u16* out, u32 len){
+        out += len; *out-- = '\0';
+        str += (len-1);
+        u32 i = len;
+        while (i--){
+            *out-- = *str--;
+        }
+    }
+    void strncpyu16u8(u16* str, u8* out, u32 len){
+        u32 i = len;
+        while (i--){
+            *out++ = *str++;
+        }
+        *out = '\0';
+    }
 }

@@ -15,6 +15,15 @@ export CTRPF_VERSION_BUILD	:=	4
 export COMMIT			:=	$(shell git rev-parse --short=8 HEAD)
 export COMPILE_DATE 	:=  $(shell date -u +"%Y-%m-%dT%H:%M:%S%Z")
 
+ENABLE_LINK_TIME_OPTIMIZATIONS = 1
+
+#ifeq ($(strip $(CTRPF_REVISION)),)
+#	export CTRPF_REVISION			:=	v0.0.0-0
+#	export CTRPF_VERSION_MAJOR	:=	0
+#	export CTRPF_VERSION_MINOR	:=	0
+#	export CTRPF_VERSION_BUILD	:=	0
+#endif
+
 #---------------------------------------------------------------------------------
 # TARGET is the name of the output
 # BUILD is the directory where object files & intermediate files will be placed
@@ -63,7 +72,7 @@ DEFINES	:=	-DCTRPF_VERSION_MAJOR="\"$(CTRPF_VERSION_MAJOR)\"" -DCTRPF_VERSION_MI
 			-DCTRPF_VERSION_BUILD="\"$(CTRPF_VERSION_BUILD)\"" -DCOMMIT_HASH="\"$(COMMIT)\"" -DCOMPILE_DATE="\"$(COMPILE_DATE)\""
 
 GCC11_FALSEPOSITIVES := -Wno-array-bounds -Wno-stringop-overflow -Wno-stringop-overread
-CFLAGS	:=	-Wall -Wno-psabi -mword-relocations \
+CFLAGS	:=	-Wall -Werror -Wno-psabi -mword-relocations \
 			-ffunction-sections \
 			-fdata-sections \
 			$(GCC11_FALSEPOSITIVES) \
@@ -72,9 +81,14 @@ CFLAGS	:=	-Wall -Wno-psabi -mword-relocations \
 
 CFLAGS	+=	$(INCLUDE) -D__3DS__ $(DEFINES)
 
-CXXFLAGS 	:= $(CFLAGS) -fno-rtti -fno-exceptions -std=gnu++20
-
 ASFLAGS	:=	$(G) $(ARCH) $(INCLUDE) -Os -Wl,$(WL)--gc-sections
+
+ifneq ($(ENABLE_LINK_TIME_OPTIMIZATIONS), 0)
+	CFLAGS += -flto=auto -ffat-lto-objects
+	ASFLAGS += -flto=auto -ffat-lto-objects
+endif
+
+CXXFLAGS 	:= $(CFLAGS) -fno-rtti -fno-exceptions -std=gnu++20
 
 #---------------------------------------------------------------------------------
 # list of directories containing libraries, this must be the top level containing

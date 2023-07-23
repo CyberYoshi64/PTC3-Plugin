@@ -37,7 +37,7 @@ namespace Services
         s32    BufferFlags{0};
         u32    InterruptReceiverThreadPriority;
 
-        extern "C" void __gsp__Update(u32 threadId, Handle eventHandle, Handle sharedMemHandle)
+        extern "C" __attribute__((__used__)) void __gsp__Update(u32 threadId, Handle eventHandle, Handle sharedMemHandle)
         {
             Update(threadId, eventHandle, sharedMemHandle);
         }

@@ -48,6 +48,7 @@ namespace CTRPluginFramework
         // Forms
         //#############################################################################################
         static void     DrawPixel(int posX, int posY, const Color &color);
+        static void     ReadPixel(int posX, int posY, Color &colorOut);
         static void     DrawLine(int posX, int posY, int length, const Color &color, int width = 1);
         static void     DrawLine(const IntVector &start, const IntVector &end, const Color &color);
         static void     DrawStippledLine(int posX, int posY, int width, const Color &color, int height);

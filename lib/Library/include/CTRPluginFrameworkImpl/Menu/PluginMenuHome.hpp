@@ -59,8 +59,11 @@ namespace CTRPluginFramework
         // Members
         MenuFolderImpl    * _root;
         MenuFolderImpl    * _folder;
+        MenuFolderImpl    * _starred;
+        MenuFolderImpl    * _starredConst;
 
         int                 _mode;
+        bool                _starMode;
         int                 _selector;
         int                 _selectedTextSize;
         float               _maxScrollOffset;
@@ -74,12 +77,18 @@ namespace CTRPluginFramework
         TextBox             _noteTB;
 
         // Mode buttons
+        Button              _showStarredBtn;
+        Button              _hidMapperBtn;
         Button              _gameGuideBtn;
         Button              _searchBtn;
         Button              _arBtn;
         Button              _toolsBtn;
 
+        Button              _keyboardBtn;
+        Button              _controllerBtn;
+
         // Entry button
+        Button              _AddFavoriteBtn;
         Button              _InfoBtn;
     };
 }
