@@ -16,19 +16,18 @@ namespace CTRPluginFramework {
         PLGSET(PLGFLG_EXPERIMENTS);
         PLGSET(PLGFLG_SBSERVER);
         if (kbdres == 0) {
-            srvName = _DEFAULT_SERVERNAME_SAVE;
-            CYX::ReplaceServerName(srvName, _DEFAULT_SERVERNAME_LOAD);
+            CYX::ReplaceServerName(SBSERVER_DEFAULT_NAME1, SBSERVER_DEFAULT_NAME2);
             return;
         } else {
             Keyboard kbd("Enter the server name to which to connect to:\n\n The domain name must be " TOSTRING(_LEN_SERVERNAME_URL) " characters\n long or less.");
-            kbd.SetMaxLength(_LEN_SERVERNAME_URL);
+            kbd.SetMaxLength(SBSERVER_URL_MAXLEN);
             kbdres = kbd.Open(srvName, "http://");
             if (kbdres < 0) return;
             if (srvName.compare(0, 4, "http")!=0) {
                 MessageBox("The server name is not valid:\nThe name must start with \"http://\" or \"https://\".", DialogType::DialogOk, ClearScreen::Both)();
                 return;
             }
-            while (strlen(srvName.c_str())>_LEN_SERVERNAME_URL) srvName.resize(srvName.size()-1);
+            while (strlen(srvName.c_str())>SBSERVER_URL_MAXLEN) srvName.resize(srvName.size()-1);
             MessageBox e("Server name changer", srvName+"\n\nIs this correct?", DialogType::DialogYesNo, ClearScreen::Both);
             if (e()){
                 CYX::ReplaceServerName(srvName, srvName);
@@ -39,9 +38,8 @@ namespace CTRPluginFramework {
     }
 
     void versionSpoof(MenuEntry *entry){
-        u32 offsets[] = {0x0, JPN_VERSION_INT, USA_VERSION_INT, EUR_VERSION_INT};
         menu:
-        u32 oldVersion = *(u32*)offsets[g_region], newVersion = 0;
+        u32 oldVersion = *(u32*)Hooks::offsets.versionInt, newVersion = 0;
         Keyboard mainsel(
             "Version spoofer\n\nCurrently set:\n" << SkipToPixel(48) <<
             CYX::ColorPTCVerValid(oldVersion, CYX__COLORVER_NOCOLOR, 0xFF0000FF) <<
@@ -60,12 +58,12 @@ namespace CTRPluginFramework {
         int kbdres = mainsel.Open();
         switch (kbdres) {
         case 0:
-            *(u32*)offsets[g_region] = CYX::currentVersion;
+            *(u32*)Hooks::offsets.versionInt = CYX::currentVersion;
             break;
         case 1:
             kbd.IsHexadecimal(true);
             PLGSET(PLGFLG_SPOOFED_VER);
-            if (kbd.Open(newVersion, oldVersion)==0) *(u32*)offsets[g_region] = newVersion;
+            if (kbd.Open(newVersion, oldVersion)==0) *(u32*)Hooks::offsets.versionInt = newVersion;
             break;
         case -1:
         case -2:
@@ -81,8 +79,7 @@ namespace CTRPluginFramework {
                 CYX::PTCVersionString(CYX::currentVersion)+
                 Utils::Format("\nCYX %s",STRING_VERSION)+"\n"+
                 Utils::Format("\nEditor data @ 0x%08X",(u32)CYX::editorInstance)+
-                Utils::Format("\nCONTROLLER func @ 0x%08X",CYX::basControllerFunc.funcAddr)+
-                Utils::Format("\nScrShot func @ 0x%08X",CYX::scrShotStub.funcAddr)
+                Utils::Format("\nCONTROLLER func @ 0x%08X",CYX::basControllerFunc.funcAddr)
             ),
             DialogType::DialogOk, ClearScreen::Both)();
     }
@@ -245,30 +242,6 @@ namespace CTRPluginFramework {
             cyxAPItoggle_getMsg(message, kres, __tmp);
         }
     }
-    void grpCorruptor(MenuEntry* entry){
-        if (entry->IsActivated()){
-            PLGSET(PLGFLG_EXPERIMENTS);
-            u32 o = Utils::Random(0, 512*512 - 4096);
-            for (u16 i=0; i<4096; i++){
-                CYX::GraphicPage->grp[0].dispBuf[o+i] = (u16)Utils::Random();
-                CYX::GraphicPage->grp[1].dispBuf[o+i] = (u16)Utils::Random();
-                CYX::GraphicPage->grp[2].dispBuf[o+i] = (u16)Utils::Random();
-                CYX::GraphicPage->grp[3].dispBuf[o+i] = (u16)Utils::Random();
-                CYX::GraphicPage->grp[4].dispBuf[o+i] = (u16)Utils::Random();
-                CYX::GraphicPage->grp[5].dispBuf[o+i] = (u16)Utils::Random();
-                CYX::GraphicPage->font.dispBuf[o+i] = (u16)Utils::Random();
-                CYX::GraphicPage->system.dispBuf[o+i] = (u16)Utils::Random();
-            }
-            CYX::GraphicPage->grp[0].displayedFormat = Utils::Random(0,11);
-            CYX::GraphicPage->grp[1].displayedFormat = Utils::Random(0,11);
-            CYX::GraphicPage->grp[2].displayedFormat = Utils::Random(0,11);
-            CYX::GraphicPage->grp[3].displayedFormat = Utils::Random(0,11);
-            CYX::GraphicPage->grp[4].displayedFormat = Utils::Random(0,11);
-            CYX::GraphicPage->grp[5].displayedFormat = Utils::Random(0,11);
-            CYX::GraphicPage->font.displayedFormat = Utils::Random(0,11);
-            CYX::GraphicPage->system.displayedFormat = Utils::Random(0,11);
-        }
-    }
     void grpFixMe(MenuEntry* entry){
         if (entry->IsActivated()){
             PLGSET(PLGFLG_EXPERIMENTS);
@@ -293,37 +266,6 @@ namespace CTRPluginFramework {
             }
         }
         entry->Disable();
-    }
-    void grpSetFormat(MenuEntry* entry){
-        PLGSET(PLGFLG_EXPERIMENTS);
-        u32 gspFmt, page;
-        Keyboard k1("Select graphic page",{"GRP0","GRP1","GRP2","GRP3","GRP4","GRP5","GRPF"});
-        Keyboard k2("Select GSP format",{"RGB565","RGBA5551 (default)","RGBA4","LA8","HILO8"});
-        int sel1, sel2;
-        while (true){
-            sel1 = k1.Open();
-            if (sel1 < 0) return;
-            sel2 = k2.Open();
-            if (sel2 < 0) continue;
-            break;
-        }
-        u8 md;
-        switch (sel2){
-            case 0: md = 3; break;
-            case 1: md = 2; break;
-            case 2: md = 4; break;
-            case 3: md = 5; break;
-            case 4: md = 6; break;
-        }
-        switch (sel1){
-            case 0: CYX::GraphicPage->grp[0].displayedFormat = md; break;
-            case 1: CYX::GraphicPage->grp[1].displayedFormat = md; break;
-            case 2: CYX::GraphicPage->grp[2].displayedFormat = md; break;
-            case 3: CYX::GraphicPage->grp[3].displayedFormat = md; break;
-            case 4: CYX::GraphicPage->grp[4].displayedFormat = md; break;
-            case 5: CYX::GraphicPage->grp[5].displayedFormat = md; break;
-            case 6: CYX::GraphicPage->font.displayedFormat = md; break;
-        }
     }
     void editorRulerPalCallback(Keyboard& kbd, KeyboardEvent& ev){
         u32 c; CTRPluginFramework::Render::Interface* r;
@@ -409,5 +351,32 @@ namespace CTRPluginFramework {
         if (kres < 0) return;
         CYX::textPalette->editRuler = ptr[kres][0];
         CYX::textPalette->editRulerSel = ptr[kres][1];
+    }
+
+    void fontGetAddrPatch(MenuEntry* entry){
+        Keyboard kbd;
+        u16 codePoint; int yOff, xOff; bool r;
+        kbd.GetMessage() = "Do you want to allow FONTDEF to edit\nthe [X] character?";
+        kbd.Populate((StringVector){
+            "Allow", "Restrict", "Test"
+        }, true);
+        kbd.DisplayTopScreen = true;
+        int kres = kbd.Open();
+        if (kres == 2){
+            kbd.GetMessage() = "Test FONTDEF strictness\n\nPlease enter a codepoint (hex) to test.";
+            kbd.IsHexadecimal(true); // U+XXXX
+            if (kbd.Open(codePoint)>=0){
+                r = CYX::fontOff(codePoint, &yOff, &xOff); // Call into PTC's code
+                kbd.GetMessage() = Utils::Format(
+                    "Test FONTDEF strictness\n\n"
+                    "The codepoint U+%04X returned\n\n"
+                    "X: %ld\nY: %ld\n\n"
+                    "FONTDEF allowed: %s",
+                    codePoint, xOff, 504-yOff, r ? "Yes" : "No"
+                );
+                kbd.Populate((StringVector){"Okay"});
+                kbd.Open();
+            }
+        } else if (kres >= 0) CYX::SetFontGetAddressStrictness(kres);
     }
 }

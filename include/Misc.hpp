@@ -2,18 +2,17 @@
 #define MISC_HPP
 
 #include "main.hpp"
-#include "Offsets.hpp"
+#include "Hooks.hpp"
 
 namespace CTRPluginFramework {
     void serverAdrChg(MenuEntry *entry);
     void versionSpoof(MenuEntry *entry);
     void pluginDetails(MenuEntry *entry);
     void cyxAPItoggle(MenuEntry* entry);
-    void grpCorruptor(MenuEntry* entry);
     void grpFixMe(MenuEntry* entry);
     void grpFreeMe(MenuEntry* entry);
-    void grpSetFormat(MenuEntry* entry);
     void editorRulerPalette(MenuEntry* entry);
+    void fontGetAddrPatch(MenuEntry* entry);
 }
 
 #endif

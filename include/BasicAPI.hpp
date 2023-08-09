@@ -7,13 +7,17 @@ namespace CTRPluginFramework {
     using BasicAPIFunction = int(*)(BASICGenericVariable* argv, u32 argc);
     
     #define BASICAPI_HANDLE_START (u32)0x10000000U
+    #define BASICAPI_HANDLE_END (u32)0x3FFFFFFFU
     #define BASICAPI_FILESTACK_LIMIT    32
 
-    enum BasicAPI_FileOpType {
-        APIFOPTYP_DONE = 0,
-        APIFOPTYP_LOAD,
-        APIFOPTYP_SAVE,
-        APIFOPTYP_CFG,
+    enum BasicAPI_PathType {
+        APIPATHTYPE_NONE = 0,
+        APIPATHTYPE_SB_SELF,
+        APIPATHTYPE_SB_OTHERS,
+        APIPATHTYPE_SAFE_SELF,
+        APIPATHTYPE_SAFE_SHARED,
+        APIPATHTYPE_SAFE_OTHERS,
+        APIPATHTYPE_SDMC
     };
 
     enum BasicAPI_FileStructFlag {
@@ -24,14 +28,14 @@ namespace CTRPluginFramework {
     };
 
     enum BasicAPI_Flags { // Project flags
-        APIFLAG_READ_SYSINFO    = BIT( 0), // Access basic info, such as system language and region
-        APIFLAG_READ_FWINFO     = BIT( 1), // Access firmware version info
-        APIFLAG_READ_HWINFO     = BIT( 2), // Access hardware info, such as 3D slider state, headset mode and Wi-Fi strength
-        APIFLAG_FS_ACC_SAFE     = BIT(16), // Allow use of a private folder (/homefs/[project name])
-        APIFLAG_FS_ACC_XREF_RO  = BIT(17), // Access files cross-project (read-only)
-        APIFLAG_FS_ACC_XREF_RW  = BIT(18), // Access files cross-project (with write permissions)
-        APIFLAG_FS_ACC_SD_RO    = BIT(19), // Access the entire SD Card (read-only)
-        APIFLAG_FS_ACC_SD_RW    = BIT(20), // Access the entire SD Card (with write permissions)
+        APIFLAG_READ_SYSINFO    = BIT( 0), APIFLAG_BIT_READ_SYSINFO    =  0, // Access basic info, such as system language and region
+        APIFLAG_READ_FWINFO     = BIT( 1), APIFLAG_BIT_READ_FWINFO     =  1, // Access firmware version info
+        APIFLAG_READ_HWINFO     = BIT( 2), APIFLAG_BIT_READ_HWINFO     =  2, // Access hardware info, such as 3D slider state, headset mode and Wi-Fi strength
+        APIFLAG_FS_ACC_SAFE     = BIT(16), APIFLAG_BIT_FS_ACC_SAFE     = 16, // Allow use of a private folder (/homefs/[project name])
+        APIFLAG_FS_ACC_XREF_RO  = BIT(17), APIFLAG_BIT_FS_ACC_XREF_RO  = 17, // Access files cross-project (read-only)
+        APIFLAG_FS_ACC_XREF_RW  = BIT(18), APIFLAG_BIT_FS_ACC_XREF_RW  = 18, // Access files cross-project (with write permissions)
+        APIFLAG_FS_ACC_SD_RO    = BIT(19), APIFLAG_BIT_FS_ACC_SD_RO    = 19, // Access the entire SD Card (read-only)
+        APIFLAG_FS_ACC_SD_RW    = BIT(20), APIFLAG_BIT_FS_ACC_SD_RW    = 20, // Access the entire SD Card (with write permissions)
         
         // All flags set
         APIFLAG_ADMIN = BIT(23)-1,
@@ -40,7 +44,7 @@ namespace CTRPluginFramework {
         APIFLAG_FS_ACCESS_SD = (APIFLAG_FS_ACC_SD_RO|APIFLAG_FS_ACC_SD_RW),
 
         // Default flag
-        APIFLAG_DEFAULT     = (APIFLAG_READ_SYSINFO | APIFLAG_READ_HWINFO) 
+        APIFLAG_DEFAULT     = (APIFLAG_READ_SYSINFO | APIFLAG_READ_HWINFO)
     };
 
     class BasicAPI {
@@ -87,8 +91,11 @@ namespace CTRPluginFramework {
         static int Func_MKDIR(BASICGenericVariable* argv, u32 argc);
         static int Func_RMDIR(BASICGenericVariable* argv, u32 argc);
         static int Func_MVDIR(BASICGenericVariable* argv, u32 argc);
+        static int Func_CHKDIR(BASICGenericVariable* argv, u32 argc);
+        static int Func_CHKFILE(BASICGenericVariable* argv, u32 argc);
         static int Func_INIT(BASICGenericVariable* argv, u32 argc);
         static int Func_EXIT(BASICGenericVariable* argv, u32 argc);
+        static int Func_CRASH(BASICGenericVariable* argv, u32 argc);
         static int Func_CFGGET(BASICGenericVariable* argv, u32 argc);
         static int Func_CFGSET(BASICGenericVariable* argv, u32 argc);
         static int Func_OSD(BASICGenericVariable* argv, u32 argc);

@@ -2,7 +2,7 @@
 #define EXPERIMENTS_HPP
 
 #include "main.hpp"
-#include "Offsets.hpp"
+#include "Hooks.hpp"
 
 namespace CTRPluginFramework {
     void experiment1(MenuEntry *entry);

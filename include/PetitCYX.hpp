@@ -2,13 +2,31 @@
 #define PETITCYX_HPP
 
 #include "main.hpp"
-#include "Offsets.hpp"
+#include "Hooks.hpp"
 
 namespace CTRPluginFramework {
 
+
+#define SBSERVER_DEFAULT_NAME1	"https://save.smilebasic.com"
+#define SBSERVER_DEFAULT_NAME2	"https://load.smilebasic.com"
+
+#define SBSERVER_SAVE_SAVE3			"/save3.php"
+#define SBSERVER_SAVE_SHOW2			"/show2.php"
+#define SBSERVER_SAVE_DELETE2		"/delete2.php"
+#define SBSERVER_SAVE_SHOPLIST2		"/shoplist2.php"
+#define SBSERVER_SAVE_PREPURCHASE2	"/prepurchase2.php"
+#define SBSERVER_SAVE_PURCHASE2		"/purchase2.php"
+#define SBSERVER_SAVE_LIST2			"/list2.php"
+#define SBSERVER_LOAD_LOAD2			"/load2.php"
+#define SBSERVER_LOAD_INFO2			"/info2.php"
+
+#define SBSERVER_URL_MAXLEN		27 
+
     #define CYX__COLORVER_NOCOLOR   1
-    #define PRJSETFILEMAGIC     0x0054455325585943ULL
+    #define PRJSETFILEMAGIC     0x0154455325585943ULL
     #define THREADVARS_MAGIC    0x21545624 // !TV$
+
+    using FontOffFunc = bool(*)(int c, int* y, int* x);
 
     typedef struct BASICTextPalette_s { // EUR @ 0x01D027CC
         u32 conClear; u32 conBlack;
@@ -117,40 +135,59 @@ namespace CTRPluginFramework {
     };
 
     class CYX {
-    typedef struct Offsets {
-        u32 versionInt;
-        u32 bootText;
-        u32 editorData;
-        u32 consoleTextPalette;
-        u32 helpPagePalette;
-        u32 helpPageDefaultColors; // Assuming u32 bg,txt; there
-        u32 grpStructs;
-        u32 clipboardFuncAddr;
-        u32 controllerFuncAddr;
-        u32 basicInterpreterFlag;
-        u32 basicIsDirectMode;
-        u32 basicIsRunning;
-        u32 activeProjectStrings;
-    } Offsets;
-    typedef struct MirroredVars {
-        u8 isDirectMode;
-        u8 isInBasic;
-        u8 isBasicRunning;
-        u8 isBasicRunning2;
-        u16 currentProject[15];
-        struct diff {
-            bool isDirectMode;
-            bool isInBasic;
-            bool isBasicRunning;
-            bool currentProject;
-        } diff;
-        u32 isBasicRunningTime;
-    } MirroredVars;
-    typedef struct ProjectSettings {
-        u64 magic;
-        u8 apiUsed;
-        u32 apiFlags;
-    } PACKED ProjectSettings;
+        typedef struct PTCConfig_s {
+            u32 magic; // Checked for, it's SB3c
+            u16 smileToolPath[0x40]; // Null-terminated UTF-16 string
+            u16 activeProject[0x10]; // Null-terminated UTF-16 string
+            u32 commentColor; // 0xAARRGGBB
+            u32 commandColor; // 0xAARRGGBB
+            u32 stringColor; // 0xAARRGGBB
+            u32 labelColor; // 0xAARRGGBB
+            u32 numericColor; // 0xAARRGGBB
+            u32 textColor; // 0xAARRGGBB
+            u32 keybDelay; // Key delay in frames
+            u32 keybRepeat; // Key repeat in frames
+            u32 wordWrap; // Editor word-wrap (boolean as u32)
+            union {
+                struct {
+                    u32 something;
+                    // I have to examine this area first
+                    // Am unsure if this is used for something obscure
+                } cyx;
+                u8 pad[0x208]; // Otherwise, it's a 520-byte padding
+            } extend;
+            u32 blackListSize; // Number of blocked users
+            u32 unk1; // Unknown
+            struct {
+                u32 userID; // User ID to block
+                u32 unk; // Padding?
+            } blockedUsers[100]; // List of blocked creators
+            u32 ownUserID; // Own user ID
+            u32 magic2; // Checked for, it's mCeD
+            u32 functionColor; // 0xAARRGGBB
+            u32 backColor; // 0xAARRGGBB
+            u32 isGoldMember; // Local-only badge
+            u32 spotPassEnabled; // Not directly saved but affects the tick in settings
+
+        } PACKED PTCConfig;
+        typedef struct MirroredVars {
+            u8 isDirectMode;
+            u8 isInBasic;
+            u8 isBasicRunning;
+            u8 isBasicRunning2;
+            u16 currentProject[15];
+            struct diff {
+                bool isDirectMode;
+                bool isInBasic;
+                bool isBasicRunning;
+                bool currentProject;
+            } diff;
+            u32 isBasicRunningTime;
+        } MirroredVars;
+        typedef struct ProjectSettings {
+            u64 magic;
+            u32 apiFlags;
+        } PACKED ProjectSettings;
     public:
 
         /**
@@ -211,6 +248,7 @@ namespace CTRPluginFramework {
         static int stubBASICFunction(void* ptr, u32 selfPtr, BASICGenericVariable* outv, u32 outc, void* a4, u32 argc, BASICGenericVariable* argv);
 
         static void MenuTick();
+        static bool WouldOpenMenu();
         static void UpdateMirror();
 
         static s32 argGetInteger(BASICGenericVariable* arg);
@@ -234,17 +272,18 @@ namespace CTRPluginFramework {
 
         static std::string ColorPTCVerValid(u32 ver, u32 ok, u32 ng);
         static void SetDarkMenuPalette();
+        static void SetFontGetAddressStrictness(bool on);
 
         static std::tuple<u32, u32*, u32> soundThreadsInfo[];
 	    static void playMusicAlongCTRPF(bool playMusic);
         static void SoundThreadHook();
 
         static u32 currentVersion;
-        static Offsets offsets;
         static BASICEditorData* editorInstance;
         static BASICActiveProject* activeProject;
         static BASICGRPStructs* GraphicPage;
         static BASICTextPalette* textPalette;
+        static PTCConfig* ptcConfig;
         static std::string g_currentProject;
         static RT_HOOK clipboardFunc;
         static RT_HOOK basControllerFunc;
@@ -254,10 +293,14 @@ namespace CTRPluginFramework {
         static string16 cyxApiTextOut;
         static double cyxApiFloatOut;
         static s32 cyxApiIntOut;
-    private:
+        static u16* basicFontMap;
+        static u32 patch_FontGetOffset[];
+        static u32 patch_FontGetOffsetNew[];
         static MirroredVars mirror;
+        static FontOffFunc fontOff;
+    private:
         static bool provideCYXAPI;
-        static bool wasClipAPIused;
+        static bool wasCYXAPIused;
         static char introText[];
         static char bytesFreeText[];
     };

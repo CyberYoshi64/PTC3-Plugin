@@ -7,15 +7,26 @@ namespace CTRPluginFramework {
     std::vector<BasicAPI::FileStruct> BasicAPI::Files = {};
     u32 BasicAPI::queueOffset = 0;
     u32 BasicAPI::flags = APIFLAG_DEFAULT;
+    u32 g_BasicAPI_PathType = 0;
 
     #define RGBA8_to_5551(r,g,b,a)  ((((b)>>3)&0x1f)<<1)|((((g)>>2)&0x1f)<<6)|((((r)>>3)&0x1f)<<11)|((a / 255)&1)
 
     #define APIOUT(s)       CYX::CYXAPI_Out(s)
     #define APIGETCLIP(s)   s.append(CYX::editorInstance->clipboardData, CYX::editorInstance->clipboardLength)
 
+    bool basicapi__HavePermission(bool write){
+        if (write){
+            if (g_BasicAPI_PathType == APIPATHTYPE_SB_OTHERS && !(BasicAPI::flags & APIFLAG_FS_ACC_XREF_RW)) return false;
+            if (g_BasicAPI_PathType == APIPATHTYPE_SAFE_OTHERS && !(BasicAPI::flags & APIFLAG_FS_ACC_XREF_RW)) return false;
+            if (g_BasicAPI_PathType == APIPATHTYPE_SDMC && !(BasicAPI::flags & APIFLAG_FS_ACC_SD_RW)) return false;
+        }
+        return g_BasicAPI_PathType != APIPATHTYPE_NONE;
+    }
+
     std::string basicapi__EvaluatePath(std::string path){
         s32 i, j;
-        while (path.size()>4 && (i=path.find(".."))>=0){
+        g_BasicAPI_PathType = APIPATHTYPE_NONE;
+        while (path.size()>=3 && (i=path.find(".."))>=0){
             j=path.find('/', i);
             if (j < 0)
                 path.erase(path.begin()+(i==0 ? 0 : i-1), path.begin()+(i+2));
@@ -26,21 +37,35 @@ namespace CTRPluginFramework {
             path.erase(path.begin()+i);
         }
         if (!path.size()) return "!EEMPTY_PATH";
-        if (path.starts_with("/"))
+        if (path.starts_with("/")){
+            g_BasicAPI_PathType = APIPATHTYPE_SB_SELF;
             return EXTDATA_PATH"/" + CYX::g_currentProject + path;
-        if (path.starts_with("ptc:/"))
+        }
+        if (path.starts_with("ptc:/")) {
+            g_BasicAPI_PathType = APIPATHTYPE_SB_OTHERS;
             return EXTDATA_PATH + path.substr(4);
+        }
         if (BasicAPI::flags & APIFLAG_FS_ACC_SAFE){
-            if (path.starts_with("home:/"))
+            if (path.starts_with("home:/")){
+                g_BasicAPI_PathType = APIPATHTYPE_SAFE_SELF;
                 return CYX::GetHomeFolder() + path.substr(5);
+            }
+            if (path.starts_with("shared:/")){
+                g_BasicAPI_PathType = APIPATHTYPE_SAFE_SHARED;
+                return HOMEFS_SHARED_PATH + path.substr(7);
+            }
         }
         if (BasicAPI::flags & APIFLAG_FS_ACCESS_XREF){
-            if (path.starts_with("data:/"))
+            if (path.starts_with("data:/")){
+                g_BasicAPI_PathType = APIPATHTYPE_SAFE_OTHERS;
                 return HOMEFS_PATH + path.substr(5);
+            }
         }
         if (BasicAPI::flags & APIFLAG_FS_ACCESS_SD){
-            if (path.starts_with("sdmc:/"))
+            if (path.starts_with("sdmc:/")){
+                g_BasicAPI_PathType = APIPATHTYPE_SDMC;
                 return path.substr(5);
+            }
         }
         return "!EACCESS_DENIED";
     }
@@ -120,26 +145,6 @@ namespace CTRPluginFramework {
         return 0;
     }
 
-    int BasicAPI::Func_CFGSET(BASICGenericVariable* argv, u32 argc) {
-        if (argc < 2) {
-            APIOUT("EMISSING_ARGS");
-            return 1;
-        }
-        s32 num=CYX::argGetInteger(argv+1);
-        switch (num){
-        case 0:
-            APIOUT((s32)1337);
-            break;
-        case 1:
-            APIOUT((double)1337.42069);
-            break;
-        case 2:
-            APIOUT("Test string");
-            break;
-        }
-        return 1;
-    }
-
     int BasicAPI::FileRead(BasicAPI::FileStruct f, u16* buf, u32* len, u32 size, u32 bytesLeft){
         if (!f.f) return File::UNEXPECTED_ERROR;
         if (f.flags & APIFSTRUCT_UTF16) size *= 2;
@@ -156,11 +161,11 @@ namespace CTRPluginFramework {
 
     int BasicAPI::Func_FOPEN(BASICGenericVariable* argv, u32 argc){
         if (argc < 2){
-            APIOUT("EMISSING_ARGS");
+            APIOUT((s32)-511);
             return 1;
         }
         if (Files.size() >= BASICAPI_FILESTACK_LIMIT){
-            APIOUT("ETOO_MANY_FILES_OPEN");
+            APIOUT((s32)-128);
             return 1;
         }
         string16 argTmp;
@@ -172,11 +177,12 @@ namespace CTRPluginFramework {
         Utils::ConvertUTF16ToUTF8(path, argTmp);
         path = basicapi__EvaluatePath(path);
         if (path==""){
-            APIOUT("EEMPTY_PATH");
+            APIOUT((s32)-256);
             return 1;
         }
         if (path[0]=='!') {
             APIOUT(path.substr(1));
+            APIOUT((s32)-257);
             return 1;
         }
         argTmp.clear();
@@ -192,18 +198,23 @@ namespace CTRPluginFramework {
             if (mode$.find('+')!=-1) mode |= (File::RWC);
             if (mode$.find('B')!=-1) fflags = APIFSTRUCT_ANSI;
         }
+        if (!basicapi__HavePermission(mode & File::WRITE)){
+            APIOUT((s32)File::UNEXPECTED_ERROR-1);
+            return 1;
+        }
         if (mode == 0){
-            APIOUT("EBAD_FILE_MODE");
+            APIOUT((s32)File::INVALID_MODE);
             return 1;
         }
         FileStruct f;
         f.flags = fflags;
         f.handle = handleIDCounter++;
+        if (handleIDCounter > BASICAPI_HANDLE_END) handleIDCounter = BASICAPI_HANDLE_START;
         f.f = new File(path, mode);
-        APIOUT("EINTERNAL");
+        APIOUT((s32)File::UNEXPECTED_ERROR);
         if (!f.f) return 1;
         if (!f.f->IsOpen()){
-            APIOUT("ECANNOT_OPEN");
+            APIOUT((s32)File::UNEXPECTED_ERROR-2);
             f.f->Close();
             delete f.f;
             return 1;
@@ -214,7 +225,7 @@ namespace CTRPluginFramework {
     }
     int BasicAPI::Func_FMODE(BASICGenericVariable* argv, u32 argc){
         if (argc < 2){
-            APIOUT("EMISSING_ARGS");
+            APIOUT((s32)-1);
             return 1;
         }
         u32 handle = CYX::argGetInteger(argv);
@@ -224,17 +235,17 @@ namespace CTRPluginFramework {
         if (mode == 1) fflags = APIFSTRUCT_UTF16;
         if (mode == 2) fflags = APIFSTRUCT_ANSI;
         if (!handle){
-            APIOUT("EBAD_HANDLE");
+            APIOUT((s32)-64);
             return 1;
         }
         for (int i=0; i<Files.size(); i++){
             if (Files[i].handle == handle){
                 Files[i].flags = fflags;
-                APIOUT("SUCCESS");
+                APIOUT((s32)0);
                 return 0;
             }
         }
-        APIOUT("EBAD_HANDLE");
+        APIOUT((s32)-64);
         return 1;
     }
     int BasicAPI::Func_FREAD(BASICGenericVariable* argv, u32 argc){
@@ -242,8 +253,8 @@ namespace CTRPluginFramework {
             APIOUT("EMISSING_ARGS");
             return 1;
         }
-        u32 handle = CYX::argGetInteger(argv);
-        u32 length = 272144;
+        s32 handle = CYX::argGetInteger(argv);
+        s32 length = 272144;
         if (argc > 1) length = CYX::argGetInteger(argv+1);
         if (length > 272144) length = 272144;
         for (int i=0; i<Files.size(); i++){
@@ -321,7 +332,7 @@ namespace CTRPluginFramework {
     }
     int BasicAPI::Func_FSEEK(BASICGenericVariable* argv, u32 argc){
         if (!argc){
-            APIOUT("EMISSING_ARGS");
+            APIOUT((s32)-511);
             return 1;
         }
         u32 handle = CYX::argGetInteger(argv);
@@ -341,12 +352,12 @@ namespace CTRPluginFramework {
                 return 0;
             }
         }
-        APIOUT("EBAD_HANDLE");
+        APIOUT((s32)-64);
         return 1;
     }
     int BasicAPI::Func_FCLOSE(BASICGenericVariable* argv, u32 argc){
         if (!argc){
-            APIOUT("EMISSING_ARGS");
+            APIOUT((s32)-1);
             return 1;
         }
         u32 handle = CYX::argGetInteger(argv);
@@ -354,20 +365,19 @@ namespace CTRPluginFramework {
             if (Files[i].handle == handle){
                 Files[i].f->Close();
                 Files.erase(Files.begin()+i);
-                APIOUT("SUCCESS");
+                APIOUT((s32)0);
                 return 0;
             }
         }
-        APIOUT("EBAD_HANDLE");
+        APIOUT((s32)-64);
         return 1;
     }
     int BasicAPI::Func_MKFILE(BASICGenericVariable* argv, u32 argc){
         if (!argc) {
-            APIOUT("EMISSING_ARGS");
+            APIOUT((s32)-1);
             return 1;
         }
-        string16 name; int mode = 0;
-        if (argc>1) mode = CYX::argGetInteger(argv+1);
+        string16 name;
         if (argv->data){
             CYX::argGetString(name, argv);
         } else {
@@ -375,17 +385,20 @@ namespace CTRPluginFramework {
         }
         std::string fpath = basicapi__EvaluatePath16(name);
         name.clear();
+        if (!basicapi__HavePermission(true)){
+            APIOUT((s32)File::UNEXPECTED_ERROR-1);
+            return 1;
+        }
         File::Create(fpath);
-        APIOUT("SUCCESS");
+        APIOUT((s32)0);
         return 0;
     }
     int BasicAPI::Func_RMFILE(BASICGenericVariable* argv, u32 argc){
         if (!argc) {
-            APIOUT("EMISSING_ARGS");
+            APIOUT((s32)-1);
             return 1;
         }
-        string16 name; int mode = 0;
-        if (argc>1) mode = CYX::argGetInteger(argv+1);
+        string16 name;
         if (argv->data){
             CYX::argGetString(name, argv);
         } else {
@@ -393,17 +406,20 @@ namespace CTRPluginFramework {
         }
         std::string fpath = basicapi__EvaluatePath16(name);
         name.clear();
+        if (!basicapi__HavePermission(true)){
+            APIOUT((s32)File::UNEXPECTED_ERROR-1);
+            return 1;
+        }
         File::Remove(fpath);
-        APIOUT("SUCCESS");
+        APIOUT((s32)0);
         return 0;
     }
     int BasicAPI::Func_MVFILE(BASICGenericVariable* argv, u32 argc){
         if (!argc) {
-            APIOUT("EMISSING_ARGS");
+            APIOUT((s32)-1);
             return 1;
         }
-        string16 name; int mode = 0;
-        if (argc>1) mode = CYX::argGetInteger(argv+1);
+        string16 name;
         std::string fpath1, fpath2;
         if (argv->data){
             CYX::argGetString(name, argv);
@@ -417,16 +433,24 @@ namespace CTRPluginFramework {
             Utils::ConvertUTF16ToUTF8(fpath1, name);
             name.clear();
             if (fpath1.find('\t')<0){
-                APIOUT("EMISSING_ARGS_CLIPBOARD");
+                APIOUT((s32)-2);
                 return 1;
             }
             fpath2 = fpath1.substr(fpath1.find('\t')+1);
             fpath1 = fpath1.substr(0, fpath1.find('\t'));
         }
         fpath1 = basicapi__EvaluatePath(fpath1);
+        if (!basicapi__HavePermission(true)){
+            APIOUT((s32)File::UNEXPECTED_ERROR-1);
+            return 1;
+        }
         fpath2 = basicapi__EvaluatePath(fpath2);
+        if (!basicapi__HavePermission(true)){
+            APIOUT((s32)File::UNEXPECTED_ERROR-1);
+            return 1;
+        }
         if (fpath1=="" || fpath2==""){
-            APIOUT("EEMPTY_PATH");
+            APIOUT((s32)-3);
             return 1;
         }
         if (fpath1.starts_with('!')) {
@@ -438,60 +462,15 @@ namespace CTRPluginFramework {
             return 1;
         }
         File::Rename(fpath1, fpath2);
-        APIOUT("SUCCESS");
+        APIOUT((s32)0);
         return 0;
     }
     int BasicAPI::Func_MKDIR(BASICGenericVariable* argv, u32 argc){
         if (!argc) {
-            APIOUT("EMISSING_ARGS");
+            APIOUT((s32)-1);
             return 1;
         }
-        string16 name; int mode = 0;
-        if (argc>1) mode = CYX::argGetInteger(argv+1);
-        std::string fpath1, fpath2;
-        if (argv->data){
-            CYX::argGetString(name, argv);
-            Utils::ConvertUTF16ToUTF8(fpath1, name);
-            name.clear();
-            CYX::argGetString(name, argv+1);
-            Utils::ConvertUTF16ToUTF8(fpath2, name);
-            name.clear();
-        } else {
-            APIGETCLIP(name);
-            Utils::ConvertUTF16ToUTF8(fpath1, name);
-            name.clear();
-            if (fpath1.find('\t')<0){
-                APIOUT("EMISSING_ARGS_CLIPBOARD");
-                return 1;
-            }
-            fpath2 = fpath1.substr(fpath1.find('\t')+1);
-            fpath1 = fpath1.substr(0, fpath1.find('\t'));
-        }
-        fpath1 = basicapi__EvaluatePath(fpath1);
-        fpath2 = basicapi__EvaluatePath(fpath2);
-        if (fpath1=="" || fpath2==""){
-            APIOUT("EEMPTY_PATH");
-            return 1;
-        }
-        if (fpath1.starts_with('!')) {
-            APIOUT(fpath1.substr(1));
-            return 1;
-        }
-        if (fpath2.starts_with('!')) {
-            APIOUT(fpath2.substr(1));
-            return 1;
-        }
-        File::Rename(fpath1, fpath2);
-        APIOUT("SUCCESS");
-        return 0;
-    }
-    int BasicAPI::Func_RMDIR(BASICGenericVariable* argv, u32 argc){
-        if (!argc) {
-            APIOUT("EMISSING_ARGS");
-            return 1;
-        }
-        string16 name; int mode = 0;
-        if (argc>1) mode = CYX::argGetInteger(argv+1);
+        string16 name;
         if (argv->data){
             CYX::argGetString(name, argv);
         } else {
@@ -499,17 +478,41 @@ namespace CTRPluginFramework {
         }
         std::string fpath = basicapi__EvaluatePath16(name);
         name.clear();
+        if (!basicapi__HavePermission(true)){
+            APIOUT((s32)File::UNEXPECTED_ERROR-1);
+            return 1;
+        }
+        Directory::Create(fpath);
+        APIOUT((s32)0);
+        return 0;
+    }
+    int BasicAPI::Func_RMDIR(BASICGenericVariable* argv, u32 argc){
+        if (!argc) {
+            APIOUT((s32)-1);
+            return 1;
+        }
+        string16 name;
+        if (argv->data){
+            CYX::argGetString(name, argv);
+        } else {
+            APIGETCLIP(name);
+        }
+        std::string fpath = basicapi__EvaluatePath16(name);
+        name.clear();
+        if (!basicapi__HavePermission(true)){
+            APIOUT((s32)File::UNEXPECTED_ERROR-1);
+            return 1;
+        }
         Directory::Remove(fpath);
-        APIOUT("SUCCESS");
+        APIOUT((s32)0);
         return 0;
     }
     int BasicAPI::Func_MVDIR(BASICGenericVariable* argv, u32 argc){
         if (!argc) {
-            APIOUT("EMISSING_ARGS");
+            APIOUT((s32)-1);
             return 1;
         }
-        string16 name; int mode = 0;
-        if (argc>1) mode = CYX::argGetInteger(argv+1);
+        string16 name;
         std::string fpath1, fpath2;
         if (argv->data){
             CYX::argGetString(name, argv);
@@ -523,16 +526,24 @@ namespace CTRPluginFramework {
             Utils::ConvertUTF16ToUTF8(fpath1, name);
             name.clear();
             if (fpath1.find('\t')<0){
-                APIOUT("EMISSING_ARGS_CLIPBOARD");
+                APIOUT((s32)-2);
                 return 1;
             }
             fpath2 = fpath1.substr(fpath1.find('\t')+1);
             fpath1 = fpath1.substr(0, fpath1.find('\t'));
         }
         fpath1 = basicapi__EvaluatePath(fpath1);
+        if (!basicapi__HavePermission(true)){
+            APIOUT((s32)File::UNEXPECTED_ERROR-1);
+            return 1;
+        }
         fpath2 = basicapi__EvaluatePath(fpath2);
+        if (!basicapi__HavePermission(true)){
+            APIOUT((s32)File::UNEXPECTED_ERROR-1);
+            return 1;
+        }
         if (fpath1=="" || fpath2==""){
-            APIOUT("EEMPTY_PATH");
+            APIOUT((s32)-3);
             return 1;
         }
         if (fpath1.starts_with('!')) {
@@ -544,15 +555,118 @@ namespace CTRPluginFramework {
             return 1;
         }
         Directory::Rename(fpath1, fpath2);
-        APIOUT("SUCCESS");
+        APIOUT((s32)0);
+        return 0;
+    }
+    int BasicAPI::Func_CHKDIR(BASICGenericVariable* argv, u32 argc){
+        if (!argc) {
+            APIOUT((s32)-1); return 1;
+        }
+        string16 name;
+        if (argv->data){
+            CYX::argGetString(name, argv);
+        } else APIGETCLIP(name);
+        std::string fpath = basicapi__EvaluatePath16(name);
+        name.clear();
+        if (!basicapi__HavePermission(false)){
+            APIOUT((s32)-1); return 1;
+        }
+        APIOUT((s32)Directory::IsExists(fpath));
+        return 0;
+    }
+    int BasicAPI::Func_CHKFILE(BASICGenericVariable* argv, u32 argc){
+        if (!argc) {
+            APIOUT((s32)-1); return 1;
+        }
+        string16 name;
+        if (argv->data){
+            CYX::argGetString(name, argv);
+        } else APIGETCLIP(name);
+        std::string fpath = basicapi__EvaluatePath16(name);
+        name.clear();
+        if (!basicapi__HavePermission(false)){
+            APIOUT((s32)-1); return 1;
+        }
+        APIOUT((s32)File::Exists(fpath));
         return 0;
     }
     int BasicAPI::Func_INIT(BASICGenericVariable* argv, u32 argc){
         Cleanup();
+        if (!Directory::IsExists(HOMEFS_PATH)) Directory::Create(HOMEFS_PATH);
+        if (!Directory::IsExists(HOMEFS_SHARED_PATH)) Directory::Create(HOMEFS_SHARED_PATH);
         return 0;
     }
     int BasicAPI::Func_EXIT(BASICGenericVariable* argv, u32 argc){
         Cleanup();
+        CYX::SaveProjectSettings();
+        return 0;
+    }
+    int BasicAPI::Func_CRASH(BASICGenericVariable* argv, u32 argc) {
+        setCTRPFConfirm(CYXCONFIRM_BASICAPI_TOHOME, 0);
+        if(!waitCTRPFConfirm()) return 3;
+        OnProcessExit();
+        Process::ReturnToHomeMenu();
+        return 3;
+    }
+    int BasicAPI::Func_CFGSET(BASICGenericVariable* argv, u32 argc) {
+        if (argc < 2) {
+            APIOUT("EMISSING_ARGS");
+            return 1;
+        }
+        basicapi__ClearClipboard();
+        std::string arg1 = ""; s32 val = CYX::argGetInteger(argv+1);
+        string16 arg1_16; CYX::argGetString(arg1_16, argv);
+        Utils::ConvertUTF16ToUTF8(arg1, arg1_16); arg1_16.clear(); strupper(arg1);
+        bool condition1 = false;
+
+        if (arg1 == "SYSINFO"){
+            flags &= ~APIFLAG_READ_SYSINFO;
+            if (val) flags |= APIFLAG_READ_SYSINFO;
+            return 0;
+        }
+        if (arg1 == "FWINFO"){
+            flags &= ~APIFLAG_READ_FWINFO;
+            if (val) flags |= APIFLAG_READ_FWINFO;
+            return 0;
+        }
+        if (arg1 == "HWINFO"){
+            flags &= ~APIFLAG_READ_HWINFO;
+            if (val) flags |= APIFLAG_READ_HWINFO;
+            return 0;
+        }
+        if (arg1 == "SAFEDIR"){
+            flags &= ~APIFLAG_FS_ACC_SAFE;
+            if (val) flags |= APIFLAG_FS_ACC_SAFE;
+            return 0;
+        }
+        if (arg1 == "PRJ_ACCESS"){
+            condition1 = flags & APIFLAG_FS_ACC_XREF_RW;
+            flags &= ~APIFLAG_FS_ACCESS_XREF;
+            if (val & 1) flags |= APIFLAG_FS_ACC_XREF_RO;
+            if (val & 2) {
+                flags |= APIFLAG_FS_ACC_XREF_RO;
+                if (!condition1){
+                    setCTRPFConfirm(CYXCONFIRM_BASICAPI_XREF_RW, 0);
+                    condition1 = waitCTRPFConfirm();
+                }
+                if (condition1) flags |= APIFLAG_FS_ACC_XREF_RW;
+            }
+            return 0;
+        }
+        if (arg1 == "SD_ACCESS"){
+            condition1 = flags & APIFLAG_FS_ACC_SD_RW;
+            flags &= ~APIFLAG_FS_ACCESS_SD;
+            if (val & 1) flags |= APIFLAG_FS_ACC_SD_RO;
+            if (val & 2) {
+                flags |= APIFLAG_FS_ACC_SD_RO;
+                if (!condition1){
+                    setCTRPFConfirm(CYXCONFIRM_BASICAPI_SD_RW, 0);
+                    condition1 = waitCTRPFConfirm();
+                }
+                if (condition1) flags |= APIFLAG_FS_ACC_SD_RW;
+            }
+            return 0;
+        }
         return 0;
     }
 
@@ -567,6 +681,34 @@ namespace CTRPluginFramework {
         Utils::ConvertUTF16ToUTF8(arg1, arg1_16); arg1_16.clear();
         std::string data = ""; strupper(arg1);
 
+        if (arg1 == "SYSINFO"){
+            APIOUT((s32)(bool)(flags & APIFLAG_READ_SYSINFO));
+            return 0;
+        }
+        if (arg1 == "FWINFO"){
+            APIOUT((s32)(bool)(flags & APIFLAG_READ_FWINFO));
+            return 0;
+        }
+        if (arg1 == "HWINFO"){
+            APIOUT((s32)(bool)(flags & APIFLAG_READ_HWINFO));
+            return 0;
+        }
+        if (arg1 == "SAFEDIR"){
+            APIOUT((s32)(bool)(flags & APIFLAG_FS_ACC_SAFE));
+            return 0;
+        }
+        if (arg1 == "PRJ_ACCESS"){
+            APIOUT((s32)((flags & APIFLAG_FS_ACCESS_XREF)>>APIFLAG_BIT_FS_ACC_XREF_RO));
+            return 0;
+        }
+        if (arg1 == "SD_ACCESS"){
+            APIOUT((s32)((flags & APIFLAG_FS_ACCESS_SD)>>APIFLAG_BIT_FS_ACC_SD_RO));
+            return 0;
+        }
+        if (arg1 == "DIRECTMODE"){
+            APIOUT((s32)CYX::mirror.isDirectMode);
+            return 0;
+        }
         if (flags & APIFLAG_READ_HWINFO){
             if (arg1 == "3DSLIDER"){
                 APIOUT(osGet3DSliderState());
@@ -701,8 +843,8 @@ namespace CTRPluginFramework {
             APIOUT(COMMIT_HASH);
             return 0;
         }
-        APIOUT("EBADKEY_OR_MISSING_PERM");
-        return 0;
+        APIOUT("ERROR");
+        return 1;
     }
 
     int BasicAPI::Func_OSD(BASICGenericVariable* argv, u32 argc) {
@@ -857,16 +999,19 @@ namespace CTRPluginFramework {
         AddEntry("FCLOSE", Func_FCLOSE);
         AddEntry("CFGSET", Func_CFGSET);
         AddEntry("MKFILE", Func_MKFILE);
-        AddEntry("RMFILE", Func_RMFILE);
-        AddEntry("MVFILE", Func_MVFILE);
         AddEntry("MKDIR", Func_MKDIR);
+        AddEntry("CHKFILE", Func_CHKFILE);
+        AddEntry("CHKDIR", Func_CHKDIR);
+        AddEntry("RMFILE", Func_RMFILE);
         AddEntry("RMDIR", Func_RMDIR);
+        AddEntry("MVFILE", Func_MVFILE);
         AddEntry("MVDIR", Func_MVDIR);
         AddEntry("SETUP_CLIP", Func_SETUP_CLIP);
         AddEntry("FILLGRP", Func_FILLGRP);
         AddEntry("SYSGCOPY", Func_SYSGCOPY);
         AddEntry("INIT", Func_INIT);
         AddEntry("EXIT", Func_EXIT);
+        AddEntry("CRASH", Func_CRASH);
     }
     void BasicAPI::Finalize(){
         for (int i=0; i<Files.size(); i++){
@@ -885,17 +1030,6 @@ namespace CTRPluginFramework {
         Files.clear();
     }
     void BasicAPI::MenuTick(){
-        u32 qsz = Queue.size();
-        if (!qsz) return;
-        if (queueOffset >= qsz) queueOffset = 0;
-        if (!Queue[queueOffset].wasProcessed){
-            Queue[queueOffset].wasProcessed = true;
-        }
-        queueOffset++;
-        while (true) {
-            qsz = Queue.size();
-            if (!qsz || Queue[qsz-1].type != APIFOPTYP_DONE) break;
-            Queue.erase(Queue.begin()+(qsz-1));
-        }
+        // IDK
     }
 }

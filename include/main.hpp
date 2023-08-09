@@ -8,6 +8,7 @@
 #include <csvc.h>
 #include <cmath>
 
+#include "Config.hpp"
 #include "Utils.hpp"
 #include "Misc.hpp"
 #include "MemDispOSD.hpp"
@@ -15,6 +16,7 @@
 #include "Experimental.hpp"
 #include "PetitCYX.hpp"
 #include "ExceptionHandler.hpp"
+#include "CYXConfirmDlg.hpp"
 
 #ifndef COMMIT_HASH
 #define COMMIT_HASH "00000000"
@@ -39,6 +41,7 @@
 #define EXTDATA_PATH        TOP_DIR "/savefs" // In SB3, data:/[projects]
 
 #define PROJECTSET_PATH     CONFIG_PATH "/prjSet"
+#define HOMEFS_SHARED_PATH  HOMEFS_PATH "/shared"
 
 #define CLIPBOARDCACHE_PATH CACHE_PATH"/clip.raw"
 
@@ -112,8 +115,14 @@ namespace CTRPluginFramework {
     extern LightLock openLock;
     extern bool canSaveRedirect;
     extern Region g_region;
+    extern vu32 ___confirmID;
+    extern volatile int ___confirmRes;
+    extern volatile bool ___confirmWaiting;
     extern u32 ___pluginFlags;
     extern char g_regionString[];
+    void setCTRPFConfirm(u32 id, int defaultRes);
+    int waitCTRPFConfirm();
+    void OnProcessExit(void);
     void mcuSetSleep(bool on);
     bool mcuIsSleepEnabled();
     int strlen16(u16* str);

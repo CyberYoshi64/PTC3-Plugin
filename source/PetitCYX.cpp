@@ -3,13 +3,17 @@
 
 namespace CTRPluginFramework {
     u32 CYX::currentVersion = 0;
-    CYX::Offsets CYX::offsets = {0};
     CYX::MirroredVars CYX::mirror = {0};
     std::tuple<u32, u32*, u32> CYX::soundThreadsInfo[1] = { std::tuple<u32, u32*, u32>(0xFFFFFFFF, nullptr, 0) };
     BASICEditorData* CYX::editorInstance = NULL;
     BASICGRPStructs* CYX::GraphicPage = NULL;
     BASICTextPalette* CYX::textPalette = NULL;
     BASICActiveProject* CYX::activeProject = NULL;
+    CYX::PTCConfig* CYX::ptcConfig = NULL;
+    FontOffFunc CYX::fontOff;
+    u16* CYX::basicFontMap = NULL;
+    u32 CYX::patch_FontGetOffset[2] = {0};
+    u32 CYX::patch_FontGetOffsetNew[2] = {0xE3A00001,0xE3A00001};
     std::string CYX::g_currentProject = "";
     RT_HOOK CYX::clipboardFunc = {0};
     RT_HOOK CYX::basControllerFunc = {0};
@@ -17,89 +21,33 @@ namespace CTRPluginFramework {
     Hook CYX::soundHook;
     char CYX::introText[512] = "SmileBASIC-CYX " STRING_VERSION "\nBuild " STRING_BUILD "\n\n2022-2023 CyberYoshi64\n\n";
     char CYX::bytesFreeText[32] = " bytes free\n\n";
-    bool CYX::provideCYXAPI = false;
-    bool CYX::wasClipAPIused = false;
+    bool CYX::provideCYXAPI = true;
+    bool CYX::wasCYXAPIused = false;
     u32 CYX::cyxApiOutType = 0;
     string16 CYX::cyxApiTextOut;
     double CYX::cyxApiFloatOut = 0;
     s32 CYX::cyxApiIntOut = 0;
 
     Result CYX::Initialize(void) {
-        switch (g_region) {
-            case REGION_JPN:
-                offsets.activeProjectStrings    = JPN_ACTPROJ_STR;
-                offsets.basicInterpreterFlag    = JPN_BASIC_INT_FLAG;
-                offsets.basicIsDirectMode       = JPN_BASIC_DIRECT_MODE;
-                offsets.basicIsRunning          = JPN_BASIC_CMD_FLAG;
-                offsets.bootText                = JPN_BOOTTEXT;
-                offsets.clipboardFuncAddr       = JPN_CLIPBOARDFUNC;
-                offsets.consoleTextPalette      = JPN_CONTXTPAL;
-                offsets.controllerFuncAddr      = JPN_CONTROLLERFUNC;
-                offsets.editorData              = JPN_EDITORDATA;
-                offsets.grpStructs              = JPN_GRPSTRUCTS;
-                offsets.helpPageDefaultColors   = JPN_HELPPAGE_DEF;
-                offsets.helpPagePalette         = JPN_HELPPAGE_PAL;
-                offsets.versionInt              = JPN_VERSION_INT;
-                break;
-            case REGION_USA:
-                offsets.activeProjectStrings    = USA_ACTPROJ_STR;
-                offsets.basicInterpreterFlag    = USA_BASIC_INT_FLAG;
-                offsets.basicIsDirectMode       = USA_BASIC_DIRECT_MODE;
-                offsets.basicIsRunning          = USA_BASIC_CMD_FLAG;
-                offsets.bootText                = USA_BOOTTEXT;
-                offsets.clipboardFuncAddr       = USA_CLIPBOARDFUNC;
-                offsets.consoleTextPalette      = USA_CONTXTPAL;
-                offsets.controllerFuncAddr      = USA_CONTROLLERFUNC;
-                offsets.editorData              = USA_EDITORDATA;
-                offsets.grpStructs              = USA_GRPSTRUCTS;
-                offsets.helpPageDefaultColors   = USA_HELPPAGE_DEF;
-                offsets.helpPagePalette         = USA_HELPPAGE_PAL;
-                offsets.versionInt              = USA_VERSION_INT;
-                break;
-            case REGION_EUR:
-                offsets.activeProjectStrings    = EUR_ACTPROJ_STR;
-                offsets.basicInterpreterFlag    = EUR_BASIC_INT_FLAG;
-                offsets.basicIsDirectMode       = EUR_BASIC_DIRECT_MODE;
-                offsets.basicIsRunning          = EUR_BASIC_CMD_FLAG;
-                offsets.bootText                = EUR_BOOTTEXT;
-                offsets.clipboardFuncAddr       = EUR_CLIPBOARDFUNC;
-                offsets.consoleTextPalette      = EUR_CONTXTPAL;
-                offsets.controllerFuncAddr      = EUR_CONTROLLERFUNC;
-                offsets.editorData              = EUR_EDITORDATA;
-                offsets.grpStructs              = EUR_GRPSTRUCTS;
-                offsets.helpPageDefaultColors   = EUR_HELPPAGE_DEF;
-                offsets.helpPagePalette         = EUR_HELPPAGE_PAL;
-                offsets.versionInt              = EUR_VERSION_INT;
-                /*soundHook.InitializeForMitm(0x12A318, (u32)SoundThreadHook);
-                soundHook.SetFlags(USE_LR_TO_RETURN|MITM_MODE|EXECUTE_OI_AFTER_CB);
-                soundHook.Enable();*/
-                break;
-        }
-        if(!offsets.versionInt) return BIT(31)|1;
-        if(!offsets.bootText) return BIT(31)|2;
-        if(!offsets.controllerFuncAddr) return BIT(31)|3;
-        if(!offsets.clipboardFuncAddr) return BIT(31)|4;
-        if(!offsets.editorData) return BIT(31)|5;
-        if(!offsets.grpStructs) return BIT(31)|6;
-        if(!offsets.activeProjectStrings) return BIT(31)|7;
-        if(!offsets.basicInterpreterFlag) return BIT(31)|8;
-        if(!offsets.basicIsDirectMode) return BIT(31)|9;
-        if(!offsets.basicIsRunning) return BIT(31)|10;
-        if(!offsets.consoleTextPalette) return BIT(31)|11;
-        if(!offsets.helpPageDefaultColors) return BIT(31)|12;
-        if(!offsets.helpPagePalette) return BIT(31)|13;
+        Result hookErr;
+        if (R_FAILED(hookErr = Hooks::Init())) return hookErr;
 
-        currentVersion = *(u32*)offsets.versionInt;
-        editorInstance = (BASICEditorData*)offsets.editorData;
-        GraphicPage = (BASICGRPStructs*)offsets.grpStructs;
-        textPalette = (BASICTextPalette*)offsets.consoleTextPalette;
-        activeProject = (BASICActiveProject*)offsets.activeProjectStrings;
-        rtInitHook(&basControllerFunc, offsets.controllerFuncAddr, (u32)CYX::controllerFuncHook);
+        currentVersion = *(u32*)Hooks::offsets.versionInt;
+        editorInstance = (BASICEditorData*)Hooks::offsets.editorData;
+        GraphicPage = (BASICGRPStructs*)Hooks::offsets.graphicStructs;
+        textPalette = (BASICTextPalette*)Hooks::offsets.consoleTextPal;
+        activeProject = (BASICActiveProject*)Hooks::offsets.activeProjStr;
+        ptcConfig = (PTCConfig*)Hooks::offsets.configBuf;
+        basicFontMap = (u16*)Hooks::offsets.fontMapBuf;
+        fontOff = (FontOffFunc)Hooks::offsets.funcFontGetOff;
+        Process::CopyMemory(patch_FontGetOffset, (void*)(Hooks::offsets.funcFontGetOff+0x3c), 8);
+        rtInitHook(&basControllerFunc, Hooks::offsets.funcController, (u32)CYX::controllerFuncHook);
         rtEnableHook(&basControllerFunc);
-        *(char**)offsets.bootText = introText;
-        *(char**)(offsets.bootText+4) = bytesFreeText;
+        *(char**)Hooks::offsets.bootText = introText;
+        *(char**)(Hooks::offsets.bootText+4) = bytesFreeText;
         LoadSettings();
         BasicAPI::Initialize();
+
         return 0;
     }
 
@@ -117,7 +65,6 @@ namespace CTRPluginFramework {
         if (File::Open(f, path, File::RWC | File::TRUNCATE) == File::SUCCESS){
             ProjectSettings p; memset(&p, 0xFF, sizeof(p));
             p.magic = PRJSETFILEMAGIC;
-            p.apiUsed = provideCYXAPI;
             p.apiFlags = BasicAPI::flags;
             f.Write(&p, sizeof(p));
         }
@@ -134,22 +81,26 @@ namespace CTRPluginFramework {
             if (p.magic != PRJSETFILEMAGIC){
                 MessageBox("The project settings for "+g_currentProject+" is invalid.\n\nThe settings will be reset for this project.")();
                 File::Remove(path);
-                provideCYXAPI = false;
                 BasicAPI::flags = APIFLAG_DEFAULT;
             } else {
-                provideCYXAPI = p.apiUsed;
                 BasicAPI::flags = p.apiFlags;
             }
         }
         if (BasicAPI::flags & APIFLAG_FS_ACC_SAFE) CreateHomeFolder();
     }
     void CYX::MenuTick(){
+        char str[128]={0};
         UpdateMirror();
         if (mirror.diff.currentProject || !g_currentProject.size()){
             SaveProjectSettings();
             UTF16toUTF8(g_currentProject="", activeProject->currentProject);
             if (g_currentProject==""||g_currentProject=="###") g_currentProject="$DEFAULT";
             //OSD::Notify(g_currentProject);
+            if (R_SUCCEEDED(frdInit())){
+                sprintf(str,"Using ＣＹＸ %s\nIn %s", STRING_VERSION, g_currentProject.c_str());
+                FRD_UpdateGameModeDescription(str);
+            }
+            frdExit();
             LoadProjectSettings();
         }
         if (mirror.diff.isDirectMode){
@@ -164,15 +115,18 @@ namespace CTRPluginFramework {
             //OSD::Notify(Utils::Format("isInBasic: %d", mirror.isInBasic));
         }
     }
+    bool CYX::WouldOpenMenu(){
+        return !mirror.isInBasic;
+    }
     void CYX::UpdateMirror(){
         mirror.diff.currentProject = memcmp(activeProject->currentProject, mirror.currentProject, sizeof(mirror.currentProject))!=0;
         memcpy(mirror.currentProject, activeProject->currentProject, sizeof(mirror.currentProject));
-        mirror.diff.isDirectMode = mirror.isDirectMode != *(u8*)offsets.basicIsDirectMode;
-        mirror.isDirectMode = *(u8*)offsets.basicIsDirectMode;
-        mirror.diff.isInBasic = mirror.isInBasic != *(u8*)offsets.basicInterpreterFlag;
-        mirror.isInBasic = *(u8*)offsets.basicInterpreterFlag;
-        mirror.diff.isBasicRunning = mirror.isBasicRunning != *(u8*)offsets.basicIsRunning;
-        mirror.isBasicRunning = *(u8*)offsets.basicIsRunning;
+        mirror.diff.isDirectMode = mirror.isDirectMode != *(u8*)Hooks::offsets.basicIsDirect;
+        mirror.isDirectMode = *(u8*)Hooks::offsets.basicIsDirect;
+        mirror.diff.isInBasic = mirror.isInBasic != *(u8*)Hooks::offsets.basicInterpretRun;
+        mirror.isInBasic = *(u8*)Hooks::offsets.basicInterpretRun;
+        mirror.diff.isBasicRunning = mirror.isBasicRunning != *(u8*)Hooks::offsets.basicCommandRun;
+        mirror.isBasicRunning = *(u8*)Hooks::offsets.basicCommandRun;
         ++mirror.isBasicRunningTime *= !(mirror.diff.isBasicRunning);
     }
 
@@ -183,13 +137,13 @@ namespace CTRPluginFramework {
         return provideCYXAPI;
     }
     void CYX::DiscardAPIUse(){
-        wasClipAPIused = false;
+        wasCYXAPIused = false;
     }
     void CYX::SetAPIUse(bool enabled){
-        wasClipAPIused = enabled;
+        wasCYXAPIused = enabled;
     }
     bool CYX::WasCYXAPIUsed(){
-        return wasClipAPIused;
+        return wasCYXAPIused;
     }
     int CYX::scrShotStubFunc() {
         return 0;
@@ -335,7 +289,7 @@ namespace CTRPluginFramework {
         } else {
             if (outc){
                 outv->type = SBVARRAW_INTEGER;
-                outv->data = 0x10000001;
+                outv->data = 1 | (provideCYXAPI<<28);
             }
         }
         return 0;
@@ -356,66 +310,46 @@ namespace CTRPluginFramework {
     void CYX::SaveSettings(){} // Not needed for now
 
     void CYX::ReplaceServerName(const  std::string& saveURL, const std::string& loadURL){
-        u32 jpnPtr[]={JPN_SERVERNAME_LOAD2_1, JPN_SERVERNAME_LOAD2_2, JPN_SERVERNAME_SAVE3_1, JPN_SERVERNAME_SAVE3_2, JPN_SERVERNAME_SHOW2, JPN_SERVERNAME_LIST2, JPN_SERVERNAME_INFO2, JPN_SERVERNAME_DELETE2, JPN_SERVERNAME_SHOPLIST2, JPN_SERVERNAME_PREPURCHASE2, JPN_SERVERNAME_PURCHASE2};
-        u32 usaPtr[]={USA_SERVERNAME_LOAD2_1, USA_SERVERNAME_LOAD2_2, USA_SERVERNAME_SAVE3_1, USA_SERVERNAME_SAVE3_2, USA_SERVERNAME_SHOW2, USA_SERVERNAME_LIST2, USA_SERVERNAME_INFO2, USA_SERVERNAME_DELETE2, USA_SERVERNAME_SHOPLIST2, USA_SERVERNAME_PREPURCHASE2, USA_SERVERNAME_PURCHASE2};
-        u32 eurPtr[]={EUR_SERVERNAME_LOAD2_1, EUR_SERVERNAME_LOAD2_2, EUR_SERVERNAME_SAVE3_1, EUR_SERVERNAME_SAVE3_2, EUR_SERVERNAME_SHOW2, EUR_SERVERNAME_LIST2, EUR_SERVERNAME_INFO2, EUR_SERVERNAME_DELETE2, EUR_SERVERNAME_SHOPLIST2, EUR_SERVERNAME_PREPURCHASE2, EUR_SERVERNAME_PURCHASE2};
-        u32* ptr;
-        switch (g_region) {
-            case REGION_JPN: ptr = jpnPtr; break;
-            case REGION_USA: ptr = usaPtr; break;
-            case REGION_EUR: ptr = eurPtr; break;
-            default: return;
-        }
-        char buf[50];
-        sprintf(buf, "%s" _NAME_SERVERNAME_LOAD_LOAD2, loadURL.c_str());
-        memcpy((void*)ptr[0], buf, strlen(buf)+1);
-        sprintf(buf, "%s" _NAME_SERVERNAME_LOAD_LOAD2, loadURL.c_str());
-        memcpy((void*)ptr[1], buf, strlen(buf)+1);
-        sprintf(buf, "%s" _NAME_SERVERNAME_SAVE_SAVE3, saveURL.c_str());
-        memcpy((void*)ptr[2], buf, strlen(buf)+1);
-        sprintf(buf, "%s" _NAME_SERVERNAME_SAVE_SAVE3, saveURL.c_str());
-        memcpy((void*)ptr[3], buf, strlen(buf)+1);
-        sprintf(buf, "%s" _NAME_SERVERNAME_SAVE_SHOW2, saveURL.c_str());
-        memcpy((void*)ptr[4], buf, strlen(buf)+1);
-        sprintf(buf, "%s" _NAME_SERVERNAME_SAVE_LIST2, saveURL.c_str() );
-        memcpy((void*)ptr[5], buf, strlen(buf)+1);
-        sprintf(buf, "%s" _NAME_SERVERNAME_LOAD_INFO2, loadURL.c_str());
-        memcpy((void*)ptr[6], buf, strlen(buf)+1);
-        sprintf(buf, "%s" _NAME_SERVERNAME_SAVE_DELETE2, saveURL.c_str());
-        memcpy((void*)ptr[7], buf, strlen(buf)+1);
-        sprintf(buf, "%s" _NAME_SERVERNAME_SAVE_SHOPLIST2, saveURL.c_str());
-        memcpy((void*)ptr[8], buf, strlen(buf)+1);
-        sprintf(buf, "%s" _NAME_SERVERNAME_SAVE_PREPURCHASE2, saveURL.c_str());
-        memcpy((void*)ptr[9], buf, strlen(buf)+1);
-        sprintf(buf, "%s" _NAME_SERVERNAME_SAVE_PURCHASE2, saveURL.c_str());
-        memcpy((void*)ptr[10], buf, strlen(buf)+1);
+        char buf[50]; u32 bufs = sizeof(buf);
+        sprintf(buf, "%s" SBSERVER_LOAD_LOAD2, loadURL.c_str());
+        memcpy((void*)Hooks::offsets.serverLoad2[0], buf, bufs);
+        sprintf(buf, "%s" SBSERVER_LOAD_LOAD2, loadURL.c_str());
+        memcpy((void*)Hooks::offsets.serverLoad2[1], buf, bufs);
+        sprintf(buf, "%s" SBSERVER_SAVE_SAVE3, saveURL.c_str());
+        memcpy((void*)Hooks::offsets.serverSave3[0], buf, bufs);
+        sprintf(buf, "%s" SBSERVER_SAVE_SAVE3, saveURL.c_str());
+        memcpy((void*)Hooks::offsets.serverSave3[1], buf, bufs);
+        sprintf(buf, "%s" SBSERVER_SAVE_SHOW2, saveURL.c_str());
+        memcpy((void*)Hooks::offsets.serverShow2, buf, bufs);
+        sprintf(buf, "%s" SBSERVER_SAVE_LIST2, saveURL.c_str() );
+        memcpy((void*)Hooks::offsets.serverList2, buf, bufs);
+        sprintf(buf, "%s" SBSERVER_LOAD_INFO2, loadURL.c_str());
+        memcpy((void*)Hooks::offsets.serverInfo2, buf, bufs);
+        sprintf(buf, "%s" SBSERVER_SAVE_DELETE2, saveURL.c_str());
+        memcpy((void*)Hooks::offsets.serverDelete2, buf, bufs);
+        sprintf(buf, "%s" SBSERVER_SAVE_SHOPLIST2, saveURL.c_str());
+        memcpy((void*)Hooks::offsets.serverShopList2, buf, bufs);
+        sprintf(buf, "%s" SBSERVER_SAVE_PREPURCHASE2, saveURL.c_str());
+        memcpy((void*)Hooks::offsets.serverPrepurchase2, buf, bufs);
+        sprintf(buf, "%s" SBSERVER_SAVE_PURCHASE2, saveURL.c_str());
+        memcpy((void*)Hooks::offsets.serverPurchase2, buf, bufs);
     }
 
     void CYX::ChangeBootText(const char* text, const char* bytfre){
-        if (!text || strlen(text)>1530) return;
+        if (!text || strlen(text)>sizeof(introText)) return;
         sprintf(introText, "%s", text);
-        if (!bytfre || strlen(bytfre)>1530) return;
+        if (!bytfre || strlen(bytfre)>sizeof(bytesFreeText)) return;
         sprintf(bytesFreeText, "%s", bytfre);
     }
     void CYX::SetDarkMenuPalette(){
-        u32 eurPtr[]={EUR_COLOR_KEYBBG,EUR_COLOR_SEARCHBG,EUR_COLOR_FCREATORBG,EUR_COLOR_FDESCBG,EUR_COLOR_ACTPRJLBL,EUR_COLOR_SETSMBUTF,EUR_COLOR_SETKEYREP,EUR_COLOR_SETKEYTL};
-        u32 usaPtr[]={USA_COLOR_KEYBBG,USA_COLOR_SEARCHBG,USA_COLOR_FCREATORBG,USA_COLOR_FDESCBG,USA_COLOR_ACTPRJLBL,USA_COLOR_SETSMBUTF,USA_COLOR_SETKEYREP,USA_COLOR_SETKEYTL};
-        u32 jpnPtr[]={JPN_COLOR_KEYBBG,JPN_COLOR_SEARCHBG,JPN_COLOR_FCREATORBG,JPN_COLOR_FDESCBG,JPN_COLOR_ACTPRJLBL,JPN_COLOR_SETSMBUTF,JPN_COLOR_SETKEYREP,JPN_COLOR_SETKEYTL};
-        u32* ptr;
-        switch (g_region) {
-            case REGION_JPN: ptr = jpnPtr; break;
-            case REGION_USA: ptr = usaPtr; break;
-            case REGION_EUR: ptr = eurPtr; break;
-            default: return;
-        }
-        *(u32*)(ptr[0]) = 0xFF100800;
-        *(u32*)(ptr[1]) = 0xFFFFA000;
-        *(u32*)(ptr[2]) = 0xFFC0FF80;
-        *(u32*)(ptr[3]) = 0xFF6868A0;
-        *(u32*)(ptr[4]) = 0xFF40C000;
-        *(u32*)(ptr[5]) = 0xFF40C000;
-        *(u32*)(ptr[6]) = 0xFF80D8FF;
-        *(u32*)(ptr[7]) = 0xFFFFA800;
+        *(u32*)(Hooks::offsets.colorKeybBack) = 0xFF100800;
+        *(u32*)(Hooks::offsets.colorSearchBack) = 0xFFFFA000;
+        *(u32*)(Hooks::offsets.colorFileCreatorBack) = 0xFFC0FF80;
+        *(u32*)(Hooks::offsets.colorFileDescBack) = 0xFF6868A0;
+        *(u32*)(Hooks::offsets.colorActiveProjLbl) = 0xFF40C000;
+        *(u32*)(Hooks::offsets.colorSetSmToolLbl) = 0xFF40C000;
+        *(u32*)(Hooks::offsets.colorSetKeyRep) = 0xFF80D8FF;
+        *(u32*)(Hooks::offsets.colorSetKeyTL) = 0xFFFFA800;
     }
 
     std::string CYX::GetProgramSlotFileName(u8 slot){
@@ -473,6 +407,14 @@ namespace CTRPluginFramework {
     }
     std::string CYX::GetHomeFolder(std::string project){
         return HOMEFS_PATH"/P"+project;
+    }
+
+    void CYX::SetFontGetAddressStrictness(bool on){
+        if (on)
+            Process::CopyMemory((char*)(Hooks::offsets.funcFontGetOff+0x3c), patch_FontGetOffset, 8);
+        else
+            Process::CopyMemory((char*)(Hooks::offsets.funcFontGetOff+0x3c), patch_FontGetOffsetNew, 8);
+        rtFlushInstructionCache((char*)Hooks::offsets.funcFontGetOff, 0x44);
     }
 
     void CYX::SoundThreadHook(){
