@@ -20,7 +20,7 @@ namespace CTRPluginFramework {
 #define SBSERVER_LOAD_LOAD2			"/load2.php"
 #define SBSERVER_LOAD_INFO2			"/info2.php"
 
-#define SBSERVER_URL_MAXLEN		27 
+#define SBSERVER_URL_MAXLEN		27
 
     #define CYX__COLORVER_NOCOLOR   1
     #define PRJSETFILEMAGIC     0x0154455325585943ULL

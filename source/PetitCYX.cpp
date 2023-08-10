@@ -310,29 +310,29 @@ namespace CTRPluginFramework {
     void CYX::SaveSettings(){} // Not needed for now
 
     void CYX::ReplaceServerName(const  std::string& saveURL, const std::string& loadURL){
-        char buf[50]; u32 bufs = sizeof(buf);
+        char buf[50] = {0};
         sprintf(buf, "%s" SBSERVER_LOAD_LOAD2, loadURL.c_str());
-        memcpy((void*)Hooks::offsets.serverLoad2[0], buf, bufs);
+        strcpy((char*)Hooks::offsets.serverLoad2[0], buf);
         sprintf(buf, "%s" SBSERVER_LOAD_LOAD2, loadURL.c_str());
-        memcpy((void*)Hooks::offsets.serverLoad2[1], buf, bufs);
+        strcpy((char*)Hooks::offsets.serverLoad2[1], buf);
         sprintf(buf, "%s" SBSERVER_SAVE_SAVE3, saveURL.c_str());
-        memcpy((void*)Hooks::offsets.serverSave3[0], buf, bufs);
+        strcpy((char*)Hooks::offsets.serverSave3[0], buf);
         sprintf(buf, "%s" SBSERVER_SAVE_SAVE3, saveURL.c_str());
-        memcpy((void*)Hooks::offsets.serverSave3[1], buf, bufs);
+        strcpy((char*)Hooks::offsets.serverSave3[1], buf);
         sprintf(buf, "%s" SBSERVER_SAVE_SHOW2, saveURL.c_str());
-        memcpy((void*)Hooks::offsets.serverShow2, buf, bufs);
+        strcpy((char*)Hooks::offsets.serverShow2, buf);
         sprintf(buf, "%s" SBSERVER_SAVE_LIST2, saveURL.c_str() );
-        memcpy((void*)Hooks::offsets.serverList2, buf, bufs);
+        strcpy((char*)Hooks::offsets.serverList2, buf);
         sprintf(buf, "%s" SBSERVER_LOAD_INFO2, loadURL.c_str());
-        memcpy((void*)Hooks::offsets.serverInfo2, buf, bufs);
+        strcpy((char*)Hooks::offsets.serverInfo2, buf);
         sprintf(buf, "%s" SBSERVER_SAVE_DELETE2, saveURL.c_str());
-        memcpy((void*)Hooks::offsets.serverDelete2, buf, bufs);
+        strcpy((char*)Hooks::offsets.serverDelete2, buf);
         sprintf(buf, "%s" SBSERVER_SAVE_SHOPLIST2, saveURL.c_str());
-        memcpy((void*)Hooks::offsets.serverShopList2, buf, bufs);
+        strcpy((char*)Hooks::offsets.serverShopList2, buf);
         sprintf(buf, "%s" SBSERVER_SAVE_PREPURCHASE2, saveURL.c_str());
-        memcpy((void*)Hooks::offsets.serverPrepurchase2, buf, bufs);
+        strcpy((char*)Hooks::offsets.serverPrepurchase2, buf);
         sprintf(buf, "%s" SBSERVER_SAVE_PURCHASE2, saveURL.c_str());
-        memcpy((void*)Hooks::offsets.serverPurchase2, buf, bufs);
+        strcpy((char*)Hooks::offsets.serverPurchase2, buf);
     }
 
     void CYX::ChangeBootText(const char* text, const char* bytfre){

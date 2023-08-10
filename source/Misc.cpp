@@ -19,7 +19,7 @@ namespace CTRPluginFramework {
             CYX::ReplaceServerName(SBSERVER_DEFAULT_NAME1, SBSERVER_DEFAULT_NAME2);
             return;
         } else {
-            Keyboard kbd("Enter the server name to which to connect to:\n\n The domain name must be " TOSTRING(_LEN_SERVERNAME_URL) " characters\n long or less.");
+            Keyboard kbd("Enter the server name to which to connect to:\n\n The domain name must be " TOSTRING(SBSERVER_URL_MAXLEN) " characters\n long or less.");
             kbd.SetMaxLength(SBSERVER_URL_MAXLEN);
             kbdres = kbd.Open(srvName, "http://");
             if (kbdres < 0) return;

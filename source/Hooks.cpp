@@ -12,7 +12,7 @@ namespace CTRPluginFramework {
         f.Close();
         if (offsets.mapMagic != HOOKFILE_MAGIC) return 0xDEADBEE0;
         if (offsets.mapVersion != HOOKFILE_VER) return 0xDEADBEE1;
-        for (u32 i=0; i<sizeof(offsets)/sizeof(u32); i++){
+        for (u32 i=2; i<sizeof(offsets)/sizeof(u32); i++){
             if (!((u32*)&offsets)[i]) return 0xDEADBEE2;
         }
         return ret;
