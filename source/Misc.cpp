@@ -23,7 +23,18 @@ namespace CTRPluginFramework {
             kbd.SetMaxLength(SBSERVER_URL_MAXLEN);
             kbdres = kbd.Open(srvName, "http://");
             if (kbdres < 0) return;
-            if (srvName.compare(0, 4, "http")!=0) {
+            while (srvName.length() && srvName.ends_with('/')) srvName.pop_back();
+            for (u32 i=0; i<srvName.size(); i++){
+                if (srvName[i] < '%' || srvName[i] > 'z'){
+                    MessageBox("The server name is not valid:\nThe name contains invalid characters.", DialogType::DialogOk, ClearScreen::Both)();
+                    return;
+                }
+            }
+            if (srvName.length()<=10){
+                MessageBox("The server name is not valid:\nThe server name is too short.", DialogType::DialogOk, ClearScreen::Both)();
+                return;
+            }
+            if (srvName.compare(0, 7, "http://")!=0&&srvName.compare(0, 8, "https://")!=0) {
                 MessageBox("The server name is not valid:\nThe name must start with \"http://\" or \"https://\".", DialogType::DialogOk, ClearScreen::Both)();
                 return;
             }
@@ -32,7 +43,7 @@ namespace CTRPluginFramework {
             if (e()){
                 CYX::ReplaceServerName(srvName, srvName);
             } else {
-                MessageBox("Cancelled operation", "No changes were made.");
+                MessageBox("Cancelled operation", "No changes were made.")();
             }
         }
     }
@@ -184,8 +195,8 @@ namespace CTRPluginFramework {
             if (CYX::WasCYXAPIUsed()){
                 kbd.GetMessage() +=
                     Color(0xFF8800FF) << "\n\nThe CYX API has been utilized.\n" <<
-                    "Disabling the hook and/or the API may cause\n" <<
-                    "unexpected behaviour." + ResetColor();
+                    "Disabling the API can result in unexpected\n" <<
+                    "behaviour, typically the program throwing an error." + ResetColor();
             }
             opt[0] = "Enable API  " + _2w[1+api];
             opt[1] = "Read SysInfo  ";
@@ -214,7 +225,8 @@ namespace CTRPluginFramework {
             kres = kbd.Open();
             switch (kres){
             case 0:
-                CYX::SetAPIAvailability(__tmp = api = !api);
+                Config::Get().cyx.enableAPI = __tmp = api = !api;
+                CYX::SetAPIAvailability(api);
                 CYX::DiscardAPIUse();
                 break;
             case 1: case 2: case 3: case 4:
@@ -377,6 +389,9 @@ namespace CTRPluginFramework {
                 kbd.Populate((StringVector){"Okay"});
                 kbd.Open();
             }
-        } else if (kres >= 0) CYX::SetFontGetAddressStrictness(kres);
+        } else if (kres >= 0) {
+            Config::Get().cyx.fontdefStrict = kres;
+            CYX::SetFontGetAddressStrictness(kres);
+        }
     }
 }

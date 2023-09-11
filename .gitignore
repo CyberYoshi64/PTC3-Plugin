@@ -28,6 +28,7 @@
 libcwav
 __staging*
 build
+release
 lib/Library/debug
 lib/Library/release
 *.elf

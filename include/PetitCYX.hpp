@@ -247,6 +247,7 @@ namespace CTRPluginFramework {
         static int controllerFuncHook(void* ptr, u32 selfPtr, BASICGenericVariable* outv, u32 outc, void* a4, u32 argc, BASICGenericVariable* argv);
         static int stubBASICFunction(void* ptr, u32 selfPtr, BASICGenericVariable* outv, u32 outc, void* a4, u32 argc, BASICGenericVariable* argv);
 
+        static void TrySave();
         static void MenuTick();
         static bool WouldOpenMenu();
         static void UpdateMirror();
@@ -298,9 +299,13 @@ namespace CTRPluginFramework {
         static u32 patch_FontGetOffsetNew[];
         static MirroredVars mirror;
         static FontOffFunc fontOff;
+        static u64 sdmcFreeSpace;
+        static u64 sdmcTotalSpace;
     private:
         static bool provideCYXAPI;
         static bool wasCYXAPIused;
+        static u32 cyxSaveTimer;
+        static u32 cyxUpdateSDMCStats;
         static char introText[];
         static char bytesFreeText[];
     };

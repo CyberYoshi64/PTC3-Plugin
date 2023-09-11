@@ -120,6 +120,14 @@ namespace CTRPluginFramework {
     extern volatile bool ___confirmWaiting;
     extern u32 ___pluginFlags;
     extern char g_regionString[];
+    extern FS_ArchiveResource g_sdmcArcRes;
+
+    extern u32 g_osFirmVer;
+    extern u32 g_osKernelVer;
+    extern OS_VersionBin g_osNVer;
+    extern OS_VersionBin g_osCVer;
+    extern char g_osSysVer[];
+
     void setCTRPFConfirm(u32 id, int defaultRes);
     int waitCTRPFConfirm();
     void OnProcessExit(void);

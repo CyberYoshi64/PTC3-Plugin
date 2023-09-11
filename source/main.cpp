@@ -17,6 +17,7 @@ u8 fsSetSecValPat[] = {0x80, 0x01, 0x75, 0x08};
 u8 fsCheckPermsPat[] = {0x04, 0x10, 0x12, 0x00, 0x76, 0x46, 0x00, 0xD9};
 namespace CTRPluginFramework {
     Region g_region;
+    FS_ArchiveResource g_sdmcArcRes;
     u32 ___pluginFlags;
     char g_regionString[4];
     u32 *fileOperations[NUMBER_FILE_OP] = {nullptr};
@@ -32,6 +33,10 @@ namespace CTRPluginFramework {
     vu32 ___confirmID;
     volatile int ___confirmRes = 0;
     volatile bool ___confirmWaiting = false;
+
+    u32 g_osFirmVer, g_osKernelVer;
+    OS_VersionBin g_osNVer, g_osCVer;
+    char g_osSysVer[16];
 
     void setCTRPFConfirm(u32 id, int defaultRes = 0){
         ___confirmID = id;
@@ -74,6 +79,7 @@ namespace CTRPluginFramework {
     }
 
     void menuClose(){
+        CYX::TrySave();
     }
 
     void deleteSecureVal() {
@@ -432,16 +438,15 @@ namespace CTRPluginFramework {
         LightLock_Init(&openLock);
         OnionSave::initDebug();
         OnionSave::setupPackPaths();
+        FSUSER_GetArchiveResource(&g_sdmcArcRes, SYSTEM_MEDIATYPE_SD);
         DEBUG("\n--- Initializing hooks:\n\n");
         initOnionFSHooks(Process::GetTextSize());
         DEBUG("\nLoading CYX...\n\n");
         CheckRegion();
-        Config::Load();
         if R_SUCCEEDED(CYX::Initialize()){
             /*Process::OnPauseResume = [](bool isGoingToPause) {
                 CYX::playMusicAlongCTRPF(isGoingToPause);
             };*/
-            CYX::LoadSettings();
             if (CheckRevision()) {
                 if (File::Exists(CONFIG_PATH"/darkPalette.flag") == 1)
                     CYX::SetDarkMenuPalette();
@@ -458,7 +463,6 @@ namespace CTRPluginFramework {
     void OnProcessExit(void) {
         ToggleTouchscreenForceOn();
         CYX::Finalize();
-        Config::Save();
     }
 
     void InitMenu(PluginMenu &menu) {
@@ -474,10 +478,25 @@ namespace CTRPluginFramework {
             new MenuEntry("Change editor ruler color", nullptr, editorRulerPalette, "Choose from one of a few palettes for the editor ruler."),
             new MenuEntry("Memory Display", MemDisplayOSD::OSDFunc),
             new MenuEntry("Memory Display Settings", nullptr, MemDisplayOSD::setup),
-            new MenuEntry("Unnamed Experiment 1", nullptr, experiment1)
+            new MenuEntry("Unnamed Experiment 1", nullptr, experiment1),
         }));
         menu += new MenuEntry("CYX API", nullptr, cyxAPItoggle, "The CYX API adds various features to BASIC.");
         menu += new MenuEntry("Plugin Details", nullptr, pluginDetails, "General details about this plugin");
+    }
+
+    void warnIfSDTooBig(void) {
+        double sdmcSize = (float)g_sdmcArcRes.clusterSize * g_sdmcArcRes.totalClusters;
+        if (((u64)sdmcSize>>30) > 58 || (((u64)sdmcSize>>30) > 32 && g_sdmcArcRes.clusterSize < 65536)){
+            MessageBox(
+                Color::Yellow << "Warning" + ResetColor() +
+                "\nThe SD Card is either too big or is not ideally formatted.\n" +
+                Utils::Format(
+                    "Detected size: %.2f GiB (%d KiB clusters)\n\n",
+                    sdmcSize / 1073741824.0, g_sdmcArcRes.clusterSize/1024
+                ) +
+                "CyberYoshi64 is not responsible for slowdowns and corruption as a result of using this plugin."
+            )();
+        }
     }
 
     const std::string about =
@@ -499,9 +518,13 @@ namespace CTRPluginFramework {
         if (g_region != REGION_NONE && g_region != REGION_MAX){
             InitMenu(*menu);
             Process::exceptionCallback = Exception::Handler;
+            g_osFirmVer = osGetFirmVersion();
+            g_osKernelVer = osGetKernelVersion();
+            osGetSystemVersionDataString(&g_osNVer, &g_osCVer, g_osSysVer, sizeof(g_osSysVer));
         } else {
             *menu += new MenuEntry("Could not initialize plugin", nullptr, pluginDetails, "This plugin could not detect SmileBASIC 3 and/or the version you're using is not supported. It will now behave like the blank template.");
         }
+        warnIfSDTooBig();
         menu->Run();
         delete menu;
         return 0;

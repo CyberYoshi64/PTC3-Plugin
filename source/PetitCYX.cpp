@@ -27,6 +27,15 @@ namespace CTRPluginFramework {
     string16 CYX::cyxApiTextOut;
     double CYX::cyxApiFloatOut = 0;
     s32 CYX::cyxApiIntOut = 0;
+    u32 CYX::cyxSaveTimer = 0;
+    u64 CYX::sdmcFreeSpace = 0;
+    u64 CYX::sdmcTotalSpace = 0;
+    u32 CYX::cyxUpdateSDMCStats = 0;
+
+    void setCYXStuff(void){
+        CYX::SetAPIAvailability(Config::Get().cyx.enableAPI);
+        CYX::SetFontGetAddressStrictness(Config::Get().cyx.fontdefStrict);
+    }
 
     Result CYX::Initialize(void) {
         Result hookErr;
@@ -45,16 +54,16 @@ namespace CTRPluginFramework {
         rtEnableHook(&basControllerFunc);
         *(char**)Hooks::offsets.bootText = introText;
         *(char**)(Hooks::offsets.bootText+4) = bytesFreeText;
-        LoadSettings();
+        Config::Load();
+        setCYXStuff();
         BasicAPI::Initialize();
-
         return 0;
     }
 
     void CYX::Finalize(){
         BasicAPI::Finalize();
         SaveProjectSettings();
-        SaveSettings();
+        Config::Save();
     }
     void CYX::SaveProjectSettings(){
         if (g_currentProject=="") return;
@@ -88,10 +97,14 @@ namespace CTRPluginFramework {
         }
         if (BasicAPI::flags & APIFLAG_FS_ACC_SAFE) CreateHomeFolder();
     }
+    void CYX::TrySave(){cyxSaveTimer = 0;}
     void CYX::MenuTick(){
         char str[128]={0};
+        bool doUpdate = (!cyxSaveTimer);
+        bool didUpdateManually = false;
         UpdateMirror();
         if (mirror.diff.currentProject || !g_currentProject.size()){
+            doUpdate = true; didUpdateManually = true;
             SaveProjectSettings();
             UTF16toUTF8(g_currentProject="", activeProject->currentProject);
             if (g_currentProject==""||g_currentProject=="###") g_currentProject="$DEFAULT";
@@ -111,8 +124,25 @@ namespace CTRPluginFramework {
             //OSD::Notify(Utils::Format("isBasicRunning: %d", mirror.isBasicRunning));
         }
         if (mirror.diff.isInBasic){
-            if (!mirror.isInBasic) SaveProjectSettings();
+            if (!mirror.isInBasic) doUpdate = true;
             //OSD::Notify(Utils::Format("isInBasic: %d", mirror.isInBasic));
+        }
+        if (doUpdate){
+            if (!didUpdateManually){
+                SaveProjectSettings();
+            }
+            Config::Save();
+            cyxSaveTimer = 1800;
+        } else {
+           cyxSaveTimer--; 
+        }
+        if (!cyxUpdateSDMCStats){
+            FSUSER_GetArchiveResource(&g_sdmcArcRes, SYSTEM_MEDIATYPE_SD);
+            sdmcFreeSpace = (float)g_sdmcArcRes.clusterSize * g_sdmcArcRes.freeClusters;
+            sdmcTotalSpace = (float)g_sdmcArcRes.clusterSize * g_sdmcArcRes.totalClusters;
+            cyxUpdateSDMCStats = 2000;
+        } else {
+            cyxUpdateSDMCStats--;
         }
     }
     bool CYX::WouldOpenMenu(){
@@ -305,9 +335,6 @@ namespace CTRPluginFramework {
         string16 s16 = str;
         Utils::ConvertUTF16ToUTF8(out, s16);
     }
-
-    void CYX::LoadSettings(){} // To be used soon
-    void CYX::SaveSettings(){} // Not needed for now
 
     void CYX::ReplaceServerName(const  std::string& saveURL, const std::string& loadURL){
         char buf[50] = {0};

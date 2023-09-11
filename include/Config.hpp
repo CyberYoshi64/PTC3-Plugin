@@ -9,9 +9,9 @@
 
 typedef struct Config_v1 {
     u64 magic;      // File magic (see CONFIG_HEADER)
-    u16 version;    // File version
-    u8 language;   // System language
-    u8 _padding;
+    u32 version;    // File version
+    u16 language;   // System language
+    u16 pad1;
     struct {    // CYX settings
         bool enableAPI;
         bool fontdefStrict;

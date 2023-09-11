@@ -709,6 +709,30 @@ namespace CTRPluginFramework {
             APIOUT((s32)CYX::mirror.isDirectMode);
             return 0;
         }
+        if (arg1 == "SDMCFREE"){
+            APIOUT((double)CYX::sdmcFreeSpace);
+            return 0;
+        }
+        if (arg1 == "SDMCTOTAL"){
+            APIOUT((double)CYX::sdmcTotalSpace);
+            return 0;
+        }
+        if (arg1 == "SDMCFREE_C"){
+            APIOUT((s32)g_sdmcArcRes.freeClusters);
+            return 0;
+        }
+        if (arg1 == "SDMCCLUSTER"){
+            APIOUT((s32)g_sdmcArcRes.clusterSize);
+            return 0;
+        }
+        if (arg1 == "SDMCSECTOR"){
+            APIOUT((s32)g_sdmcArcRes.sectorSize);
+            return 0;
+        }
+        if (arg1 == "SDMCTOTAL_C"){
+            APIOUT((s32)g_sdmcArcRes.totalClusters);
+            return 0;
+        }
         if (flags & APIFLAG_READ_HWINFO){
             if (arg1 == "3DSLIDER"){
                 APIOUT(osGet3DSliderState());
@@ -791,15 +815,13 @@ namespace CTRPluginFramework {
                 return 0;
             }
             if (arg1 == "REGION$"){
-                OS_VersionBin nv,cv; osGetSystemVersionData(&nv, &cv);
-                data.clear(); data = nv.region;
+                data.clear(); data = g_osNVer.region;
                 APIOUT(data);
                 return 0;
             }
             if (arg1 == "REGION"){
-                OS_VersionBin nv,cv; osGetSystemVersionData(&nv, &cv);
                 data = "JUE_CKT";
-                APIOUT((s32)data.find(nv.region));
+                APIOUT((s32)data.find(g_osNVer.region));
                 return 0;
             }
         }
@@ -822,16 +844,15 @@ namespace CTRPluginFramework {
         if (flags & APIFLAG_READ_FWINFO){
             if (arg1 == "SYSVER"){
                 char str[32]={0};
-                osGetSystemVersionDataString(NULL, NULL, str, 32);
-                APIOUT(str);
+                APIOUT(g_osSysVer);
                 return 0;
             }
             if (arg1 == "FIRMVER"){
-                APIOUT((s32)osGetFirmVersion());
+                APIOUT((s32)g_osFirmVer);
                 return 0;
             }
             if (arg1 == "KERNELVER"){
-                APIOUT((s32)osGetKernelVersion());
+                APIOUT((s32)g_osKernelVer);
                 return 0;
             }
         }
