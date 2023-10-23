@@ -13,6 +13,8 @@ namespace CTRPluginFramework {
     void grpFreeMe(MenuEntry* entry);
     void editorRulerPalette(MenuEntry* entry);
     void fontGetAddrPatch(MenuEntry* entry);
+    
+    void validateFile(MenuEntry* entry);
 }
 
 #endif

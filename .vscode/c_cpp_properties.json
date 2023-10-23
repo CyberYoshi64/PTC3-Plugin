@@ -1,17 +1,15 @@
 {
     "configurations": [
         {
-            "name": "Linux",
+            "name": "",
             "includePath": [
-                "${workspaceFolder}/include",
-                "${DEVKITARM}/arm-none-eabi/include",
-                "${DEVKITPRO}/libctru/include"
+                "${workspaceFolder}/include/*",
+                "/opt/devkitpro/libctru/**",
+                "/opt/devkitpro/libctrpf/**",
+                "/opt/devkitpro/devkitARM/arm-none-eabi/**"
             ],
             "defines": [],
-            "compilerPath": "${DEVKITARM}/bin/arm-none-eabi-gcc",
-            "cStandard": "c11",
-            "cppStandard": "c++20",
-            "intelliSenseMode": "linux-gcc-arm"
+            "intelliSenseMode": "gcc-arm"
         }
     ],
     "version": 4

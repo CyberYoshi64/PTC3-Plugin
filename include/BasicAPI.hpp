@@ -6,7 +6,7 @@
 namespace CTRPluginFramework {
     using BasicAPIFunction = int(*)(BASICGenericVariable* argv, u32 argc);
     
-    #define BASICAPI_HANDLE_START (u32)0x10000000U
+    #define BASICAPI_HANDLE_START (u32)0x20000000U
     #define BASICAPI_HANDLE_END (u32)0x3FFFFFFFU
     #define BASICAPI_FILESTACK_LIMIT    32
 

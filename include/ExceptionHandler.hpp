@@ -35,7 +35,6 @@ namespace CTRPluginFramework {
         char currentProject[16];
         u32 cyxApiFlags;
     } PACKED ExceptionSysDump;
-    #define kjlgdhfjghdkgjdhgkj sizeof(ExceptionSysDump);
     
     typedef struct ExceptionSysDumpTxt_s {
         u32 magic;
@@ -48,8 +47,6 @@ namespace CTRPluginFramework {
         char err[100];
     } PACKED ExceptionSysDumpTxt;
 
-    #define sfdgkdh sizeof(ExceptionSysDump)
-    
     enum ExceptionRescueBitMask {
         EXCEPRESCUE_PROGRAM = 1,
         EXCEPRESCUE_CLIPBOARD = 2,

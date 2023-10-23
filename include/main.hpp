@@ -17,6 +17,7 @@
 #include "PetitCYX.hpp"
 #include "ExceptionHandler.hpp"
 #include "CYXConfirmDlg.hpp"
+#include "petitReimpl.hpp"
 
 #ifndef COMMIT_HASH
 #define COMMIT_HASH "00000000"

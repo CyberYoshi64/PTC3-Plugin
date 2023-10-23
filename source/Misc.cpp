@@ -394,4 +394,79 @@ namespace CTRPluginFramework {
             CYX::SetFontGetAddressStrictness(kres);
         }
     }
+    void validateFile(MenuEntry* entry){
+        char* hmac = (char*)Hooks::offsets.serverHMACKey;
+        int hmac_len = strlen(hmac), res = 0;
+        std::string out;
+        std::string headerString = "Validating...";
+        Screen sc1 = OSD::GetTopScreen();
+
+        Utils::FilePicker(out);
+        if (strncmp(SAVEDATA_PATH, out.c_str(), strlen(SAVEDATA_PATH))!=0){
+            MessageBox("Please select a SmileBASIC file.")();
+            return;
+        }
+        OSD::Lock();
+        for (u32 b=0; b<2; b++){
+            sc1.DrawRect(125, 80, 150, 80, Color::Black, true);
+            sc1.DrawSysfont(headerString, 200 - Render::GetTextWidth(headerString)/2, 90);
+            sc1.DrawRect(130, 125, 140, 25, Color::White, false);
+            OSD::SwapBuffers();
+        }
+        OSD::Unlock();
+        File f;
+        if ((res = File::Open(f, out, File::RW))){
+            MessageBox("An error has occured while opening the file.\n\nStatus code: "+Utils::Format("%d",res))();
+            return;
+        }
+        u8 digest[20], oldDigest[20];
+        u8 buf[8192]; u32 size, size2, chunk;
+        size = size2 = f.GetSize()-20;
+        f.Seek(-20, File::END);
+        if (res = f.Read(oldDigest, 20)){
+            MessageBox("An error occured while reading the existing signature.\nStatus code: "+Utils::Format("%d",res))();
+            f.Close();
+            return;
+        }
+        f.Seek(0, File::SET);
+
+        SHA1_HMACCTX hmacCtx;
+        SHA1_HMACInit(&hmacCtx, (u8*)hmac, hmac_len);
+        OSD::Lock();
+        while (size){
+            headerString = Utils::Format("%.1f%%", (1.f - (float)size / (float)size2) * 100.f);
+            sc1.DrawRect(131, 126, 138, 23, Color::Black);
+            sc1.DrawRect(131, 126, 138.f * (1.f - (float)size / (float)size2), 23, Color::Teal);
+            sc1.DrawSysfont(headerString, 200 - Render::GetTextWidth(headerString)/2, 128, Color::White);
+            OSD::SwapBuffers();
+            chunk = size > sizeof(buf) ? sizeof(buf) : size;
+            if (res = f.Read(buf, chunk)){
+                OSD::Unlock();
+                MessageBox("An error occured while reading the file.\nStatus code: "+Utils::Format("%d",res))();
+                f.Close();
+                return;
+            }
+            SHA1_HMACUpdate(&hmacCtx, buf, chunk);
+            size -= chunk;
+        }
+        SHA1_HMACFinal(digest, &hmacCtx);
+        
+        sc1.DrawRect(131, 126, 138, 23, Color::Black);
+        sc1.DrawRect(131, 126, 138.f * (1.f - (float)size / (float)size2), 23, Color::Teal);
+        sc1.DrawSysfont(headerString, 200 - Render::GetTextWidth(headerString)/2, 128, Color::White);
+        OSD::SwapBuffers();
+        OSD::Unlock();
+
+        if (memcmp(digest, oldDigest, 20)) {
+            f.Seek(-20, File::END);
+            if (res = f.Write(digest, 20)){
+                MessageBox("An error occured while writing the new signature.\nStatus code: "+Utils::Format("%d",res))();
+            } else {
+                MessageBox("The signature of the file has been corrected.")();
+            }
+        } else {
+            MessageBox("The signature of the file was valid. No changes were made.")();
+        }
+        f.Close();
+    }
 }

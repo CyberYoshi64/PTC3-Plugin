@@ -141,7 +141,31 @@ namespace CTRPluginFramework {
     }
 
     int BasicAPI::Func_SETUP_CLIP(BASICGenericVariable* argv, u32 argc) {
-        basicapi__ClearClipboard();
+        if (argc) {
+            s32 mode = CYX::argGetInteger(argv);
+            switch (mode)
+            {
+            case 0: case 1: case 2: case 3:
+                CYX::editorInstance->clipboardLength = CYX::editorInstance->programSlot[mode].text_len;
+                memcpy(CYX::editorInstance->clipboardData, CYX::editorInstance->programSlot[mode].text, 2049152);
+                break;
+            case 4: case 5: case 6: case 7:
+                CYX::editorInstance->programSlot[mode - 4].text_len = CYX::editorInstance->clipboardLength;
+                memcpy(CYX::editorInstance->programSlot[mode - 4].text, CYX::editorInstance->clipboardData, 2049152);
+                basicapi__ClearClipboard();
+                break;
+            case  8: case  9: case 10: case 11:
+            case 12: case 13: case 14: case 15:
+                CYX::editorInstance->clipboardLength = CYX::editorInstance->undo[mode-8].len;
+                memcpy(CYX::editorInstance->clipboardData, CYX::editorInstance->undo[mode-8].data, 8204);
+                break;
+            default:
+                basicapi__ClearClipboard();
+                break;
+            }
+        } else {
+            basicapi__ClearClipboard();
+        }
         return 0;
     }
 

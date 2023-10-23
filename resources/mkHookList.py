@@ -54,6 +54,7 @@ class HookListFile:
         "ServerShoplist2",
         "ServerPrepurchase2",
         "ServerPurchase2",
+        "PetcFileHMACKey",
     )
     _MGC = b"CY$X"
     version = 1

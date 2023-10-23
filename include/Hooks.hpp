@@ -45,6 +45,7 @@ namespace CTRPluginFramework {
             u32 serverShopList2;
             u32 serverPrepurchase2;
             u32 serverPurchase2;
+            u32 serverHMACKey;
         } Offsets;
     public:
         static Offsets offsets;

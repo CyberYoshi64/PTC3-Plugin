@@ -479,6 +479,7 @@ namespace CTRPluginFramework {
             new MenuEntry("Memory Display", MemDisplayOSD::OSDFunc),
             new MenuEntry("Memory Display Settings", nullptr, MemDisplayOSD::setup),
             new MenuEntry("Unnamed Experiment 1", nullptr, experiment1),
+            new MenuEntry("ValidateFile()", nullptr, validateFile),
         }));
         menu += new MenuEntry("CYX API", nullptr, cyxAPItoggle, "The CYX API adds various features to BASIC.");
         menu += new MenuEntry("Plugin Details", nullptr, pluginDetails, "General details about this plugin");

@@ -28,7 +28,7 @@ namespace CTRPluginFramework {
 
     using FontOffFunc = bool(*)(int c, int* y, int* x);
 
-    typedef struct BASICTextPalette_s { // EUR @ 0x01D027CC
+    typedef struct BASICTextPalette_s { // EUR 3.6.0 @ 0x01D027CC
         u32 conClear; u32 conBlack;
         u32 conMaroon; u32 conRed;
         u32 conGreen; u32 conLime;
@@ -44,7 +44,7 @@ namespace CTRPluginFramework {
         u32 editStatement; u32 editSelectFG;
     } BASICTextPalette;
 
-    typedef struct BASICActiveProject_s { // EUR @ 0x01B14B00
+    typedef struct BASICActiveProject_s { // EUR 3.6.0 @ 0x01B14B00
         u16 activeProject[15]; u16 currentProject[15];
         u16 unk1; u16 unk2;
     } PACKED BASICActiveProject;
@@ -62,7 +62,7 @@ namespace CTRPluginFramework {
         u32 isResourceProtected; // Used by "Protected Resource" error
     } PACKED BASICGraphicPage;
     
-    typedef struct BASICGRPStructs_s { // EUR @ 0x01D02A4C
+    typedef struct BASICGRPStructs_s { // EUR 3.6.0 @ 0x01D02A4C
         BASICGraphicPage grp[6];   // GRP0-GRP5
         BASICGraphicPage font;     // GRPF
         BASICGraphicPage system;   // SysUI / SysBASIC
@@ -136,39 +136,32 @@ namespace CTRPluginFramework {
 
     class CYX {
         typedef struct PTCConfig_s {
-            u32 magic; // Checked for, it's SB3c
+            u32 magic;          // Checked for, it's "SB3c"
             u16 smileToolPath[0x40]; // Null-terminated UTF-16 string
             u16 activeProject[0x10]; // Null-terminated UTF-16 string
-            u32 commentColor; // 0xAARRGGBB
-            u32 commandColor; // 0xAARRGGBB
-            u32 stringColor; // 0xAARRGGBB
-            u32 labelColor; // 0xAARRGGBB
-            u32 numericColor; // 0xAARRGGBB
-            u32 textColor; // 0xAARRGGBB
-            u32 keybDelay; // Key delay in frames
-            u32 keybRepeat; // Key repeat in frames
-            u32 wordWrap; // Editor word-wrap (boolean as u32)
-            union {
-                struct {
-                    u32 something;
-                    // I have to examine this area first
-                    // Am unsure if this is used for something obscure
-                } cyx;
-                u8 pad[0x208]; // Otherwise, it's a 520-byte padding
-            } extend;
-            u32 blackListSize; // Number of blocked users
-            u32 unk1; // Unknown
-            struct {
-                u32 userID; // User ID to block
-                u32 unk; // Padding?
-            } blockedUsers[100]; // List of blocked creators
-            u32 ownUserID; // Own user ID
-            u32 magic2; // Checked for, it's mCeD
-            u32 functionColor; // 0xAARRGGBB
-            u32 backColor; // 0xAARRGGBB
-            u32 isGoldMember; // Local-only badge
-            u32 spotPassEnabled; // Not directly saved but affects the tick in settings
-
+            u32 commentColor;   // 0xAARRGGBB
+            u32 commandColor;   // 0xAARRGGBB
+            u32 stringColor;    // 0xAARRGGBB
+            u32 labelColor;     // 0xAARRGGBB
+            u32 numericColor;   // 0xAARRGGBB
+            u32 textColor;      // 0xAARRGGBB
+            u32 keybDelay;      // Key delay in frames
+            u32 keybRepeat;     // Key repeat in frames
+            u32 wordWrap;       // Editor word-wrap (boolean as u32)
+            u8 pad[0x208];      // Unused / Padding?
+            u32 blackListSize;  // Number of blocked users
+            u32 unk1;           // Unknown
+            struct {            // List of blocked creators
+                u32 userID;         // User ID to block
+                u32 unk;            // Padding?
+            } blockedUsers[100];
+            u32 ownUserID;      // Own user ID
+            u32 magic2;         // Checked for, it's "DeCm"
+            u32 functionColor;  // 0xAARRGGBB
+            u32 backColor;      // 0xAARRGGBB
+            u32 isGoldMember;   // Local-only badge
+            u32 spotPassEnabled;// Not really meaningful - 
+                                // used moreso temporarily
         } PACKED PTCConfig;
         typedef struct MirroredVars {
             u8 isDirectMode;
