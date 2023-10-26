@@ -15,7 +15,7 @@ Once the launcher for this plugin is released, this issue should be resolved. Fo
   3. Select "Browse save data".
   4. Select "\<current directory>", then "Copy all contents".
   5. Go all the way back to the main menu and select "SD".
-  6. Select "PTC3PLG", then "config".
+  6. Select "PTC3PLG", then "savefs".
       - If the folders don't exist, create them, then enter them.
   7. Select "\<current directory>", then "Paste".
   8. Select "Yes" and wait for the transfer to finish.
@@ -34,14 +34,9 @@ Once the launcher for this plugin is released, this issue should be resolved. Fo
 ## The plugin doesn't work / I cannot open the in-app menu.
 
 - Check, if you're running [the latest version of Luma 3DS with plugin loader support](https://github.com/Nanquitas/Luma3DS/releases/latest).
+- Are you on the TOP MENU? The menu is purposefully disabled in BASIC.
 - Have you remapped the hotkey for the in-app menu at some point but forgot?
   - Delete the file `/PTC3PLG/resources/CTRPFData.bin`. This will reset the button to SELECT.
-
-## The hotkey for the in-app menu is inconvenient. I keep making screenshots when opening the menu...
-
-The default hotkey is set by CTRPluginFramework and the fine folks there figured that the SELECT button was the best button to use as a default.
-
-To change the hotkey, open the in-app menu, then tap "Tools", select "Settings", then "Change menu hotkeys". There you can set the hotkey to your liking.
 
 ## I'm on New3DS but the C Stick doesn't work / SmileBASIC doesn't detect ZL/ZR, when using the plugin.
 

@@ -1,8 +1,4 @@
-#include <CTRPluginFramework.hpp>
-#include "main.hpp"
-#include "save.hpp"
-#include "rt.h"
-#include <map>
+#include "hooked_func.hpp"
 
 namespace CTRPluginFramework {
 
@@ -16,7 +12,7 @@ namespace CTRPluginFramework {
 
     static thread_local u16 *g_buffers[2] = { nullptr, nullptr };
 
-    u16* GetBuffer(bool secondary = false) {
+    u16* GetBuffer(bool secondary) {
         if (g_buffers[secondary] == nullptr)
             g_buffers[secondary] = static_cast<u16 *>(::operator new(0x200));
         return g_buffers[secondary];
@@ -30,19 +26,11 @@ namespace CTRPluginFramework {
         *dest = '\0';
     }
 
-    static inline u16* skipArchive(u16* src) {
-        while (*src++ != u'/'); //Skip the archive lowpath
-
-        while (*src == u'/') ++src; // Skip any remaining  /
-
-        return src - 1; //Return the position of the last /
-    }
-
     void strcpy16(u16* dst, u16* src) {
         while (*src) *dst++ = *src++;
         *dst = '\0';
     }
-    u16* calculateNewPath(u16* initialPath, bool isReadOnly, bool isSecondary = false, bool* shouldReopen = nullptr) {
+    u16* calculateNewPath(u16* initialPath, bool isReadOnly, bool isSecondary, bool* shouldReopen) {
         u8 mode;
         if (shouldReopen) *shouldReopen = true;
         DEBUG("Checking: ");
@@ -157,8 +145,6 @@ namespace CTRPluginFramework {
         int ret = ((fsu16u16)fileOpHooks[RENAME_DIRECTORY_OP].callCode)(newPath1, newPath2);
         return ret;
     }
-
-    u32 fileOperationFuncs[NUMBER_FILE_OP] = { (u32)fsOpenFileFunc, (u32)fsOpenDirectoryFunc, (u32)fsDeleteFileFunc, (u32)fsRenameFileFunc, (u32)fsDeleteDirectoryFunc, (u32)fsDeleteDirectoryRecFunc, (u32)fsCreateFileFunc, (u32)fsCreateDirectoryFunc, (u32)fsRenameDirectoryFunc };
     
     u32 fsRegArchiveCallback(u8* path, u32* arch, u32 isAddOnContent, u32 isAlias) {
         u32 ret, ret2;

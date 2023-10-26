@@ -192,9 +192,26 @@ namespace CTRPluginFramework
         return (SUCCESS);
     }
 
-    int     File::WriteLine(std::string line)
+    int     File::WriteLine(std::string line, LineBreakType linebreakType)
     {
-        line += "\r\n";
+        switch (linebreakType)
+        {
+            case CRLF:
+            {
+                line += "\r\n";
+                break;
+            }
+            case CR:
+            {
+                line += "\r";
+                break;
+            }
+            default: // I'm being leniant here
+            {
+                line += "\n";
+                break;
+            }
+        }
         return (Write(line.c_str(), line.size()));
     }
 
@@ -270,6 +287,19 @@ namespace CTRPluginFramework
         if (R_FAILED(res))
             return (res);
         return (size);
+    }
+
+    int     File::SetSize(u64 size) const
+    {
+        Lock    lock(_mutex);
+
+        if (!_isOpen)
+            return (NOT_OPEN);
+
+        Result res = FSFILE_SetSize(_handle, size);
+        if (R_FAILED(res))
+            return (res);
+        return (SUCCESS);
     }
 
     void    File::SetPriority(u32 priority)

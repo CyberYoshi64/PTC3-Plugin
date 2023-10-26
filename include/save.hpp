@@ -1,7 +1,7 @@
 #pragma once
 #include <CTRPluginFramework.hpp>
 
-#define MAX_SAVE_ENTRIES 50
+#define MAX_SAVE_ENTRIES 25
 
 namespace CTRPluginFramework {
 
@@ -18,9 +18,9 @@ namespace CTRPluginFramework {
 
     enum ArchTypes
     {
-        ARCH_ROMFS = 1,
-        ARCH_SAVE = 2,
-        ARCH_EXTDATA = 4
+        ARCH_ROMFS = 1,     // RomFS
+        ARCH_SAVE = 2,      // Save Data
+        ARCH_EXTDATA = 4    // Ext Save Data
     };
 
     #define ARCH_RW		ARCH_SAVE|ARCH_EXTDATA
@@ -37,9 +37,17 @@ namespace CTRPluginFramework {
         static void addArchiveHnd(u64 handle, u32 archid);
         static int existArchiveu8(u8* arch);
         static void setupPackPaths();
+        
+        // Path to the new RomFS directory
         static u16 romPath[50];
+        
+        // Path to the new save data directory
         static u16 dataPath[50];
+
+        // Path to the new extData directory
         static u16 extPath[50];
+
+        // Log file - used in plugin debug mode
         static File* debugFile;
     };
 }

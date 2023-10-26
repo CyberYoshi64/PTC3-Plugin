@@ -6,7 +6,6 @@
 
 namespace CTRPluginFramework {
 
-
 #define SBSERVER_DEFAULT_NAME1	"https://save.smilebasic.com"
 #define SBSERVER_DEFAULT_NAME2	"https://load.smilebasic.com"
 
@@ -22,11 +21,84 @@ namespace CTRPluginFramework {
 
 #define SBSERVER_URL_MAXLEN		27
 
-    #define CYX__COLORVER_NOCOLOR   1
-    #define PRJSETFILEMAGIC     0x0154455325585943ULL
-    #define THREADVARS_MAGIC    0x21545624 // !TV$
+#define PTC_WORKSPACE_EXTDATANAME   "###"
+#define PTC_WORKSPACE_CYXNAME       "$DEFAULT"
+
+#define CYX__COLORVER_NOCOLOR   1
+#define PRJSETFILEMAGIC     0x0154455325585943ULL
+#define THREADVARS_MAGIC    0x21545624 // !TV$
 
     using FontOffFunc = bool(*)(int c, int* y, int* x);
+
+    typedef struct PTCConfig_s {
+        u32 magic;          // Checked for, it's "SB3c"
+        u16 smileToolPath[0x40]; // Null-terminated UTF-16 string
+        u16 activeProject[0x10]; // Null-terminated UTF-16 string
+        u32 commentColor;   // 0xAARRGGBB
+        u32 commandColor;   // 0xAARRGGBB
+        u32 stringColor;    // 0xAARRGGBB
+        u32 labelColor;     // 0xAARRGGBB
+        u32 numericColor;   // 0xAARRGGBB
+        u32 textColor;      // 0xAARRGGBB
+        u32 keybDelay;      // Key delay in frames
+        u32 keybRepeat;     // Key repeat in frames
+        u32 wordWrap;       // Editor word-wrap (boolean as u32)
+        u8 pad[0x208];      // Unused / Padding?
+        u32 blackListSize;  // Number of blocked users
+        u32 unk1;           // Unknown
+        struct {            // List of blocked creators
+            u32 userID;         // User ID to block
+            u32 unk;            // Padding?
+        } blockedUsers[100];
+        u32 ownUserID;      // Own user ID
+        u32 magic2;         // Checked for, it's "DeCm"
+        u32 functionColor;  // 0xAARRGGBB
+        u32 backColor;      // 0xAARRGGBB
+        u32 isGoldMember;   // Local-only badge
+        u32 spotPassEnabled;// Not really meaningful - 
+                            // used moreso temporarily
+    } PACKED PTCConfig;
+
+    typedef struct {
+        u16 version;
+        u16 type;
+        u16 bitmask1;
+        u16 icon;
+        s32 dataSize;
+        struct {
+            s16 year;
+            s8 month;
+            s8 day;
+            s8 hour;
+            s8 minute;
+            s8 second;
+            s8 weekDay;
+        } modDate;
+        char creatorName[16];
+        char uploaderName[16];
+        u32 creatorUID;
+        u32 uploaderUID;
+        u64 creatorPID;
+        u64 uploaderPID;
+    } PACKED PTCFileHeader;
+    
+    typedef struct {
+        char sign[4];       // should be "PCBN"
+        char version[4];    // should be "0001"
+        u16 contentType;    // s8/u8/s16/u16/s32/f64
+        u16 dimCount;
+        u32 dimensions[4];
+    } PACKED PTCBinaryHeader;
+
+    typedef struct {
+        u32 dataSize;
+        u32 fileCount;
+    } PACKED PTCPackedProjectHeader;
+
+    typedef struct {
+        u32 size;
+        char name[16];
+    } PACKED PTCPackedProjectEntry;
 
     typedef struct BASICTextPalette_s { // EUR 3.6.0 @ 0x01D027CC
         u32 conClear; u32 conBlack;
@@ -74,6 +146,15 @@ namespace CTRPluginFramework {
         u32 type; u32 unk1;
         u32 data; void* data2;
     } PACKED BASICGenericVariable;
+
+    typedef struct {
+        BASICGenericVariable* argc;
+        u32 argv;
+        BASICGenericVariable* outv;
+        u32 outc;
+        u32 unk[4];
+        u32 stringPtr;
+    } BASICFunctionStack;
 
     typedef struct BASICProgramSlot_s {
         u16 text[1048576]; // UTF-16 content of slot
@@ -135,34 +216,6 @@ namespace CTRPluginFramework {
     };
 
     class CYX {
-        typedef struct PTCConfig_s {
-            u32 magic;          // Checked for, it's "SB3c"
-            u16 smileToolPath[0x40]; // Null-terminated UTF-16 string
-            u16 activeProject[0x10]; // Null-terminated UTF-16 string
-            u32 commentColor;   // 0xAARRGGBB
-            u32 commandColor;   // 0xAARRGGBB
-            u32 stringColor;    // 0xAARRGGBB
-            u32 labelColor;     // 0xAARRGGBB
-            u32 numericColor;   // 0xAARRGGBB
-            u32 textColor;      // 0xAARRGGBB
-            u32 keybDelay;      // Key delay in frames
-            u32 keybRepeat;     // Key repeat in frames
-            u32 wordWrap;       // Editor word-wrap (boolean as u32)
-            u8 pad[0x208];      // Unused / Padding?
-            u32 blackListSize;  // Number of blocked users
-            u32 unk1;           // Unknown
-            struct {            // List of blocked creators
-                u32 userID;         // User ID to block
-                u32 unk;            // Padding?
-            } blockedUsers[100];
-            u32 ownUserID;      // Own user ID
-            u32 magic2;         // Checked for, it's "DeCm"
-            u32 functionColor;  // 0xAARRGGBB
-            u32 backColor;      // 0xAARRGGBB
-            u32 isGoldMember;   // Local-only badge
-            u32 spotPassEnabled;// Not really meaningful - 
-                                // used moreso temporarily
-        } PACKED PTCConfig;
         typedef struct MirroredVars {
             u8 isDirectMode;
             u8 isInBasic;
@@ -250,14 +303,15 @@ namespace CTRPluginFramework {
         static void argGetString(u16** ptr, u32* len, BASICGenericVariable* arg);
         static double argGetFloat(BASICGenericVariable* arg);
 
-        static void CYXAPI_Out();
-        static void CYXAPI_Out(s32 i);
-        static void CYXAPI_Out(double f);
-        static void CYXAPI_Out(const char* s);
-        static void CYXAPI_Out(const std::string& s);
+        static void CYXAPI_Out(BASICGenericVariable* out);
+        static void CYXAPI_Out(BASICGenericVariable* out, s32 i);
+        static void CYXAPI_Out(BASICGenericVariable* out, double f);
+        static void CYXAPI_Out(BASICGenericVariable* out, const char* s);
+        static void CYXAPI_Out(BASICGenericVariable* out, const std::string& s);
 
         static void CreateHomeFolder(const std::string& s);
         static void CreateHomeFolder();
+        static std::string GetExtDataFolderName();
         static std::string GetHomeFolder();
         static std::string GetHomeFolder(std::string project);
 
@@ -283,10 +337,8 @@ namespace CTRPluginFramework {
         static RT_HOOK basControllerFunc;
         static RT_HOOK scrShotStub;
         static Hook soundHook;
-        static u32 cyxApiOutType;
         static string16 cyxApiTextOut;
-        static double cyxApiFloatOut;
-        static s32 cyxApiIntOut;
+        static u32 cyxApiOutc, cyxApiLastOutv;
         static u16* basicFontMap;
         static u32 patch_FontGetOffset[];
         static u32 patch_FontGetOffsetNew[];

@@ -15,9 +15,16 @@ namespace CTRPluginFramework
 
         enum SeekPos
         {
-            CUR,
-            SET,
-            END
+            CUR, ///< Seek relative to the current position
+            SET, ///< Seek relative to the beginning of the file
+            END  ///< Seek relative to the end of the file
+        };
+
+        enum LineBreakType
+        {
+            LF,   ///< Unix line-break style
+            CRLF, ///< MS-DOS/Windows line-break style
+            CR    ///< Macintosh line-break style
         };
 
         enum Mode
@@ -27,7 +34,7 @@ namespace CTRPluginFramework
             CREATE = 1 << 2,    ///< The file will be created if it doesn't exist
             APPEND = 1 << 3,    ///< You'll be unable to overwrite the file, only append data to it
             TRUNCATE = 1 << 4,  ///< Will clear the file
-            SYNC = 1 << 5,       ///< Will flush and update time on each write
+            SYNC = 1 << 5,      ///< Will flush and update time on each write
 
             RW = READ | WRITE,
             RWC = READ | WRITE | CREATE
@@ -35,12 +42,12 @@ namespace CTRPluginFramework
 
         enum OPResult
         {
-            SUCCESS = 0,        ///< Operation succeeded
-            INVALID_PATH = -1,  ///< The path is invalid
-            NOT_OPEN = -2,      ///< The File instance is not opened
-            INVALID_MODE = -3,  ///< The mode passed when opened the file doesn't allow this operation
-            INVALID_ARG = -4,   ///< One of the args passed to the operation is invalid (nullptr, address unreachable, etc)
-            UNEXPECTED_ERROR = -5 ///< An error occured
+            SUCCESS = 0,            ///< Operation succeeded
+            INVALID_PATH = -1,      ///< The path is invalid
+            NOT_OPEN = -2,          ///< The File instance is not opened
+            INVALID_MODE = -3,      ///< The mode passed when opened the file doesn't allow this operation
+            INVALID_ARG = -4,       ///< One of the args passed to the operation is invalid (nullptr, address unreachable, etc)
+            UNEXPECTED_ERROR = -5   ///< An error occured
         };
 
         /**
@@ -116,12 +123,13 @@ namespace CTRPluginFramework
 
 
         /**
-         * \brief Write a string to file (auto append '\n')
+         * \brief Write a string to file (auto-append a line break)
          * \param line Text to write
+         * \param linebreakType Line breakt type — 0=Win, 1=Unix, 2=Mac
          * \return
          * Either a value in \ref OPResult or an error code from FS service
          */
-        int     WriteLine(std::string line);
+        int     WriteLine(std::string line, LineBreakType linebreakType = LF);
 
         /**
          * \brief Set the position in the file
@@ -157,6 +165,14 @@ namespace CTRPluginFramework
          * Either a value in \ref OPResult or an error code from FS service otherwise
          */
         u64     GetSize(void) const;
+
+        /**
+         * \brief Set the file size
+         * \param size New file size
+         * \return
+         * Either a value in \ref OPResult or an error code from FS service otherwise
+         */
+        int     SetSize(u64 size) const;
 
         void    SetPriority(u32 priority);
 

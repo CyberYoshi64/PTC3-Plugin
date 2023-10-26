@@ -2,10 +2,11 @@
    base64.cpp and base64.h
 
    base64 encoding and decoding with C++.
+   
    More information at
      https://renenyffenegger.ch/notes/development/Base64/Encoding-and-decoding-base-64-with-cpp
 
-   Version: 2.rc.04 (release candidate)
+   Version: 2.rc.04 (release candidate) — EDITED
 
    Copyright (C) 2004-2017, 2020 René Nyffenegger
 
@@ -29,6 +30,11 @@
 
    René Nyffenegger rene.nyffenegger@adp-gmbh.ch
 
+   -----
+
+   Changes made:
+   
+      - Use Nintendo 3DS types of variables
 */
 
 #include "base64.hpp"
@@ -49,7 +55,7 @@ const char* base64_chars[2] = {
              "0123456789"
              "-_"};
 
-static unsigned int pos_of_char(const unsigned char chr) {
+static u32 pos_of_char(const unsigned char chr) {
  //
  // Return the position of chr within base64_encode()
  //
@@ -63,7 +69,7 @@ static unsigned int pos_of_char(const unsigned char chr) {
     abort(); // throw "If input is correct, this line should never be reached.";
 }
 
-static std::string insert_linebreaks(std::string str, size_t distance) {
+static std::string insert_linebreaks(std::string str, u32 distance) {
  //
  // Provided by https://github.com/JomaCorpFX, adapted by me.
  //
@@ -71,7 +77,7 @@ static std::string insert_linebreaks(std::string str, size_t distance) {
         return "";
     }
 
-    size_t pos = distance;
+    u32 pos = distance;
 
     while (pos < str.size()) {
         str.insert(pos, "\n");
@@ -81,7 +87,7 @@ static std::string insert_linebreaks(std::string str, size_t distance) {
     return str;
 }
 
-template <typename String, unsigned int line_length>
+template <typename String, u32 line_length>
 static std::string encode_with_line_breaks(String s) {
   return insert_linebreaks(base64_encode(s, false), line_length);
 }
@@ -101,11 +107,11 @@ static std::string encode(String s, bool url) {
   return base64_encode(reinterpret_cast<const unsigned char*>(s.data()), s.length(), url);
 }
 
-std::string base64_encode(unsigned char const* bytes_to_encode, size_t in_len, bool url) {
+std::string base64_encode(u8 const* bytes_to_encode, u32 in_len, bool url) {
 
-    size_t len_encoded = (in_len +2) / 3 * 4;
+    u32 len_encoded = (in_len +2) / 3 * 4;
 
-    unsigned char trailing_char = url ? '.' : '=';
+    u8 trailing_char = url ? '.' : '=';
 
  //
  // Choose set of base64 characters. They differ
@@ -121,7 +127,7 @@ std::string base64_encode(unsigned char const* bytes_to_encode, size_t in_len, b
     std::string ret;
     ret.reserve(len_encoded);
 
-    unsigned int pos = 0;
+    u32 pos = 0;
 
     while (pos < in_len) {
         ret.push_back(base64_chars_[(bytes_to_encode[pos + 0] & 0xfc) >> 2]);
@@ -167,20 +173,20 @@ static std::string decode(String encoded_string, bool remove_linebreaks) {
 
        std::string copy(encoded_string);
 
-       size_t pos=0;
-       while ((pos = copy.find("\n", pos)) != std::string::npos) {
-           copy.erase(pos, 1);
-       }
+       u32 pos=0;
+       while ((pos = copy.find("\n", pos)) != std::string::npos) copy.erase(pos, 1);
+       while ((pos = copy.find("\r", pos)) != std::string::npos) copy.erase(pos, 1);
+       while ((pos = copy.find("\0", pos)) != std::string::npos) copy.erase(pos, 1);
 
        return base64_decode(copy, false);
 
     }
 
-    size_t length_of_string = encoded_string.length();
+    u32 length_of_string = encoded_string.length();
     if (!length_of_string) return std::string("");
 
-    size_t in_len = length_of_string;
-    size_t pos = 0;
+    u32 in_len = length_of_string;
+    u32 pos = 0;
 
  //
  // The approximate length (bytes) of the decoded string might be one ore
@@ -188,19 +194,19 @@ static std::string decode(String encoded_string, bool remove_linebreaks) {
  // in the encoded string. This approximation is needed to reserve
  // enough space in the string to be returned.
  //
-    size_t approx_length_of_decoded_string = length_of_string / 4 * 3;
+    u32 approx_length_of_decoded_string = length_of_string / 4 * 3;
     std::string ret;
     ret.reserve(approx_length_of_decoded_string);
 
     while (pos < in_len) {
 
-       unsigned int pos_of_char_1 = pos_of_char(encoded_string[pos+1] );
+       u32 pos_of_char_1 = pos_of_char(encoded_string[pos+1] );
 
        ret.push_back(static_cast<std::string::value_type>( ( (pos_of_char(encoded_string[pos+0]) ) << 2 ) + ( (pos_of_char_1 & 0x30 ) >> 4)));
 
        if (encoded_string[pos+2] != '=' && encoded_string[pos+2] != '.') { // accept URL-safe base 64 strings, too, so check for '.' also.
 
-          unsigned int pos_of_char_2 = pos_of_char(encoded_string[pos+2] );
+          u32 pos_of_char_2 = pos_of_char(encoded_string[pos+2] );
           ret.push_back(static_cast<std::string::value_type>( (( pos_of_char_1 & 0x0f) << 4) + (( pos_of_char_2 & 0x3c) >> 2)));
 
           if (encoded_string[pos+3] != '=' && encoded_string[pos+3] != '.') {

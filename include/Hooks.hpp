@@ -10,45 +10,45 @@
 namespace CTRPluginFramework {
     class Hooks {
         typedef struct Offsets {
-            u32 mapMagic;
-            u32 mapVersion;
+            u32 mapMagic; // Map file signature — not for use
+            u32 mapVersion; // Map file version — not for use
 
-            u32 versionInt;
-            u32 bootText;
-            u32 configBuf;
-            u32 editorData;
-            u32 graphicStructs;
-            u32 activeProjStr;
-            u32 helpPagePal;
-            u32 helpPageDef;
-            u32 consoleTextPal;
-            u32 funcController;
-            u32 basicInterpretRun;
-            u32 basicCommandRun;
-            u32 basicIsDirect;
-            u32 fontMapBuf;
-            u32 funcFontGetOff;
-            u32 colorKeybBack;
-            u32 colorSearchBack;
-            u32 colorFileCreatorBack;
-            u32 colorFileDescBack;
-            u32 colorActiveProjLbl;
-            u32 colorSetSmToolLbl;
-            u32 colorSetKeyRep;
-            u32 colorSetKeyTL;
-            u32 serverLoad2[2];
-            u32 serverSave3[2];
-            u32 serverShow2;
-            u32 serverList2;
-            u32 serverInfo2;
-            u32 serverDelete2;
-            u32 serverShopList2;
-            u32 serverPrepurchase2;
-            u32 serverPurchase2;
-            u32 serverHMACKey;
+            u32 versionInt;             // Version integer (VERSION)
+            u32 bootText;               // Pointer to boot text
+            u32 configBuf;              // Config save buffer
+            u32 editorData;             // Editor data structure
+            u32 graphicStructs;         // Graphic Page structs
+            u32 activeProjStr;          // Active Project structure
+            u32 helpPagePal;            // Help page palette
+            u32 helpPageDef;            // Help page default color
+            u32 consoleTextPal;         // Console text palette
+            u32 funcController;         // CONTROLLER function
+            u32 basicInterpretRun;      // Interpreter is running
+            u32 basicCommandRun;        // A command/program is executed
+            u32 basicIsDirect;          // Direct Mode / Play Mode
+            u32 fontMapBuf;             // Font Map buffer
+            u32 funcFontGetOff;         // Function to rule FONTDEF definitions
+            u32 colorKeybBack;          // BASIC Keyboard background color
+            u32 colorSearchBack;        // Search background color
+            u32 colorFileCreatorBack;   // Browser File Creator Color
+            u32 colorFileDescBack;      // Browser File Description Color
+            u32 colorActiveProjLbl;     // TOP MENU Active Project Color
+            u32 colorSetSmToolLbl;      // Settings SmileTool Color
+            u32 colorSetKeyRep;         // Settings Key Repeat Color
+            u32 colorSetKeyTL;          // Settings Key TL Color
+            u32 serverLoad2[2];         // Server URL to load2.php
+            u32 serverSave3[2];         // Server URL to save3.php
+            u32 serverShow2;            // Server URL to show2.php
+            u32 serverList2;            // Server URL to list2.php
+            u32 serverInfo2;            // Server URL to info2.php
+            u32 serverDelete2;          // Server URL to delete2.php
+            u32 serverShopList2;        // Server URL to shoplist2.php
+            u32 serverPrepurchase2;     // Server URL to prepurchase2.php
+            u32 serverPurchase2;        // Server URL to purchase2.php
+            u32 serverHMACKey;          // Server HMAC Signature Key
         } Offsets;
     public:
-        static Offsets offsets;
+        static Offsets offsets; // Offset structure
         static Result Init();
     };
 }

@@ -13,7 +13,6 @@
 #include "Misc.hpp"
 #include "MemDispOSD.hpp"
 #include "save.hpp"
-#include "Experimental.hpp"
 #include "PetitCYX.hpp"
 #include "ExceptionHandler.hpp"
 #include "CYXConfirmDlg.hpp"
@@ -28,11 +27,12 @@
 
 #define ENABLE_DEBUG        false
 #define TOP_DIR             "/PTC3PLG" // Top directory (sdmc:/[TOP_DIR])
-#define CONFIG_PATH         TOP_DIR "/config"
-#define RESOURCES_PATH      TOP_DIR "/resources"
-#define CACHE_PATH          TOP_DIR "/cache"
-#define DUMP_PATH           TOP_DIR "/dumps"
-#define DEBUGLOG_FILE       RESOURCES_PATH "/debug.log"
+#define CONFIG_PATH         TOP_DIR "/config" // General configurations
+#define RESOURCES_PATH      TOP_DIR "/resources" // Plugin resources
+#define CACHE_PATH          TOP_DIR "/cache" // Temporary data
+#define DUMP_PATH           TOP_DIR "/dumps" // Crash dumps
+#define INCOMING_PATH       TOP_DIR "/in" // Incoming data, such as packed project files
+#define DEBUGLOG_FILE       RESOURCES_PATH "/debug.log" // Log file to use in debug mode
 
 #define ROMFS_PATH          TOP_DIR "/datafs" // Directory containing RomFS edits
 #define HOMEFS_PATH         TOP_DIR "/homefs" // Limited folder for BASIC projects using the CYX API
@@ -41,16 +41,16 @@
 #define SAVEDATA_PATH       TOP_DIR "/savefs" // In SB3, save:/config.dat
 #define EXTDATA_PATH        TOP_DIR "/savefs" // In SB3, data:/[projects]
 
-#define PROJECTSET_PATH     CONFIG_PATH "/prjSet"
-#define HOMEFS_SHARED_PATH  HOMEFS_PATH "/shared"
+#define PROJECTSET_PATH     CONFIG_PATH "/prjSet" // Project-specific configurations
+#define HOMEFS_SHARED_PATH  HOMEFS_PATH "/shared" // Shared project home folder
 
 #define CLIPBOARDCACHE_PATH CACHE_PATH"/clip.raw"
 
 #define NUMBER_FILE_OP      9
-#define VER_MAJOR           0
-#define VER_MINOR           0
-#define VER_MICRO           6
-#define VER_REVISION        3
+#define VER_MAJOR           0 // Major version
+#define VER_MINOR           0 // Minor version
+#define VER_MICRO           6 // Micro version
+#define VER_REVISION        4 // Revision
 #define STRINGIFY(x)        #x
 #define TOSTRING(x)         STRINGIFY(x)
 #define STRING_VERSION      TOSTRING(VER_MAJOR) "." TOSTRING(VER_MINOR) "." TOSTRING(VER_MICRO) "-" TOSTRING(VER_REVISION)
@@ -104,7 +104,7 @@ typedef struct miniHeap_s {
 namespace CTRPluginFramework {
     using StringVector = std::vector<std::string>;
     u32 fsRegArchiveCallback(u8* path, u32* arch, u32 isAddOnContent, u32 isAlias);
-    int  fsOpenArchiveFunc(u32* fsHandle, u64* out, u32 archiveID, u32 pathType, u32 pathData, u32 pathsize);
+    int fsOpenArchiveFunc(u32* fsHandle, u64* out, u32 archiveID, u32 pathType, u32 pathData, u32 pathsize);
     int fsFormatSaveData(int *a1, int a2, int a3, int a4, int a5, int a6, int a7, int a8, int a9, int a10, char a11);
     extern miniHeap strHeap;
     extern char g_ProcessTID[17];
@@ -129,12 +129,19 @@ namespace CTRPluginFramework {
     extern OS_VersionBin g_osCVer;
     extern char g_osSysVer[];
 
+    // Set the ID from SB3 to wait for a user response using the plugin
     void setCTRPFConfirm(u32 id, int defaultRes);
+
+    // Stall the thread until a response was issued
     int waitCTRPFConfirm();
-    void OnProcessExit(void);
+
+    // Enable/Disable sleep mode
     void mcuSetSleep(bool on);
+
+    // Check, if sleep mode is enabled
     bool mcuIsSleepEnabled();
     int strlen16(u16* str);
+    void OnProcessExit(void);
     int fsSetThisSaveDataSecureValue(u32 a1, u64 a2);
     int Obsoleted_5_0_fsSetSaveDataSecureValue(u64 a1, u32 a2, u32 a3, u8 a4);
     int fsSetSaveDataSecureValue(u64 a1, u32 a2, u64 a3, u8 a4);

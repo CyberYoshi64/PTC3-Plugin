@@ -16,7 +16,7 @@ TARGET		:= 	ptc3plg
 PLGINFO 	:= 	$(TARGET).plgInfo
 
 BUILD		:= 	build
-INCLUDES	:= 	include
+INCLUDES	:= 	include lib/Library/include
 SOURCES 	:= 	source
 
 #---------------------------------------------------------------------------------

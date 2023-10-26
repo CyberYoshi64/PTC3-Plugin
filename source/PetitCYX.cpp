@@ -9,7 +9,7 @@ namespace CTRPluginFramework {
     BASICGRPStructs* CYX::GraphicPage = NULL;
     BASICTextPalette* CYX::textPalette = NULL;
     BASICActiveProject* CYX::activeProject = NULL;
-    CYX::PTCConfig* CYX::ptcConfig = NULL;
+    PTCConfig* CYX::ptcConfig = NULL;
     FontOffFunc CYX::fontOff;
     u16* CYX::basicFontMap = NULL;
     u32 CYX::patch_FontGetOffset[2] = {0};
@@ -23,10 +23,9 @@ namespace CTRPluginFramework {
     char CYX::bytesFreeText[32] = " bytes free\n\n";
     bool CYX::provideCYXAPI = true;
     bool CYX::wasCYXAPIused = false;
-    u32 CYX::cyxApiOutType = 0;
     string16 CYX::cyxApiTextOut;
-    double CYX::cyxApiFloatOut = 0;
-    s32 CYX::cyxApiIntOut = 0;
+    u32 CYX::cyxApiOutc;
+    u32 CYX::cyxApiLastOutv;
     u32 CYX::cyxSaveTimer = 0;
     u64 CYX::sdmcFreeSpace = 0;
     u64 CYX::sdmcTotalSpace = 0;
@@ -107,8 +106,7 @@ namespace CTRPluginFramework {
             doUpdate = true; didUpdateManually = true;
             SaveProjectSettings();
             UTF16toUTF8(g_currentProject="", activeProject->currentProject);
-            if (g_currentProject==""||g_currentProject=="###") g_currentProject="$DEFAULT";
-            //OSD::Notify(g_currentProject);
+            if (g_currentProject==""||g_currentProject==PTC_WORKSPACE_EXTDATANAME) g_currentProject=PTC_WORKSPACE_CYXNAME;
             if (R_SUCCEEDED(frdInit())){
                 sprintf(str,"Using ＣＹＸ %s\nIn %s", STRING_VERSION, g_currentProject.c_str());
                 FRD_UpdateGameModeDescription(str);
@@ -116,16 +114,11 @@ namespace CTRPluginFramework {
             frdExit();
             LoadProjectSettings();
         }
-        if (mirror.diff.isDirectMode){
-            //OSD::Notify(Utils::Format("isDirectMode: %d", mirror.isDirectMode));
-        }
         if (mirror.isInBasic && mirror.isBasicRunningTime == 3 && mirror.isBasicRunning2 != mirror.isBasicRunning){
             mirror.isBasicRunning2 = mirror.isBasicRunning;
-            //OSD::Notify(Utils::Format("isBasicRunning: %d", mirror.isBasicRunning));
         }
         if (mirror.diff.isInBasic){
             if (!mirror.isInBasic) doUpdate = true;
-            //OSD::Notify(Utils::Format("isInBasic: %d", mirror.isInBasic));
         }
         if (doUpdate){
             if (!didUpdateManually){
@@ -146,7 +139,11 @@ namespace CTRPluginFramework {
         }
     }
     bool CYX::WouldOpenMenu(){
-        return !mirror.isInBasic;
+        if (mirror.isInBasic){
+            SoundEngine::PlayMenuSound(SoundEngine::Event::CANCEL);
+            return false;
+        }
+        return true;
     }
     void CYX::UpdateMirror(){
         mirror.diff.currentProject = memcmp(activeProject->currentProject, mirror.currentProject, sizeof(mirror.currentProject))!=0;
@@ -178,29 +175,39 @@ namespace CTRPluginFramework {
     int CYX::scrShotStubFunc() {
         return 0;
     }
-    void CYX::CYXAPI_Out(){
-        cyxApiOutType = 3;
-        cyxApiTextOut.clear();
+    void CYX::CYXAPI_Out(BASICGenericVariable* out){
+        if (out >= (BASICGenericVariable*)cyxApiLastOutv) return;
+        out->type = SBVARRAW_STRING;
+        out->data = editorInstance->clipboardLength;
+        out->data2 = editorInstance->clipboardData;
     }
-    void CYX::CYXAPI_Out(s32 i){
-        cyxApiOutType = 2;
-        cyxApiTextOut.clear();
-        cyxApiIntOut = i;
+    void CYX::CYXAPI_Out(BASICGenericVariable* out, s32 i){
+        if (out >= (BASICGenericVariable*)cyxApiLastOutv) return;
+        out->type = SBVARRAW_INTEGER;
+        out->data = i;
     }
-    void CYX::CYXAPI_Out(double f){
-        cyxApiOutType = 1;
-        cyxApiTextOut.clear();
-        cyxApiFloatOut = f;
+    void CYX::CYXAPI_Out(BASICGenericVariable* out, double f){
+        if (out >= (BASICGenericVariable*)cyxApiLastOutv) return;
+        out->type = SBVARRAW_DOUBLE;
+        *(double*)&out->data = f;
     }
-    void CYX::CYXAPI_Out(const char* s){
-        cyxApiOutType = 0;
-        cyxApiTextOut.clear();
-        Utils::ConvertUTF8ToUTF16(cyxApiTextOut, s);
-    }
-    void CYX::CYXAPI_Out(const std::string& s){
-        cyxApiOutType = 0;
-        CYX::cyxApiTextOut.clear();
+    void CYX::CYXAPI_Out(BASICGenericVariable* out, const char* s){
+        if (out >= (BASICGenericVariable*)cyxApiLastOutv) return;
+        u32 o = cyxApiTextOut.size(), l;
         Utils::ConvertUTF8ToUTF16(CYX::cyxApiTextOut, s);
+        l = cyxApiTextOut.size() - o;
+        out->type = SBVARRAW_STRING;
+        out->data = l;
+        out->data2 = (void*)(cyxApiTextOut.c_str() + o);
+    }
+    void CYX::CYXAPI_Out(BASICGenericVariable* out, const std::string& s){
+        if (out >= (BASICGenericVariable*)cyxApiLastOutv) return;
+        u32 o = cyxApiTextOut.size(), l;
+        Utils::ConvertUTF8ToUTF16(CYX::cyxApiTextOut, s);
+        l = cyxApiTextOut.size() - o;
+        out->type = SBVARRAW_STRING;
+        out->data = l;
+        out->data2 = (void*)(cyxApiTextOut.c_str() + o);
     }
 
     s32 CYX::argGetInteger(BASICGenericVariable* arg){
@@ -212,7 +219,7 @@ namespace CTRPluginFramework {
             case SBVARRAW_DOUBLE:
                 return (s32)(*(double*)&arg->data);
             case SBVARRAW_STRING:
-                CYXAPI_Out("W: Can't convert string to s32"); break;
+                return 0;
         }
         return 0;
     }
@@ -251,7 +258,7 @@ namespace CTRPluginFramework {
             case SBVARRAW_DOUBLE:
                 return *(double*)&arg->data;
             case SBVARRAW_STRING:
-                CYXAPI_Out("W: Can't convert string to s32"); break;
+                return 0;
         }
         return 0;
     }
@@ -267,7 +274,6 @@ namespace CTRPluginFramework {
     }
     // Function stub
     int CYX::stubBASICFunction(void* ptr, u32 selfPtr, BASICGenericVariable* outv, u32 outc, void* a4, u32 argc, BASICGenericVariable* argv){
-        DEBUG("CYX: Function %08X (%x/%x) %p", selfPtr, argc, outc, a4);
         return 0;
     }
     int CYX::controllerFuncHook(void* ptr, u32 selfPtr, BASICGenericVariable* outv, u32 outc, void* a4, u32 argc, BASICGenericVariable* argv){
@@ -286,35 +292,15 @@ namespace CTRPluginFramework {
             }
         }
         if (provideCYXAPI && isCYX){
+            cyxApiOutc = outc;
+            cyxApiLastOutv = (u32)(outv+outc);
             CYX::cyxApiTextOut.clear();
-            int res=BasicAPI::Parse(argv, argc);
+            int res=BasicAPI::Parse(argv, argc, outv, outc);
             switch (res){
                 case 0: case 1: break;
                 case 2: return 1; // Silent exit
                 case 3: return 2; // Non-fatal quit
                 default: return 3; // Fatal quit
-            }
-            if (outc){
-                switch (cyxApiOutType){
-                case 0:
-                    outv->type = SBVARRAW_STRING;
-                    outv->data = cyxApiTextOut.size();
-                    outv->data2 = (void*)cyxApiTextOut.c_str();
-                    break;
-                case 1:
-                    outv->type = SBVARRAW_DOUBLE;
-                    *(double*)&outv->data = cyxApiFloatOut;
-                    break;
-                case 2:
-                    outv->type = SBVARRAW_INTEGER;
-                    outv->data = cyxApiIntOut;
-                    break;
-                case 3:
-                    outv->type = SBVARRAW_STRING;
-                    outv->data = editorInstance->clipboardLength;
-                    outv->data2 = editorInstance->clipboardData;
-                    break;
-                }
             }
         } else {
             if (outc){
@@ -429,10 +415,15 @@ namespace CTRPluginFramework {
     void CYX::CreateHomeFolder(){
         CreateHomeFolder(g_currentProject);
     }
+    std::string CYX::GetExtDataFolderName(){
+        if (g_currentProject == PTC_WORKSPACE_CYXNAME) return PTC_WORKSPACE_EXTDATANAME;
+        return g_currentProject;
+    }
     std::string CYX::GetHomeFolder(){
         return HOMEFS_PATH"/P"+g_currentProject;
     }
     std::string CYX::GetHomeFolder(std::string project){
+        if (project == PTC_WORKSPACE_EXTDATANAME) return HOMEFS_PATH "/P" PTC_WORKSPACE_CYXNAME;
         return HOMEFS_PATH"/P"+project;
     }
 

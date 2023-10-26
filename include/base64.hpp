@@ -1,12 +1,19 @@
 //
 //  base64 encoding and decoding with C++.
-//  Version: 2.rc.04 (release candidate)
+//  Version: 2.rc.04 (release candidate) — EDITED
 //
+
+/*
+   Changes made:
+   
+      - Use Nintendo 3DS types of variables
+*/
 
 #ifndef BASE64_H_C0CE2A47_D10E_42C9_A27C_C883944E704A
 #define BASE64_H_C0CE2A47_D10E_42C9_A27C_C883944E704A
 
 #include <string>
+#include "types.h"
 
 #if __cplusplus >= 201703L
 #include <string_view>
@@ -17,7 +24,7 @@ std::string base64_encode_pem (std::string const& s);
 std::string base64_encode_mime(std::string const& s);
 
 std::string base64_decode(std::string const& s, bool remove_linebreaks = false);
-std::string base64_encode(unsigned char const*, size_t len, bool url = false);
+std::string base64_encode(u8 const*, u32 len, bool url = false);
 
 #if __cplusplus >= 201703L
 //

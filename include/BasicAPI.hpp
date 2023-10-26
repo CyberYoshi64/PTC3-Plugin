@@ -4,7 +4,11 @@
 #include "main.hpp"
 
 namespace CTRPluginFramework {
-    using BasicAPIFunction = int(*)(BASICGenericVariable* argv, u32 argc);
+    using BasicAPIFunction = int(*)(
+        BASICGenericVariable* argv, u32 argc,
+        BASICGenericVariable* outv, u32 outc
+    );
+    #define BASICAPI_FUNCVARS BASICGenericVariable* argv, u32 argc, BASICGenericVariable* outv, u32 outc
     
     #define BASICAPI_HANDLE_START (u32)0x20000000U
     #define BASICAPI_HANDLE_END (u32)0x3FFFFFFFU
@@ -73,36 +77,37 @@ namespace CTRPluginFramework {
         static void Finalize(void);
         static void Cleanup(void);
         static void MenuTick(void);
-        static int Parse(BASICGenericVariable* argv, u32 argc);
+        static int Parse(BASICAPI_FUNCVARS);
         static int FileRead(BasicAPI::FileStruct f, u16* buf, u32* len, u32 size, u32 bytesLeft);
         static int FileWrite(BasicAPI::FileStruct f, u16* buf, u32 size);
         static u32 flags;
     private:
-        static int Func_FILES(BASICGenericVariable* argv, u32 argc);
-        static int Func_FOPEN(BASICGenericVariable* argv, u32 argc);
-        static int Func_FMODE(BASICGenericVariable* argv, u32 argc);
-        static int Func_FREAD(BASICGenericVariable* argv, u32 argc);
-        static int Func_FWRITE(BASICGenericVariable* argv, u32 argc);
-        static int Func_FCLOSE(BASICGenericVariable* argv, u32 argc);
-        static int Func_FSEEK(BASICGenericVariable* argv, u32 argc);
-        static int Func_MKFILE(BASICGenericVariable* argv, u32 argc);
-        static int Func_RMFILE(BASICGenericVariable* argv, u32 argc);
-        static int Func_MVFILE(BASICGenericVariable* argv, u32 argc);
-        static int Func_MKDIR(BASICGenericVariable* argv, u32 argc);
-        static int Func_RMDIR(BASICGenericVariable* argv, u32 argc);
-        static int Func_MVDIR(BASICGenericVariable* argv, u32 argc);
-        static int Func_CHKDIR(BASICGenericVariable* argv, u32 argc);
-        static int Func_CHKFILE(BASICGenericVariable* argv, u32 argc);
-        static int Func_INIT(BASICGenericVariable* argv, u32 argc);
-        static int Func_EXIT(BASICGenericVariable* argv, u32 argc);
-        static int Func_CRASH(BASICGenericVariable* argv, u32 argc);
-        static int Func_CFGGET(BASICGenericVariable* argv, u32 argc);
-        static int Func_CFGSET(BASICGenericVariable* argv, u32 argc);
-        static int Func_OSD(BASICGenericVariable* argv, u32 argc);
-        static int Func_SETUP_CLIP(BASICGenericVariable* argv, u32 argc);
-        static int Func_FILLGRP(BASICGenericVariable* argv, u32 argc);
-        static int Func_SYSGCOPY(BASICGenericVariable* argv, u32 argc);
-        static int Func_UNIXTIME(BASICGenericVariable* argv, u32 argc);
+        static int Func_FILES(BASICAPI_FUNCVARS);
+        static int Func_FOPEN(BASICAPI_FUNCVARS);
+        static int Func_FMODE(BASICAPI_FUNCVARS);
+        static int Func_FREAD(BASICAPI_FUNCVARS);
+        static int Func_FWRITE(BASICAPI_FUNCVARS);
+        static int Func_FCLOSE(BASICAPI_FUNCVARS);
+        static int Func_FSEEK(BASICAPI_FUNCVARS);
+        static int Func_MKFILE(BASICAPI_FUNCVARS);
+        static int Func_RMFILE(BASICAPI_FUNCVARS);
+        static int Func_MVFILE(BASICAPI_FUNCVARS);
+        static int Func_MKDIR(BASICAPI_FUNCVARS);
+        static int Func_RMDIR(BASICAPI_FUNCVARS);
+        static int Func_MVDIR(BASICAPI_FUNCVARS);
+        static int Func_CHKDIR(BASICAPI_FUNCVARS);
+        static int Func_CHKFILE(BASICAPI_FUNCVARS);
+        static int Func_INIT(BASICAPI_FUNCVARS);
+        static int Func_EXIT(BASICAPI_FUNCVARS);
+        static int Func_CRASH(BASICAPI_FUNCVARS);
+        static int Func_CFGGET(BASICAPI_FUNCVARS);
+        static int Func_CFGSET(BASICAPI_FUNCVARS);
+        static int Func_OSD(BASICAPI_FUNCVARS);
+        static int Func_SETUP_CLIP(BASICAPI_FUNCVARS);
+        static int Func_FILLGRP(BASICAPI_FUNCVARS);
+        static int Func_SYSGCOPY(BASICAPI_FUNCVARS);
+        static int Func_UNIXTIME(BASICAPI_FUNCVARS);
+        static int Func_VALIDATE(BASICAPI_FUNCVARS);
         
         static void AddEntry(const char* id, BasicAPIFunction func);
         static std::vector<Entry> Entries;

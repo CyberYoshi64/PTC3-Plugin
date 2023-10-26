@@ -3,7 +3,7 @@
 
 namespace CTRPluginFramework {
 
-    void* generalPointer;
+    void* generalPointer[8];
     u32 generalInt;
 
     void serverAdrChg(MenuEntry *entry){
@@ -23,7 +23,7 @@ namespace CTRPluginFramework {
             kbd.SetMaxLength(SBSERVER_URL_MAXLEN);
             kbdres = kbd.Open(srvName, "http://");
             if (kbdres < 0) return;
-            while (srvName.length() && srvName.ends_with('/')) srvName.pop_back();
+            while (srvName.length() && srvName.back()=='/') srvName.pop_back();
             for (u32 i=0; i<srvName.size(); i++){
                 if (srvName[i] < '%' || srvName[i] > 'z'){
                     MessageBox("The server name is not valid:\nThe name contains invalid characters.", DialogType::DialogOk, ClearScreen::Both)();
@@ -282,25 +282,28 @@ namespace CTRPluginFramework {
     void editorRulerPalCallback(Keyboard& kbd, KeyboardEvent& ev){
         u32 c; CTRPluginFramework::Render::Interface* r;
         Color c0, c1, c2, c3;
-        std::string t;
-        StringVector s = {
-            "This is a sample.",
-            "It's sorta accurate.",
-            "\uFF3C\uE008\uFF0F",
-            "?\"サイバーヨッシー６４\""
-        };
+        u32 sline = 0, scol = 0;
+        std::string t; StringVector s;
         switch (ev.type){
             case ev.SelectionChanged:
-                if (ev.selectedIndex > 7) return;
+                if (ev.selectedIndex < 0 || ev.selectedIndex > 7) return;
                 generalInt = ev.selectedIndex;
                 break;
             case ev.FrameTop:
+                s = {
+                    "\005REM\001 Look, \0061\001 sample\006.",
+                    "\003@I_hope\002's good...",
+                    "\004CONTROLLER\006 0\002 '\uFF3C\uE008\uFF0F",
+                    "?\007\"サイバーヨッシー６４ rules, right?\"",
+                    "Currently in \005use\001:",
+                    ">> "+(*(StringVector*)generalPointer[1])[generalInt]
+                };
                 kbd.GetMessage() = "Select the color scheme to use.";
                 c = CYX::textPalette->editSelectFG;
                 c0 = Color(SWITCHEND32(c));
-                c = ((u32**)generalPointer)[generalInt][0];
+                c = ((u32**)generalPointer[0])[generalInt][0];
                 c1 = Color(SWITCHEND32(c));
-                c = ((u32**)generalPointer)[generalInt][1];
+                c = ((u32**)generalPointer[0])[generalInt][1];
                 c2 = Color(SWITCHEND32(c));
                 c = CYX::textPalette->editText;
                 c3 = Color(SWITCHEND32(c));
@@ -319,18 +322,50 @@ namespace CTRPluginFramework {
                 for (u32 si0=0; si0 < s.size(); si0++){
                     t = Utils::Format("%d",si0+1);
                     c = Render::GetTextWidth(t);
-                    r->DrawSysString(t, 100-c, 59+si0*16, Color::Black);
-                    u32 si2=0;
+                    r->DrawSysString(t, 100-c, 59+sline*16, Color::Black);
                     for (u32 si1=0; si1 < s[si0].size(); si1++){
                         t = s[si0].at(si1);
-                        if (t[0]>=0x80) {
-                            t = s[si0].substr(si1, 3);
-                            si1+=2;
+                        if ((c = t[0]) < ' '){
+                            switch (c){
+                                case 0: // Cut off
+                                    si1 = 0x7FFFDEAD;
+                                    break;
+                                case 1: // Reset color
+                                    c3 = Color(SWITCHEND32(CYX::textPalette->editText));
+                                    break;
+                                case 2: // Comment
+                                    c3 = Color(SWITCHEND32(CYX::textPalette->editComment));
+                                    break;
+                                case 3: // Label
+                                    c3 = Color(SWITCHEND32(CYX::textPalette->editLabel));
+                                    break;
+                                case 4: // Statement
+                                    c3 = Color(SWITCHEND32(CYX::textPalette->editStatement));
+                                    break;
+                                case 5: // Keyword
+                                    c3 = Color(SWITCHEND32(CYX::textPalette->editKeywords));
+                                    break;
+                                case 6: // Numeric
+                                    c3 = Color(SWITCHEND32(CYX::textPalette->editNumeric));
+                                    break;
+                                case 7: // String
+                                    c3 = Color(SWITCHEND32(CYX::textPalette->editString));
+                                    break;
+                            }
+                            continue;
+                        }
+                        if (c = (t[0]>=0xC0)+(t[0]>=0xE0)+(t[0]>=0xF0)) {
+                            t = s[si0].substr(si1, c+1);
+                            si1 += c;
                         }
                         c = Render::GetTextWidth(t)/2;
-                        r->DrawSysString(t, 115+si2*12-c, 59+si0*16, c3, 400);
-                        si2++;
+                        r->DrawSysString(t, 115+scol*12-c, 59+sline*16, c3, 360);
+                        if (scol++ >= 20) {
+                            scol = 0; sline++;
+                        }
                     }
+                    c3 = Color(SWITCHEND32(CYX::textPalette->editText));
+                    scol = 0; sline++;
                 }
                 break;
         }
@@ -344,12 +379,7 @@ namespace CTRPluginFramework {
         u32 pal4[] = {0xFF484040, 0xFF80FF00}; // Dark 1
         u32 pal5[] = {0xFF000000, 0xFFFF7000}; // Dark 2
         u32 pal6[] = {0xFFFFFFFF, 0xFFFF5000}; // Light
-        u32* ptr[] = {pal0,pal1,pal2,pal3,pal4,pal5,pal6};
-        generalPointer = ptr; generalInt = 0;
-        
-        Keyboard kbd;
-        kbd.OnKeyboardEvent(editorRulerPalCallback);
-        kbd.Populate({
+        StringVector str = {
             "Original",
             "Inverted",
             "Aqua",
@@ -357,7 +387,15 @@ namespace CTRPluginFramework {
             "Dark 1",
             "Dark 2",
             "Light",
-        }, true);
+        };
+        u32* ptr[] = {pal0,pal1,pal2,pal3,pal4,pal5,pal6};
+        generalPointer[0] = ptr;
+        generalPointer[1] = &str;
+        generalInt = 0;
+        
+        Keyboard kbd;
+        kbd.OnKeyboardEvent(editorRulerPalCallback);
+        kbd.Populate(str, true);
         kbd.DisplayTopScreen = true;
         int kres = kbd.Open();
         if (kres < 0) return;
@@ -395,78 +433,143 @@ namespace CTRPluginFramework {
         }
     }
     void validateFile(MenuEntry* entry){
+        #define BUFFER_SIZE 262144
         char* hmac = (char*)Hooks::offsets.serverHMACKey;
         int hmac_len = strlen(hmac), res = 0;
-        std::string out;
+        std::string out = "/"+CYX::GetExtDataFolderName();
         std::string headerString = "Validating...";
-        Screen sc1 = OSD::GetTopScreen();
+        Screen sc1 = OSD::GetBottomScreen();
+        StringVector strings; bool inFolder = true;
+        Keyboard k; u32 entries;
+        Directory d; Directory::Open(d, SAVEDATA_PATH+out);
+        entries = d.ListFiles(strings);
+        d.Close();
+        strings.push_back("\uE072 Back");
+        k.Populate(strings);
+        k.DisplayTopScreen = true;
 
-        Utils::FilePicker(out);
-        if (strncmp(SAVEDATA_PATH, out.c_str(), strlen(SAVEDATA_PATH))!=0){
-            MessageBox("Please select a SmileBASIC file.")();
-            return;
+        while (true){
+            if (inFolder){
+                k.GetMessage() = "Select a file to validate in\n\"ptc:"+out+"\".";
+            } else {
+                k.GetMessage() = "Select a project to validate a file of.\n";
+            }
+            k.GetMessage() += "\n\n\uE07D Move cursor\n\uE000 Select\n\uE001 Back";
+            k.ChangeEntrySound(entries, SoundEngine::Event::CANCEL);
+            res = k.Open();
+            if (res == entries) res = -1;
+            if (res < -1) return;
+            if (res == -1){
+                if (inFolder){
+                    inFolder = false;
+                    out = "";
+                    strings.clear();
+                    Directory::Open(d, SAVEDATA_PATH);
+                    entries = d.ListDirectories(strings);
+                    d.Close();
+                    strings.push_back("\uE072 Back");
+                    k.Populate(strings);
+                } else
+                    return;
+            } else {
+                out += "/"+strings[res];
+                if (inFolder){
+                    break;
+                } else {
+                    inFolder = true;
+                    strings.clear();
+                    Directory::Open(d, SAVEDATA_PATH+out);
+                    entries = d.ListFiles(strings);
+                    d.Close();
+                    strings.push_back("\uE072 Back");
+                    k.Populate(strings);
+                }
+            }
         }
+        out = SAVEDATA_PATH + out;
+
         OSD::Lock();
         for (u32 b=0; b<2; b++){
-            sc1.DrawRect(125, 80, 150, 80, Color::Black, true);
-            sc1.DrawSysfont(headerString, 200 - Render::GetTextWidth(headerString)/2, 90);
-            sc1.DrawRect(130, 125, 140, 25, Color::White, false);
+            OSD::GetTopScreen().DrawRect(33, 23, 334, 194, Color::Black, true);
+            sc1.DrawRect(23, 23, 274, 194, Color::Black, true);
+            sc1.DrawSysfont(headerString, 160 - Render::GetTextWidth(headerString)/2, 80);
+            sc1.DrawRect(90, 125, 140, 25, Color::White, false);
             OSD::SwapBuffers();
         }
         OSD::Unlock();
         File f;
         if ((res = File::Open(f, out, File::RW))){
-            MessageBox("An error has occured while opening the file.\n\nStatus code: "+Utils::Format("%d",res))();
+            MessageBox("An error has occured while opening the file.\n\nStatus code: "+Utils::Format("%08X", res), DialogType::DialogOk, ClearScreen::Both)();
             return;
         }
         u8 digest[20], oldDigest[20];
-        u8 buf[8192]; u32 size, size2, chunk;
+        u16 waitIc$[2] = {0};
+        u32 waitIcT;
+        void* buf = new u8[BUFFER_SIZE];
+        if (!buf) abort();
+        bool aborted = false;
+        u32 size, size2, chunk;
+        u32 perc = 0, operc;
         size = size2 = f.GetSize()-20;
         f.Seek(-20, File::END);
         if (res = f.Read(oldDigest, 20)){
-            MessageBox("An error occured while reading the existing signature.\nStatus code: "+Utils::Format("%d",res))();
+            MessageBox("An error occured while reading the existing signature.\nStatus code: "+Utils::Format("%08X", res), DialogType::DialogOk, ClearScreen::Both)();
             f.Close();
             return;
         }
         f.Seek(0, File::SET);
 
-        SHA1_HMACCTX hmacCtx;
-        SHA1_HMACInit(&hmacCtx, (u8*)hmac, hmac_len);
+        SHA1_HMAC::CTX hmacCtx;
+        SHA1_HMAC::Init(&hmacCtx, (u8*)hmac, hmac_len);
         OSD::Lock();
-        while (size){
-            headerString = Utils::Format("%.1f%%", (1.f - (float)size / (float)size2) * 100.f);
-            sc1.DrawRect(131, 126, 138, 23, Color::Black);
-            sc1.DrawRect(131, 126, 138.f * (1.f - (float)size / (float)size2), 23, Color::Teal);
-            sc1.DrawSysfont(headerString, 200 - Render::GetTextWidth(headerString)/2, 128, Color::White);
+        while (size && !aborted){
+            operc = perc;
+            perc = (1.f - (float)size / (float)size2) * 1000;
+            waitIc$[0] = 0xE020 + ((waitIcT++ / 4) & 7);
+            headerString = Utils::Format("%.1f %%", perc/10.f);
+            sc1.DrawRect(91, 126, 138, 23, Color::Black);
+            sc1.DrawRect(91, 126, 138.f * (perc / 1000.f), 23, Color::Teal);
+            sc1.DrawSysfont(headerString, 160 - Render::GetTextWidth(headerString)/2, 128, Color::White);
+            headerString.clear();
+            Utils::ConvertUTF16ToUTF8(headerString, waitIc$);
+            sc1.DrawRect(145, 100, 30, 20, Color::Black);
+            sc1.DrawSysfont(headerString, 160 - Render::GetTextWidth(headerString)/2, 100, Color::Cyan);
             OSD::SwapBuffers();
-            chunk = size > sizeof(buf) ? sizeof(buf) : size;
+            Controller::Update();
+            if (Controller::GetKeysDown() & KEY_X) {
+                aborted = true;
+                break;
+            }
+            chunk = size > BUFFER_SIZE ? BUFFER_SIZE : size;
             if (res = f.Read(buf, chunk)){
                 OSD::Unlock();
-                MessageBox("An error occured while reading the file.\nStatus code: "+Utils::Format("%d",res))();
+                MessageBox("An error occured while reading the file.\nStatus code: "+Utils::Format("%08X", res), DialogType::DialogOk, ClearScreen::Both)();
                 f.Close();
                 return;
             }
-            SHA1_HMACUpdate(&hmacCtx, buf, chunk);
+            SHA1_HMAC::Update(&hmacCtx, (u8*)buf, chunk);
             size -= chunk;
         }
-        SHA1_HMACFinal(digest, &hmacCtx);
-        
-        sc1.DrawRect(131, 126, 138, 23, Color::Black);
-        sc1.DrawRect(131, 126, 138.f * (1.f - (float)size / (float)size2), 23, Color::Teal);
-        sc1.DrawSysfont(headerString, 200 - Render::GetTextWidth(headerString)/2, 128, Color::White);
-        OSD::SwapBuffers();
+        ::operator delete(buf);
         OSD::Unlock();
+        
+        if (!aborted){
+            SHA1_HMAC::Final(digest, &hmacCtx);
 
-        if (memcmp(digest, oldDigest, 20)) {
-            f.Seek(-20, File::END);
-            if (res = f.Write(digest, 20)){
-                MessageBox("An error occured while writing the new signature.\nStatus code: "+Utils::Format("%d",res))();
+            if (memcmp(digest, oldDigest, 20)) {
+                f.Seek(-20, File::END);
+                if (res = f.Write(digest, 20)){
+                    MessageBox("An error occured while writing the new signature.\nStatus code: "+Utils::Format("%08X", res), DialogType::DialogOk, ClearScreen::Both)();
+                } else {
+                    MessageBox("The signature of the file has been corrected.", DialogType::DialogOk, ClearScreen::Both)();
+                }
             } else {
-                MessageBox("The signature of the file has been corrected.")();
+                MessageBox("The signature of the file was valid. No changes were made.", DialogType::DialogOk, ClearScreen::Both)();
             }
         } else {
-            MessageBox("The signature of the file was valid. No changes were made.")();
+            MessageBox("The operation was cancelled. No changes were made.", DialogType::DialogOk, ClearScreen::Both)();
         }
         f.Close();
+        #undef BUFFER_SIZE
     }
 }

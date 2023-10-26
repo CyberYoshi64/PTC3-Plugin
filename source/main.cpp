@@ -4,6 +4,7 @@
 #include "save.hpp"
 #include "ptm.h"
 
+// Patterns of functions to try replace with custom ones
 u8 fsMountArchivePat1[] = {0x10, 0x00, 0x97, 0xE5, 0xD8, 0x20, 0xCD, 0xE1, 0x00, 0x00, 0x8D};
 u8 fsMountArchivePat2[] = {0x28, 0xD0, 0x4D, 0xE2, 0x00, 0x40, 0xA0, 0xE1, 0xA8, 0x60, 0x9F, 0xE5, 0x01, 0xC0, 0xA0, 0xE3};
 u8 fsRegArchivePat[] = {0xB4, 0x44, 0x20, 0xC8, 0x59, 0x46, 0x60, 0xD8};
@@ -15,6 +16,7 @@ u8 fsSetThisSecValPat[] = {0xC0, 0x00, 0x6E, 0x08};
 u8 fsObsSetThisSecValPat[] = {0x40, 0x01, 0x65, 0x08};
 u8 fsSetSecValPat[] = {0x80, 0x01, 0x75, 0x08};
 u8 fsCheckPermsPat[] = {0x04, 0x10, 0x12, 0x00, 0x76, 0x46, 0x00, 0xD9};
+
 namespace CTRPluginFramework {
     Region g_region;
     FS_ArchiveResource g_sdmcArcRes;
@@ -478,7 +480,6 @@ namespace CTRPluginFramework {
             new MenuEntry("Change editor ruler color", nullptr, editorRulerPalette, "Choose from one of a few palettes for the editor ruler."),
             new MenuEntry("Memory Display", MemDisplayOSD::OSDFunc),
             new MenuEntry("Memory Display Settings", nullptr, MemDisplayOSD::setup),
-            new MenuEntry("Unnamed Experiment 1", nullptr, experiment1),
             new MenuEntry("ValidateFile()", nullptr, validateFile),
         }));
         menu += new MenuEntry("CYX API", nullptr, cyxAPItoggle, "The CYX API adds various features to BASIC.");
@@ -501,10 +502,22 @@ namespace CTRPluginFramework {
     }
 
     const std::string about =
-        "CYX extension for SmileBASIC\n\n"
-        "2022-2023 CyberYoshi64\n\n";
+        "SmileBASIC-CYX\n"
+        "2022-2023 CyberYoshi64\n\n"
+        "May not be used seperately.\n"
+        "CyberYoshi64 is hereby not held responsible for any damage inflicted on the game or your save data.";
 
     int main(void) {
+        if (g_region != REGION_NONE && g_region != REGION_MAX){
+            Process::exceptionCallback = Exception::Handler;
+            g_osFirmVer = osGetFirmVersion();
+            g_osKernelVer = osGetKernelVersion();
+            osGetSystemVersionDataString(&g_osNVer, &g_osCVer, g_osSysVer, sizeof(g_osSysVer));
+        } else {
+            MessageBox("This application is not supported and will be closed.")();
+            Process::ReturnToHomeMenu();
+            return 1;
+        }
 
         PluginMenu *menu = new PluginMenu("Main Menu", VER_MAJOR, VER_MINOR, VER_MICRO, about, false);
 
@@ -516,16 +529,8 @@ namespace CTRPluginFramework {
         menu->OnOpening = menuOpen;
         menu->OnClosing = menuClose;
 
-        if (g_region != REGION_NONE && g_region != REGION_MAX){
-            InitMenu(*menu);
-            Process::exceptionCallback = Exception::Handler;
-            g_osFirmVer = osGetFirmVersion();
-            g_osKernelVer = osGetKernelVersion();
-            osGetSystemVersionDataString(&g_osNVer, &g_osCVer, g_osSysVer, sizeof(g_osSysVer));
-        } else {
-            *menu += new MenuEntry("Could not initialize plugin", nullptr, pluginDetails, "This plugin could not detect SmileBASIC 3 and/or the version you're using is not supported. It will now behave like the blank template.");
-        }
         warnIfSDTooBig();
+        InitMenu(*menu);
         menu->Run();
         delete menu;
         return 0;

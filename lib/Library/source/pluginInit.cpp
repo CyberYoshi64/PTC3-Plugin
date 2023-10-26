@@ -483,10 +483,10 @@ namespace CTRPluginFramework
         // Init sysfont
         Font::Initialize();
         {
-            // If /cheats/ doesn't exists, create it
-            const char *dirpath = "/cheats";
-            if (!Directory::IsExists(dirpath))
-                Directory::Create(dirpath);
+            // If /cheats/ doesn't exists, create it // actually, we don't
+            // const char *dirpath = "/cheats";
+            // if (!Directory::IsExists(dirpath))
+            //     Directory::Create(dirpath);
         }
 
         // Set AR file path
@@ -497,14 +497,14 @@ namespace CTRPluginFramework
             Preferences::CheatsFile = Utils::Format("/cheats/%016llX.txt", Process::GetTitleID());
 
         {
-            // If /Screenshots/ doesn't exists, create it
-            const char *dirpath = "/Screenshots";
-            if (!Directory::IsExists(dirpath))
-                Directory::Create(dirpath);
+            // If /Screenshots/ doesn't exists, create it // actually, we don't
+            // const char *dirpath = "/Screenshots";
+            // if (!Directory::IsExists(dirpath))
+            //     Directory::Create(dirpath);
 
-            // Set default screenshot path
-            Screenshot::Path = dirpath;
-            Screenshot::Path.append("/");
+            // Set default screenshot path // actually no
+            // Screenshot::Path = dirpath;
+            // Screenshot::Path.append("/");
 
             // Set default screenshot prefix
             Screenshot::Prefix = "[";

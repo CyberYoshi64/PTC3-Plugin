@@ -3,12 +3,14 @@
         {
             "name": "",
             "includePath": [
-                "${workspaceFolder}/include/*",
+                "${workspaceFolder}/**",
                 "/opt/devkitpro/libctru/**",
-                "/opt/devkitpro/libctrpf/**",
+                "/opt/devkitpro/portlibs/3ds/**",
                 "/opt/devkitpro/devkitARM/arm-none-eabi/**"
             ],
             "defines": [],
+            "cStandard": "c11",
+            "cppStandard": "c++20",
             "intelliSenseMode": "gcc-arm"
         }
     ],
