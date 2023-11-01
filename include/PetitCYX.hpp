@@ -325,6 +325,7 @@ namespace CTRPluginFramework {
         static std::tuple<u32, u32*, u32> soundThreadsInfo[];
 	    static void playMusicAlongCTRPF(bool playMusic);
         static void SoundThreadHook();
+        static void SoundThreadHook2();
 
         static u32 currentVersion;
         static BASICEditorData* editorInstance;
@@ -337,6 +338,7 @@ namespace CTRPluginFramework {
         static RT_HOOK basControllerFunc;
         static RT_HOOK scrShotStub;
         static Hook soundHook;
+        static Hook soundHook2;
         static string16 cyxApiTextOut;
         static u32 cyxApiOutc, cyxApiLastOutv;
         static u16* basicFontMap;
@@ -346,6 +348,9 @@ namespace CTRPluginFramework {
         static FontOffFunc fontOff;
         static u64 sdmcFreeSpace;
         static u64 sdmcTotalSpace;
+        static bool wouldExit;
+        static std::string exitMessage;
+        static u32 helpPageColors[];
     private:
         static bool provideCYXAPI;
         static bool wasCYXAPIused;

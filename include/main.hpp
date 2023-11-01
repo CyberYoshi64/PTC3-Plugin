@@ -61,10 +61,11 @@
 
 enum Region {
     REGION_NONE = 0,
-    REGION_JPN = 1,
-    REGION_USA = 2,
-    REGION_EUR = 3,
-    REGION_MAX = 4
+    REGION_JPN,
+    REGION_USA,
+    REGION_EUR,
+    REGION_MAX,
+    REGION_MAX2
 };
 extern Region g_region;
 

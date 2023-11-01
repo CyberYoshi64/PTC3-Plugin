@@ -54,6 +54,7 @@ namespace CTRPluginFramework {
     };
     
     #define CYXDMPHDR_MAGIC "CYX$DMP0"
+    #define CYXDMPHDR_VERSION 2
     typedef struct CYXDumpHeader_v1_s {
         u64 magic;
         u32 version;

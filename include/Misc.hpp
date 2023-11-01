@@ -7,7 +7,7 @@
 namespace CTRPluginFramework {
     void serverAdrChg(MenuEntry *entry);
     void versionSpoof(MenuEntry *entry);
-    void pluginDetails(MenuEntry *entry);
+    void pluginDisclaimer(MenuEntry *entry);
     void cyxAPItoggle(MenuEntry* entry);
     void grpFixMe(MenuEntry* entry);
     void grpFreeMe(MenuEntry* entry);
@@ -15,6 +15,8 @@ namespace CTRPluginFramework {
     void fontGetAddrPatch(MenuEntry* entry);
     
     void validateFile(MenuEntry* entry);
+    
+    void tokenHooker(MenuEntry* entry);
 }
 
 #endif

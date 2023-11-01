@@ -388,7 +388,7 @@ namespace CTRPluginFramework {
         CYXDumpHeader d;
         memset(&d,0,sizeof(d));
         d.magic = *(u64*)CYXDMPHDR_MAGIC;
-        d.version = 2;
+        d.version = CYXDMPHDR_VERSION;
         d.blobCount = cnt;
         d.contType = type;
         return d;

@@ -13,9 +13,6 @@ Targets: # Low TitleId of games which are compatibles with this plugin (empty fo
 Title: SmileBASIC-CYX
 
 Summary: CyberYoshi64's eXtensions
-
-Description: |
-    For use with SmileBASIC
   
 Compatibility: Any
-MemorySize: 10MiB
+MemorySize: 5MiB

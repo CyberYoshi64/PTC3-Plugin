@@ -83,16 +83,17 @@ namespace CTRPluginFramework {
         }
         goto menu;
     }
-    void pluginDetails(MenuEntry *entry){
-        MessageBox("Details",
+    void pluginDisclaimer(MenuEntry *entry){
+        if (!MessageBox("Disclaimer",
             (
-                Utils::Format("Base application: %s ",g_regionString)+
-                CYX::PTCVersionString(CYX::currentVersion)+
-                Utils::Format("\nCYX %s",STRING_VERSION)+"\n"+
-                Utils::Format("\nEditor data @ 0x%08X",(u32)CYX::editorInstance)+
-                Utils::Format("\nCONTROLLER func @ 0x%08X",CYX::basControllerFunc.funcAddr)
+                "This plugin applies modifications to the application \"SmileBASIC\".\n"
+                "Such changes may include using custom servers for NETWORK MENU, allow BASIC programs to use some plugin functionality such as reading and writing files on the SD Card.\n\n"
+                "CyberYoshi64 is hereby not responsible for any damage made to other programs and/or the console.\n\n"
+                "Do you accept this agreement?"
             ),
-            DialogType::DialogOk, ClearScreen::Both)();
+            DialogType::DialogYesNo, ClearScreen::Both
+        )())
+            Process::ReturnToHomeMenu();
     }
     u8 cyxAPItoggle_handleSeverity(int index, u8 mode){
         switch (index){
@@ -571,5 +572,62 @@ namespace CTRPluginFramework {
         }
         f.Close();
         #undef BUFFER_SIZE
+
+    }
+
+    int tokenHookerFunc(){
+        *(u8*)Hooks::offsets.nnActConnectRequired = 0;
+        *(u8*)Hooks::offsets.nnActNetworkTimeValidated = 1;
+
+        memset((char*)Hooks::offsets.petcAccountToken, 0, 512); // Set a bogus token here
+        sprintf((char*)Hooks::offsets.petcAccountToken,
+            "QUFCQiwgb2ghIEhlbGxvIHRoZXJlLCBzaXIgb3IgbWFkYW0hIEkgaG9wZSBpIGFpbid0IGludHJ1ZGluZyB0aGUgcGVhY2UgaGVyZSAuLi4K"
+        );
+        
+        return 0; // Indicate success
+    }
+    int nnActIsNetworkAccountStub(){
+        return 1; // What do you expect? We spoof it to say "Yes".
+    }
+
+    RT_HOOK tokenHook = {0};
+    RT_HOOK nnActIsNetworkAccountHook = {0};
+    void tokenHooker(MenuEntry* entry){
+        if (!tokenHook.funcAddr) {// Set up function hook
+            rtInitHook(&tokenHook, Hooks::offsets.petcSessionTokenFunc, (u32)tokenHookerFunc);
+            rtInitHook(&nnActIsNetworkAccountHook, Hooks::offsets.nnActIsNetworkAccountFunc, (u32)nnActIsNetworkAccountStub); // EUR-only!
+        }
+
+        Keyboard k(ToggleDrawMode(Render::FontDrawMode::BOLD | Render::FontDrawMode::UNDERLINE) + "Server session token - Hook Test" + ToggleDrawMode(Render::FontDrawMode::BOLD | Render::FontDrawMode::UNDERLINE) + "\n\nIf enabled, the session token used with\nthe SmileBASIC server will be a dummy token.\n\nYou may not use this with the official server\nas it will be rejected immediately.\n\nState: " + (StringVector){Color::Red<<"Disabled",Color::Lime<<"Enabled"}[tokenHook.isEnabled] + ResetColor(), (StringVector){"Hook function","Revert to original","Toggle IsNetworkAccount()"});
+        int res = k.Open();
+        if (res < 0) return;
+
+        // Ensure values are at a safe state for NNID login
+        *(u8*)Hooks::offsets.nnActConnectRequired = 1;
+        *(u8*)Hooks::offsets.nnActNetworkTimeValidated = 0;
+        memset((char*)Hooks::offsets.petcAccountToken, 0, 512);
+
+        std::string m;
+        if (res == 0 || res == 1) {
+            if (res==0 && !tokenHook.isEnabled){
+                m = "The hook has been enabled.\nThis is for a rough test with a custom server and will not be useful on the official servers.";
+                rtEnableHook(&tokenHook);
+            } else if (res==1 && tokenHook.isEnabled) {
+                m = "The hook has been disabled.\nPlease sign back into Nintendo Network to obtain a valid session token.";
+                rtDisableHook(&tokenHook);
+            } else {
+                m = "The login state was reset.";
+                if (!tokenHook.isEnabled) m += "\nPlease sign back into Nintendo Network to obtain a valid session token.";
+            }
+        } else if (res == 2) {
+            if (nnActIsNetworkAccountHook.isEnabled) {
+                rtDisableHook(&nnActIsNetworkAccountHook);
+                m = "nn::act::IsNetworkAccount has been unhooked.";
+            } else {
+                rtEnableHook(&nnActIsNetworkAccountHook);
+                m = "nn::act::IsNetworkAccount has been hooked. I'd not try to use SmileBoom's server tho";
+            }
+        }
+        MessageBox(m, DialogType::DialogOk, ClearScreen::Both)();
     }
 }

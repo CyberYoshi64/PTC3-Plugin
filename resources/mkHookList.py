@@ -8,7 +8,7 @@ class HookAddresses:
         cfgprs.read(name)
         for i in cfgprs.items("Hooks"):
             if i[0]=="version":
-                if i[1]!="1.0": raise Exception("Incompatible version")
+                if i[1]!="1.1": raise Exception("Incompatible version")
         self.list = cfgprs.items("Hooks.Keys")
         del cfgprs
     def get(self, k:str, d=None):
@@ -27,7 +27,8 @@ class HookListFile:
         "GraphicStructs",
         "ActiveProjStr",
         "HelpPagePal",
-        "HelpPageDef",
+        "HelpPageDefCol",
+        "HelpPageDefPal",
         "ConsoleTextPal",
         "FuncController",
         "BasicInterpretRun",
@@ -55,9 +56,16 @@ class HookListFile:
         "ServerPrepurchase2",
         "ServerPurchase2",
         "PetcFileHMACKey",
+        "PetcSessionTokenFunc",
+        "OAuthOutToken",
+        "nnActConnectRequired",
+        "nnActNetworkTimeValidated",
+        "nnActIsNetworkAccountFunc",
+        "nnSndSoundThreadEntry1",
+        "nnSndSoundThreadEntry2",
     )
     _MGC = b"CY$X"
-    version = 1
+    version = 2
 
     def __init__(self, hooklist:HookAddresses=None)->None:
         if hooklist!=None:

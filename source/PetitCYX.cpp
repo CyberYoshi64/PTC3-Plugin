@@ -4,7 +4,7 @@
 namespace CTRPluginFramework {
     u32 CYX::currentVersion = 0;
     CYX::MirroredVars CYX::mirror = {0};
-    std::tuple<u32, u32*, u32> CYX::soundThreadsInfo[1] = { std::tuple<u32, u32*, u32>(0xFFFFFFFF, nullptr, 0) };
+    std::tuple<u32, u32*, u32> CYX::soundThreadsInfo[2] = { std::tuple<u32, u32*, u32>(0xFFFFFFFF, nullptr, 0) };
     BASICEditorData* CYX::editorInstance = NULL;
     BASICGRPStructs* CYX::GraphicPage = NULL;
     BASICTextPalette* CYX::textPalette = NULL;
@@ -19,6 +19,7 @@ namespace CTRPluginFramework {
     RT_HOOK CYX::basControllerFunc = {0};
     RT_HOOK CYX::scrShotStub = {0};
     Hook CYX::soundHook;
+    Hook CYX::soundHook2;
     char CYX::introText[512] = "SmileBASIC-CYX " STRING_VERSION "\nBuild " STRING_BUILD "\n\n2022-2023 CyberYoshi64\n\n";
     char CYX::bytesFreeText[32] = " bytes free\n\n";
     bool CYX::provideCYXAPI = true;
@@ -30,6 +31,15 @@ namespace CTRPluginFramework {
     u64 CYX::sdmcFreeSpace = 0;
     u64 CYX::sdmcTotalSpace = 0;
     u32 CYX::cyxUpdateSDMCStats = 0;
+    bool CYX::wouldExit = false;
+    std::string CYX::exitMessage = "";
+    u32 CYX::helpPageColors[10] = {
+        0xFFFFFFFF, 0xFF000818,
+        0xFFFFFFFF, 0xFF0060D0,
+        0xFFFFFFFF, 0xFF082098,
+        0xFFFFFFFF, 0xFF042060,
+        0xFFFFFFFF, 0xFF001030,
+    };
 
     void setCYXStuff(void){
         CYX::SetAPIAvailability(Config::Get().cyx.enableAPI);
@@ -38,6 +48,7 @@ namespace CTRPluginFramework {
 
     Result CYX::Initialize(void) {
         Result hookErr;
+        wouldExit = true;
         if (R_FAILED(hookErr = Hooks::Init())) return hookErr;
 
         currentVersion = *(u32*)Hooks::offsets.versionInt;
@@ -48,14 +59,24 @@ namespace CTRPluginFramework {
         ptcConfig = (PTCConfig*)Hooks::offsets.configBuf;
         basicFontMap = (u16*)Hooks::offsets.fontMapBuf;
         fontOff = (FontOffFunc)Hooks::offsets.funcFontGetOff;
+        Process::Write32(Hooks::offsets.helpPagePal, (u32)helpPageColors);
+        Process::Write32(Hooks::offsets.helpPageDefCol + 0, helpPageColors[1]);
+        Process::Write32(Hooks::offsets.helpPageDefCol + 4, helpPageColors[0]);
         Process::CopyMemory(patch_FontGetOffset, (void*)(Hooks::offsets.funcFontGetOff+0x3c), 8);
         rtInitHook(&basControllerFunc, Hooks::offsets.funcController, (u32)CYX::controllerFuncHook);
         rtEnableHook(&basControllerFunc);
+        soundHook.InitializeForMitm(Hooks::offsets.nnSndSoundThreadEntry1, (u32)SoundThreadHook);
+        soundHook.SetFlags(USE_LR_TO_RETURN|MITM_MODE|EXECUTE_OI_AFTER_CB);
+        soundHook.Enable();
+        soundHook2.InitializeForMitm(Hooks::offsets.nnSndSoundThreadEntry2, (u32)SoundThreadHook2);
+        soundHook2.SetFlags(USE_LR_TO_RETURN|MITM_MODE|EXECUTE_OI_AFTER_CB);
+        soundHook2.Enable();
         *(char**)Hooks::offsets.bootText = introText;
         *(char**)(Hooks::offsets.bootText+4) = bytesFreeText;
         Config::Load();
         setCYXStuff();
         BasicAPI::Initialize();
+        wouldExit = false;
         return 0;
     }
 
@@ -101,17 +122,23 @@ namespace CTRPluginFramework {
         char str[128]={0};
         bool doUpdate = (!cyxSaveTimer);
         bool didUpdateManually = false;
+
+        if (wouldExit){
+            if (exitMessage.size()) {
+                MessageBox(
+                    Color::Orange << "An error has occured!" + ResetColor() +
+                    "\n\n" + exitMessage, DialogType::DialogOk, ClearScreen::Both
+                )();
+            }
+            Process::ReturnToHomeMenu();
+        }
+
         UpdateMirror();
         if (mirror.diff.currentProject || !g_currentProject.size()){
             doUpdate = true; didUpdateManually = true;
             SaveProjectSettings();
             UTF16toUTF8(g_currentProject="", activeProject->currentProject);
             if (g_currentProject==""||g_currentProject==PTC_WORKSPACE_EXTDATANAME) g_currentProject=PTC_WORKSPACE_CYXNAME;
-            if (R_SUCCEEDED(frdInit())){
-                sprintf(str,"Using ＣＹＸ %s\nIn %s", STRING_VERSION, g_currentProject.c_str());
-                FRD_UpdateGameModeDescription(str);
-            }
-            frdExit();
             LoadProjectSettings();
         }
         if (mirror.isInBasic && mirror.isBasicRunningTime == 3 && mirror.isBasicRunning2 != mirror.isBasicRunning){
@@ -119,6 +146,17 @@ namespace CTRPluginFramework {
         }
         if (mirror.diff.isInBasic){
             if (!mirror.isInBasic) doUpdate = true;
+            if (R_SUCCEEDED(frdInit())){
+                if (mirror.isDirectMode) {
+                    sprintf(str,"Using SmileBASIC-CYX\nEditing %s", g_currentProject.c_str());
+                } else if (mirror.isInBasic) {
+                    sprintf(str,"Using SmileBASIC-CYX\nPlaying %s", g_currentProject.c_str());
+                } else {
+                    sprintf(str,"Using SmileBASIC-CYX\nIdling in TOP MENU");
+                }
+                FRD_UpdateGameModeDescription(str);
+            }
+            frdExit();
         }
         if (doUpdate){
             if (!didUpdateManually){
@@ -440,6 +478,11 @@ namespace CTRPluginFramework {
         std::get<1>(soundThreadsInfo[0]) = (u32*)getThreadLocalStorage();
         ctrpfHook__ExecuteOriginalFunction();
     }
+    void CYX::SoundThreadHook2(){
+        svcGetThreadId(&std::get<0>(soundThreadsInfo[1]), CUR_THREAD_HANDLE);
+        std::get<1>(soundThreadsInfo[1]) = (u32*)getThreadLocalStorage();
+        ctrpfHook__ExecuteOriginalFunction();
+    }
 
 	void CYX::playMusicAlongCTRPF(bool playMusic) {
 		static bool isPlayMusic = false;
@@ -447,26 +490,28 @@ namespace CTRPluginFramework {
 		//	playMusic = false;
 		if (isPlayMusic == playMusic) return;
 		isPlayMusic = playMusic;
-		static u32 tlsBackup;
-		static s32 prioBackup;
-        u32 soundThreadID = std::get<0>(soundThreadsInfo[0]);
-        u32* soundThreadTls = std::get<1>(soundThreadsInfo[0]);
-        Handle soundThreadHandle; bool perf=true;
-        if (R_FAILED(svcOpenThread(&soundThreadHandle, CUR_PROCESS_HANDLE, soundThreadID))) perf=false;
-        if (soundThreadID == 0xFFFFFFFF) perf=false;
-        if (soundThreadHandle == 0) perf=false;
-        if (perf){
-            if (playMusic) {
-                tlsBackup = *soundThreadTls;
-                *soundThreadTls = THREADVARS_MAGIC;
-                svcGetThreadPriority(&prioBackup, soundThreadHandle);
-                svcSetThreadPriority(soundThreadHandle, FwkSettings::Get().ThreadPriority - 1);
+		static u32 tlsBackup[2];
+		static s32 prioBackup[2];
+        for (u32 i = 0; i < 2; i++){
+            u32 soundThreadID = std::get<0>(soundThreadsInfo[i]);
+            u32* soundThreadTls = std::get<1>(soundThreadsInfo[i]);
+            Handle soundThreadHandle; bool perf=true;
+            if (R_FAILED(svcOpenThread(&soundThreadHandle, CUR_PROCESS_HANDLE, soundThreadID))) perf=false;
+            if (soundThreadID == 0xFFFFFFFF) perf=false;
+            if (soundThreadHandle == 0) perf=false;
+            if (perf){
+                if (playMusic) {
+                    tlsBackup[i] = *soundThreadTls;
+                    *soundThreadTls = THREADVARS_MAGIC;
+                    svcGetThreadPriority(&prioBackup[i], soundThreadHandle);
+                    svcSetThreadPriority(soundThreadHandle, FwkSettings::Get().ThreadPriority - 1);
+                }
+                else {
+                    *soundThreadTls = tlsBackup[i];
+                    svcSetThreadPriority(soundThreadHandle, prioBackup[i]);
+                }
             }
-            else {
-                *soundThreadTls = tlsBackup;
-                svcSetThreadPriority(soundThreadHandle, prioBackup);
-            }
+            svcCloseHandle(soundThreadHandle);
         }
-        svcCloseHandle(soundThreadHandle);
 	}
 }

@@ -995,12 +995,12 @@ namespace CTRPluginFramework {
         return 0;
     }
     int BasicAPI::Func_UNIXTIME(BASICAPI_FUNCVARS){
-        APIOUT(outv, (s32)osGetUnixTime());
+        APIOUT_I(outv, osGetUnixTime());
         return 0;
     }
     int BasicAPI::Func_VALIDATE(BASICAPI_FUNCVARS){
         if (!argc) {
-            APIOUT(outv, (s32)-1);
+            APIOUT_I(outv, -1);
             return 1;
         }
         string16 name;
@@ -1009,15 +1009,17 @@ namespace CTRPluginFramework {
         } else {
             APIGETCLIP(name);
         }
+        u32 doFix = 0;
+        if (argc > 1) doFix = CYX::argGetInteger(argv+1);
         std::string fpath = basicapi__EvaluatePath16(name);
         name.clear();
         if (!basicapi__HavePermission(true)){
-            APIOUT(outv, (s32)File::UNEXPECTED_ERROR-1);
+            APIOUT_I(outv, File::UNEXPECTED_ERROR-1);
             return 1;
         }
         File f;
         if ((File::Open(f, fpath, File::RW))){
-            APIOUT(outv, (s32)-1);
+            APIOUT_I(outv, -1);
             return 1;
         }
         #define BUFFER_SIZE 262144
@@ -1027,7 +1029,7 @@ namespace CTRPluginFramework {
         size = size2 = f.GetSize()-20;
         f.Seek(-20, File::END);
         if (f.Read(oldDigest, 20)){
-            APIOUT(outv, (s32)0);
+            APIOUT_I(outv, 0);
             f.Close();
             return 1;
         }
@@ -1039,7 +1041,7 @@ namespace CTRPluginFramework {
             chunk = size > BUFFER_SIZE ? BUFFER_SIZE : size;
             if (f.Read(buf, chunk)){
                 f.Close();
-                APIOUT(outv, (s32)-1);
+                APIOUT_I(outv, -1);
                 return 1;
             }
             SHA1_HMAC::Update(&hmacCtx, (u8*)buf, chunk);
@@ -1048,14 +1050,17 @@ namespace CTRPluginFramework {
         ::operator delete(buf);
         SHA1_HMAC::Final(digest, &hmacCtx);
         if (memcmp(digest, oldDigest, 20)) {
-            f.Seek(-20, File::END);
-            if (f.Write(digest, 20)){
-                APIOUT(outv, (s32)-1);
-            } else {
-                APIOUT(outv, (s32)1);
-            }
+            if (doFix) {
+                f.Seek(-20, File::END);
+                if (f.Write(digest, 20)){
+                    APIOUT_I(outv, -1);
+                } else {
+                    APIOUT_I(outv, 1);
+                }
+            } else
+                APIOUT_I(outv, 1);
         } else {
-            APIOUT(outv, (s32)0);
+            APIOUT_I(outv, 0);
         }
         f.Close();
         #undef BUFFER_SIZE
