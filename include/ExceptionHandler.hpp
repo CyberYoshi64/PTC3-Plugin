@@ -76,6 +76,7 @@ namespace CTRPluginFramework {
         static Process::ExceptionCallbackState Handler(ERRF_ExceptionInfo *excep, CpuRegisters *regs);
         static void RescueIfRequired(void);
         static void Panic(std::string s);
+        static void Error(std::string s, const char* f = NULL, s32 line = 0);
         static ExceptionSettings excepSet;
     private:
         static CYXDumpHeader mkHeader(u16 type, u16 cnt);
@@ -94,5 +95,8 @@ namespace CTRPluginFramework {
 }
 
 #define PANIC(s,fn,line)    Exception::Panic(Utils::Format("%s:%d: %s",fn,line,s))
+#define DANG(s,fn,line)     {if(!MessageBox("Dang...", (std::string)s+"\n\nProceeding may cause instability or corruption. Continue anyway?", DialogType::DialogYesNo)()){Exception::Error("User aborted execution\n\n"+(std::string)s,fn,line);}}
+#define ERROR(s)            Exception::Error(s)
+#define ERROR_F(s,fn,line)  Exception::Error(s,fn,line)
 
 #endif

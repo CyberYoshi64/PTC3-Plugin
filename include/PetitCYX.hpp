@@ -321,6 +321,7 @@ namespace CTRPluginFramework {
         static std::string ColorPTCVerValid(u32 ver, u32 ok, u32 ng);
         static void SetDarkMenuPalette();
         static void SetFontGetAddressStrictness(bool on);
+        static void RestoreRescueDump(const std::string& path);
 
         static std::tuple<u32, u32*, u32> soundThreadsInfo[];
 	    static void playMusicAlongCTRPF(bool playMusic);
@@ -348,6 +349,7 @@ namespace CTRPluginFramework {
         static FontOffFunc fontOff;
         static u64 sdmcFreeSpace;
         static u64 sdmcTotalSpace;
+        static u64 askQuickRestore;
         static bool wouldExit;
         static std::string exitMessage;
         static u32 helpPageColors[];

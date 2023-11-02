@@ -473,11 +473,11 @@ namespace CTRPluginFramework {
     }
 
     void InitMenu(PluginMenu &menu) {
-        menu += new MenuFolder("Miscellaneous", std::vector<MenuEntry *>({
+        menu += new MenuFolder(LANG("menuMiscellaneous"), std::vector<MenuEntry *>({
             new MenuEntry("Change server location", nullptr, serverAdrChg, "Change the server address to be connected to for the NETWORK MENU."),
             new MenuEntry("Spoof VERSION system variable", nullptr, versionSpoof, "[Useless but whatever] Modify the VERSION system variable to fool BASIC programs imposing a version blocker."),
         }));
-        menu += new MenuFolder("[!] Experiments",
+        menu += new MenuFolder(LANG("menuExperiments"),
         "These features are freshly implemented or are still work in progress. Use these at your own risk.",
         std::vector<MenuEntry *>({
             new MenuEntry("Set FONTDEF strictness", nullptr, fontGetAddrPatch, "Allow FONTDEF to modify the [X] character (or help simplify using a custom non-standard font map)"),
@@ -485,11 +485,17 @@ namespace CTRPluginFramework {
             new MenuEntry("Change editor ruler color", nullptr, editorRulerPalette, "Choose from one of a few palettes for the editor ruler."),
             new MenuEntry("Memory Display", MemDisplayOSD::OSDFunc),
             new MenuEntry("Memory Display Settings", nullptr, MemDisplayOSD::setup),
+            new MenuEntry("Restore CYX rescue dump", nullptr, restoreRescueDump, "Restore a CYX rescue dump that is obtained when the plugin closes abnormally, i.e. during a critical error or an exception."),
             new MenuEntry("Correct file HMAC", nullptr, validateFile, "Select a file to fix its HMAC signature footer. Fixing the signature will make the file eligible for upload to the SmileBASIC server."),
             new MenuEntry("Server session token hooking", nullptr, tokenHooker, "This hook will replace the obtainment of the NNID-based session token for the SmileBASIC server with a dummy one. This option is only for use as a test with custom servers and is discouraged to be used for the official server."),
+            new MenuEntry("———————————", nullptr, dummyEntry),
+            new MenuEntry("experiment1", nullptr, experiment1),
+            new MenuEntry("experiment2", nullptr, experiment2),
+            new MenuEntry("experiment3", nullptr, experiment3),
+            new MenuEntry("experiment4", nullptr, experiment4),
         }));
-        menu += new MenuEntry("CYX API", nullptr, cyxAPItoggle, "The CYX API adds various features to BASIC.");
-        menu += new MenuEntry("Plugin Disclaimer", nullptr, pluginDisclaimer, "General details about this plugin");
+        menu += new MenuEntry(LANG("menuCYXAPISet"), nullptr, cyxAPItoggle, "The CYX API adds various features to BASIC.");
+        menu += new MenuEntry(LANG("menuPluginDiscl"), nullptr, pluginDisclaimer, "General details about this plugin");
     }
 
     void warnIfSDTooBig(void) {

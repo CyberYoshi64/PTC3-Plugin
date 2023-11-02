@@ -1,0 +1,71 @@
+ID	Name	Data	Encoding
+0	plgDiscl	This plugin applies modifications to the application "SmileBASIC".\nSuch changes may include using custom servers for NETWORK MENU, allow BASIC programs to use some plugin functionality such as reading and writing files on the SD Card.\n\nCyberYoshi64 is hereby not responsible for any damage made to other programs and/or the console.\n\nDo you agree to these terms? Declining will close the application.	utf-8
+0	plgDisclVer	\x01\x00\d010\d023	ascii
+0	plgDisclTitle	Plugin Disclaimer — %s %d	utf-8
+0xDA7E0000	dateJanuary	January	utf-8
+0xDA7E0001	dateFebruary	February	utf-8
+0xDA7E0002	dateMarch	March	utf-8
+0xDA7E0003	dateApril	April	utf-8
+0xDA7E0004	dateMay	May	utf-8
+0xDA7E0005	dateJune	June	utf-8
+0xDA7E0006	dateJuly	July	utf-8
+0xDA7E0007	dateAugust	August	utf-8
+0xDA7E0008	dateSeptember	September	utf-8
+0xDA7E0009	dateOctober	October	utf-8
+0xDA7E000A	dateNovember	November	utf-8
+0xDA7E000B	dateDecember	December	utf-8
+0xDA7E0010	dateJanShort	Jan	utf-8
+0xDA7E0011	dateFebShort	Feb	utf-8
+0xDA7E0012	dateMarShort	Mar	utf-8
+0xDA7E0013	dateAprShort	Apr	utf-8
+0xDA7E0014	dateMayShort	May	utf-8
+0xDA7E0015	dateJunShort	Jun	utf-8
+0xDA7E0016	dateJulShort	Jul	utf-8
+0xDA7E0017	dateAugShort	Aug	utf-8
+0xDA7E0018	dateSepShort	Sep	utf-8
+0xDA7E0019	dateOctShort	Oct	utf-8
+0xDA7E001A	dateNovShort	Nov	utf-8
+0xDA7E001B	dateDecShort	Dec	utf-8
+0xDA7E0100	dateMonday	Monday	utf-8
+0xDA7E0101	dateTuesday	Tuesday	utf-8
+0xDA7E0102	dateWednesday	Wednesday	utf-8
+0xDA7E0103	dateThursday	Thursday	utf-8
+0xDA7E0104	dateFriday	Friday	utf-8
+0xDA7E0105	dateSaturday	Saturday	utf-8
+0xDA7E0106	dateSunday	Sunday	utf-8
+0xDA7E0110	dateMonShort	Mon	utf-8
+0xDA7E0111	dateTueShort	Tue	utf-8
+0xDA7E0112	dateWedShort	Wed	utf-8
+0xDA7E0113	dateThuShort	Thu	utf-8
+0xDA7E0114	dateFriShort	Fri	utf-8
+0xDA7E0115	dateSatShort	Sat	utf-8
+0xDA7E0116	dateSunShort	Sun	utf-8
+0	menuMiscellaneous	Miscellaneous	utf-8
+0	menuExperiments	[!] Experiments	utf-8
+0	menuPluginDiscl	View Plugin Disclaimer	utf-8
+0	menuCYXAPISet	CYX API Settings	utf-8
+0	warn	Warning	utf-8
+0	error	Error	utf-8
+0	success	Success	utf-8
+0	note	Note	utf-8
+0	question	Question	utf-8
+0	cyxQuickRescueAsk	CYX was previously shut down unexpectedly, but you have made a CYX rescue dump. Do you want to restore it now?	utf-8
+0	cyxSettingsInvalid	The project settings for "%s" is invalid and will be reset to default values.	utf-8
+0	friendListHeader	Using SmileBASIC-CYX\n%s	utf-8
+0	friendListEditing	Editing %s	utf-8
+0	friendListPlaying	Playing %s	utf-8
+0	friendListIdling	Idling in TOP MENU	utf-8
+0	fileOpenFail	The file couldn't be opened.	utf-8
+0	fileReadFail	The file couldn't be read.	utf-8
+0	fileWriteFail	The file couldn't be written to.	utf-8
+0	fileSignatureFail	The file is either corrupted or not what was expected.	utf-8
+0	fileVerifyFail	The file couldn't be verified.	utf-8
+0	fileVersionMismatch	The file is of an incompatible version.	utf-8
+0	fileErrStateCode	(Status Code 0x%08X)	utf-8
+0	operationGood	Operation successful.	utf-8
+0	operationFail	Operation failed.	utf-8
+0	cyxBasicHdrBytes	\x20bytes free\n\n	utf-8
+0x1337F00D	-------------------	This is a translation file for use with the SmileBASIC-CYX plugin. It may not be used seperately. Translation files not made using mkStrArc.py may not be compatible with the SmileBASIC-CYX plugin. I will also say I don't like this code but it's the best I can come up with... I am bad lmao.	ascii
+0	utf16test	This is a sample string for UTF-16. äøÞ€«Ω™·…–×÷—	utf-16-le
+0	utf8test	This is a sample string for UTF-8. äøÞ€«Ω™·…–×÷—	utf-8
+0	asciitest	This is a sample string for ASCII. äøÞ€«Ω™·…–×÷—	ascii

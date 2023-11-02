@@ -31,14 +31,17 @@ namespace CTRPluginFramework {
     u64 CYX::sdmcFreeSpace = 0;
     u64 CYX::sdmcTotalSpace = 0;
     u32 CYX::cyxUpdateSDMCStats = 0;
+    u64 CYX::askQuickRestore = 0;
     bool CYX::wouldExit = false;
     std::string CYX::exitMessage = "";
-    u32 CYX::helpPageColors[10] = {
+    u32 CYX::helpPageColors[14] = {
         0xFFFFFFFF, 0xFF000818,
         0xFFFFFFFF, 0xFF0060D0,
         0xFFFFFFFF, 0xFF082098,
         0xFFFFFFFF, 0xFF042060,
         0xFFFFFFFF, 0xFF001030,
+        0xFFFFFFFF, 0xFFC04000, // This is technically out of bounds in the
+        0xFF808080, 0xFF000000, // original but I want some more colors ;.;
     };
 
     void setCYXStuff(void){
@@ -47,7 +50,7 @@ namespace CTRPluginFramework {
     }
 
     Result CYX::Initialize(void) {
-        Result hookErr;
+        Result hookErr; u32 res;
         wouldExit = true;
         if (R_FAILED(hookErr = Hooks::Init())) return hookErr;
 
@@ -74,13 +77,27 @@ namespace CTRPluginFramework {
         *(char**)Hooks::offsets.bootText = introText;
         *(char**)(Hooks::offsets.bootText+4) = bytesFreeText;
         Config::Load();
+        if (Config::Get().clearCache){
+            Directory::Remove(CACHE_PATH);
+            Config::Get().clearCache = false;
+        }
+        if (Config::Get().recoverFromException){
+            askQuickRestore = Config::Get().lastExcepDumpID;
+            Config::Get().lastExcepDumpID = false;
+            Config::Get().wasExceptionFatal = false;
+            Config::Get().recoverFromException = false;
+        }
         setCYXStuff();
         BasicAPI::Initialize();
+        if (res = StringArchive::Init()) {
+            OSD::Notify(Utils::Format("StringArchive::Init() -> 0x%08X", res));
+        }
         wouldExit = false;
         return 0;
     }
 
     void CYX::Finalize(){
+        StringArchive::Exit();
         BasicAPI::Finalize();
         SaveProjectSettings();
         Config::Save();
@@ -108,7 +125,7 @@ namespace CTRPluginFramework {
                 f.Read(&p, sizeof(p));
             f.Close();
             if (p.magic != PRJSETFILEMAGIC){
-                MessageBox("The project settings for "+g_currentProject+" is invalid.\n\nThe settings will be reset for this project.")();
+                MessageBox(LANG("warn"), Utils::Format(LANG("cyxSettingsInvalid").c_str(), g_currentProject.c_str()))();
                 File::Remove(path);
                 BasicAPI::flags = APIFLAG_DEFAULT;
             } else {
@@ -119,18 +136,24 @@ namespace CTRPluginFramework {
     }
     void CYX::TrySave(){cyxSaveTimer = 0;}
     void CYX::MenuTick(){
-        char str[128]={0};
+        std::string str;
         bool doUpdate = (!cyxSaveTimer);
         bool didUpdateManually = false;
 
+        if (Config::Get().pluginDisclAgreed < PLUGINDISCLAIMERVER){
+            pluginDisclaimer(NULL);
+        }
+        
         if (wouldExit){
-            if (exitMessage.size()) {
-                MessageBox(
-                    Color::Orange << "An error has occured!" + ResetColor() +
-                    "\n\n" + exitMessage, DialogType::DialogOk, ClearScreen::Both
-                )();
+            DANG(exitMessage, __FILE, __LINE);
+            wouldExit = false;
+        }
+
+        if (askQuickRestore){
+            if (MessageBox(LANG("question"), LANG("cyxQuickRescueAsk"), DialogType::DialogYesNo)()){
+                RestoreRescueDump(Utils::Format(DUMP_PATH"/%016X.cyxdmp",askQuickRestore));
             }
-            Process::ReturnToHomeMenu();
+            askQuickRestore = 0;
         }
 
         UpdateMirror();
@@ -148,13 +171,13 @@ namespace CTRPluginFramework {
             if (!mirror.isInBasic) doUpdate = true;
             if (R_SUCCEEDED(frdInit())){
                 if (mirror.isDirectMode) {
-                    sprintf(str,"Using SmileBASIC-CYX\nEditing %s", g_currentProject.c_str());
+                    str = Utils::Format(LANG("friendListHeader").c_str(), Utils::Format(LANG("friendListEditing").c_str(), g_currentProject.c_str()).c_str());
                 } else if (mirror.isInBasic) {
-                    sprintf(str,"Using SmileBASIC-CYX\nPlaying %s", g_currentProject.c_str());
+                    str = Utils::Format(LANG("friendListHeader").c_str(), Utils::Format(LANG("friendListPlaying").c_str(), g_currentProject.c_str()).c_str());
                 } else {
-                    sprintf(str,"Using SmileBASIC-CYX\nIdling in TOP MENU");
+                    str = Utils::Format(LANG("friendListHeader").c_str(), Utils::Format(LANG("friendListIdling").c_str(), g_currentProject.c_str()).c_str());
                 }
-                FRD_UpdateGameModeDescription(str);
+                FRD_UpdateGameModeDescription(str.c_str());
             }
             frdExit();
         }
@@ -471,6 +494,45 @@ namespace CTRPluginFramework {
         else
             Process::CopyMemory((char*)(Hooks::offsets.funcFontGetOff+0x3c), patch_FontGetOffsetNew, 8);
         rtFlushInstructionCache((char*)Hooks::offsets.funcFontGetOff, 0x44);
+    }
+
+    void CYX::RestoreRescueDump(const std::string& path) {
+        File f;
+        if (File::Open(f, path, File::READ)){
+            MessageBox(LANG("error"), LANG("fileOpenFail"))();
+            return;
+        }
+        CYXDumpHeader h;
+        f.Read(&h, sizeof(h));
+        if (h.magic != *(u64*)CYXDMPHDR_MAGIC){
+            MessageBox(LANG("error"), LANG("fileSignatureFail"))();
+            return;
+        }
+        if (h.version != CYXDMPHDR_VERSION){
+            MessageBox(LANG("error"), LANG("fileVersionMismatch"))();
+            return;
+        }
+        for (u32 i=0; i<h.blobCount; i++){
+            u32 index;
+            if (strncmp(h.blobName[i],"PRG",3)==0){
+                index = h.blobName[i][3] - '0';
+                f.Read(editorInstance->programSlot[index].text, h.blobBufSize[i]);
+                editorInstance->programSlot[index].text_len = editorInstance->programSlot[index].text_og_len = h.blobDataLen[i] / 2;
+                Process::WriteString((u32)editorInstance->programSlot[index].file_name, h.blobName[i]+5, StringFormat::Utf16);
+            } else if (strncmp(h.blobName[i],"CLP",3)==0){
+                index = h.blobName[i][3] - '0';
+                f.Read(editorInstance->clipboardData, h.blobBufSize[i]);
+                editorInstance->clipboardLength = h.blobDataLen[i] / 2;
+            } else if (strncmp(h.blobName[i],"GRP",3)==0){
+                index = h.blobName[i][3] - '0';
+                f.Read(GraphicPage->grp[index].workBuf, h.blobBufSize[i]);
+                memcpy(GraphicPage->grp[index].dispBuf, GraphicPage->grp[index].workBuf, h.blobBufSize[i]);
+            } else {
+                OSD::Notify(Utils::Format("CYX::RestoreRescueDump() - IDK what '%s' is!", h.blobName[i]));
+            }
+        }
+        f.Close();
+        MessageBox(LANG("success"), LANG("operationGood"))();
     }
 
     void CYX::SoundThreadHook(){

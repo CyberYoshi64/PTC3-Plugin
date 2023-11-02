@@ -20,21 +20,27 @@ fi
 
 make -f cookbook.mk clean
 if make -f cookbook.mk $1 -j4; then
-    python3 resources/mkHookList.py -i resources/ptcEUR-3.6.0.ini -o build/map_EUR.cyxmap
-    python3 resources/mkHookList.py -i resources/ptcUSA-3.6.0.ini -o build/map_USA.cyxmap
-    python3 resources/mkHookList.py -i resources/ptcJPN-3.6.3.ini -o build/map_JPN.cyxmap
+    python3 resources/mkHookList.py -i resources/hooks/ptcEUR-3.6.0.ini -o build/map_EUR.cyxmap
+    python3 resources/mkHookList.py -i resources/hooks/ptcUSA-3.6.0.ini -o build/map_USA.cyxmap
+    python3 resources/mkHookList.py -i resources/hooks/ptcJPN-3.6.3.ini -o build/map_JPN.cyxmap
+    python3 resources/mkStrArc.py resources/strings/csv build
     if [ -d release ]; then
-        mkdir -p release/sdmc/PTC3PLG/resources
-        rm release/sdmc/PTC3PLG/resources/*.*
-        cp *.3gx release/sdmc/PTC3PLG/resources
-        cp build/*.cyxmap release/sdmc/PTC3PLG/resources
-        rm -rf release/sdmc/luma/plugins
-        mkdir -p release/sdmc/luma/plugins
-        mkdir release/sdmc/luma/plugins/0004000000117200
-        cp *.3gx release/sdmc/luma/plugins/0004000000117200
-        mkdir release/sdmc/luma/plugins/000400000016DE00
-        cp *.3gx release/sdmc/luma/plugins/000400000016DE00
-        mkdir release/sdmc/luma/plugins/00040000001A1C00
-        cp *.3gx release/sdmc/luma/plugins/00040000001A1C00
+        mkdir -p release/PTC3PLG/resources/lang
+        rm release/PTC3PLG/resources/*.*
+        cp build/lang/*.* release/PTC3PLG/resources/lang
+        cp *.3gx release/PTC3PLG/resources
+        cp build/*.cyxmap release/PTC3PLG/resources
+        rm -rf release/luma/plugins
+        mkdir -p release/luma/plugins
+        mkdir release/luma/plugins/0004000000117200
+        cp *.3gx release/luma/plugins/0004000000117200
+        mkdir release/luma/plugins/000400000016DE00
+        cp *.3gx release/luma/plugins/000400000016DE00
+        mkdir release/luma/plugins/00040000001A1C00
+        cp *.3gx release/luma/plugins/00040000001A1C00
+        if [ -f PTC3PLG.zip ]; then
+        	rm PTC3PLG.zip
+        fi
+        zip -9qur PTC3PLG.zip release/*
     fi
 fi

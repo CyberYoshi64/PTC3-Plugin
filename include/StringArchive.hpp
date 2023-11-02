@@ -40,6 +40,7 @@ namespace CTRPluginFramework {
         u32 magic;
         u32 version;
         u32 entries;
+        char pad[20];
     } PACKED StringArchiveHeader;
     #define STRINGARCHIVEHEADER_SIZE    sizeof(StringArchiveHeader)
     
@@ -51,11 +52,25 @@ namespace CTRPluginFramework {
         static int isArchiveReady;
         static int Load(u32 lang);
         static int Init(void);
+        
+        static void Get(std::string& out, u32 id);
+        static void Get(std::string& out, std::string& id);
+        static void Get(std::string& out, const char* id);
+
         static std::string Get(u32 id);
         static std::string Get(std::string& id);
         static std::string Get(const char* id);
+
+        static std::string GetName(u32 id);
+        static u32 GetID(std::string& id);
+        static u32 GetID(const char* id);
+
         static void Exit(void);
     };
 }
+
+#define LANG(s) StringArchive::Get(s)
+#define LANGID(s) StringArchive::GetID(s)
+#define LANGNAME(s) StringArchive::GetName(s)
 
 #endif

@@ -2,9 +2,9 @@
 
 ## My projects are gone when I'm using this plugin?
 
-It's not gone. SmileBASIC is no longer looking in its save data, but the `/PTC3PLG/config/` and `/PTC3PLG/savefs` folders.
+It's not gone. SmileBASIC is no longer looking in its original save data, but the `/PTC3PLG/savefs` folder.
 
-Once the launcher for this plugin is released, this issue should be resolved. For now, have this text guide:
+Once the launcher for this plugin is released, this issue should be resolved. For now, have this guide on how to transfer the data yourself:
 
 ### How to transfer the save from SB3 to /PTC3PLG
 
@@ -19,6 +19,7 @@ Once the launcher for this plugin is released, this issue should be resolved. Fo
       - If the folders don't exist, create them, then enter them.
   7. Select "\<current directory>", then "Paste".
   8. Select "Yes" and wait for the transfer to finish.
+
 - Project save data (extData)
   - Contains all your projects.
   1. Open FBI's main menu. Select "Ext Save Data".
@@ -33,17 +34,7 @@ Once the launcher for this plugin is released, this issue should be resolved. Fo
 
 ## The plugin doesn't work / I cannot open the in-app menu.
 
-- Check, if you're running [the latest version of Luma 3DS with plugin loader support](https://github.com/Nanquitas/Luma3DS/releases/latest).
-- Are you on the TOP MENU? The menu is purposefully disabled in BASIC.
+- Check, if you're running [the latest version of Luma 3DS with plugin loader support](https://github.com/LumaTeam/Luma3DS/releases/latest).
+- Are you on the TOP MENU? The menu is disabled in BASIC to prevent the screenshot feature from triggering when you don't want it to.
 - Have you remapped the hotkey for the in-app menu at some point but forgot?
   - Delete the file `/PTC3PLG/resources/CTRPFData.bin`. This will reset the button to SELECT.
-
-## I'm on New3DS but the C Stick doesn't work / SmileBASIC doesn't detect ZL/ZR, when using the plugin.
-
-This is a bug in CTRPluginFramework that needs to be fixed. CTRPluginFramework can use ZL/ZR buttons, as of now, but fails to pass the buttons through to SmileBASIC.
-
-## [Citra] The in-app menu is making horrible grinding noises; it like freezes the audio
-
-This is an emulation inaccuracy caused by Citra, whereas the sound keeps trying to play, even if it shouldn't. I cannot find and hook the related function in SmileBASIC's code, so I'm sorry for this issue.
-
-Note that any other issue that is Citra-specific and does not occur on 3DS is to be reported to the Citra Team, instead of me, m'kay?

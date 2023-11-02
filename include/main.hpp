@@ -17,6 +17,7 @@
 #include "ExceptionHandler.hpp"
 #include "CYXConfirmDlg.hpp"
 #include "petitReimpl.hpp"
+#include "StringArchive.hpp"
 
 #ifndef COMMIT_HASH
 #define COMMIT_HASH "00000000"
@@ -163,7 +164,8 @@ enum PluginFlags {
     PLGFLG_PANIC        = BIT(0), // Panic
 };
 
-#define _FILENAME   strrchr("/" __FILE__, '/')+1
+#define __FILE      strrchr("/" __FILE__, '/')+1
+#define __LINE      __LINE__
 
 #define PLGFLAGS  ___pluginFlags
 #define PLGSET(n) {PLGFLAGS|=(n);}

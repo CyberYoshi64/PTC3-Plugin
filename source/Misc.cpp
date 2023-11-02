@@ -6,6 +6,34 @@ namespace CTRPluginFramework {
     void* generalPointer[8];
     u32 generalInt;
 
+    void experiment1(MenuEntry* entry) {
+        PANIC("experiment1(): PANIC() Test", __FILE, __LINE);
+    }
+    void experiment2(MenuEntry* entry) {
+        ERROR("experiment2(): ERROR() Test");
+    }
+    void experiment3(MenuEntry* entry) {
+        ERROR_F("experiment3(): ERROR_F() Test", __FILE, __LINE);
+    }
+    void experiment4(MenuEntry* entry) {
+        DANG("experiment4(): DANG() Test", __FILE, __LINE);
+    }
+
+    void restoreRescueDump(MenuEntry *entry) {
+        StringVector s;
+        Directory d;
+        Directory::Open(d, DUMP_PATH);
+        d.ListFiles(s, ".cyxdmp");
+        d.Close();
+
+        Keyboard k("Select a CYX rescue dump to restore.", s);
+
+        int res = k.Open();
+
+        if (res < 0) return;
+        CYX::RestoreRescueDump(DUMP_PATH "/" + s[res]);
+    }
+
     void serverAdrChg(MenuEntry *entry){
         std::string srvName;
         Keyboard kbd("");
@@ -84,16 +112,23 @@ namespace CTRPluginFramework {
         goto menu;
     }
     void pluginDisclaimer(MenuEntry *entry){
-        if (!MessageBox("Disclaimer",
-            (
-                "This plugin applies modifications to the application \"SmileBASIC\".\n"
-                "Such changes may include using custom servers for NETWORK MENU, allow BASIC programs to use some plugin functionality such as reading and writing files on the SD Card.\n\n"
-                "CyberYoshi64 is hereby not responsible for any damage made to other programs and/or the console.\n\n"
-                "Do you accept this agreement?"
-            ),
+        std::string disclSet;
+        u32 monthID = StringArchive::GetID("dateJanuary");
+        u16 plgDisclVer;
+        
+        StringArchive::Get(disclSet, "plgDisclVer");
+        plgDisclVer = *(u16*)&disclSet[0];
+        
+        int res = MessageBox(
+            Utils::Format(StringArchive::Get("plgDisclTitle").c_str(), StringArchive::Get(monthID + disclSet[2]).c_str(), 2000 + disclSet[3]),
+            StringArchive::Get("plgDiscl"),
             DialogType::DialogYesNo, ClearScreen::Both
-        )())
+        )();
+        if (!res) {
+            CYX::Finalize();
             Process::ReturnToHomeMenu();
+        }
+        Config::Get().pluginDisclAgreed = plgDisclVer;
     }
     u8 cyxAPItoggle_handleSeverity(int index, u8 mode){
         switch (index){

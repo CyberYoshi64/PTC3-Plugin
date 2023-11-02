@@ -14,7 +14,8 @@ Currently available:
 
 - Redirect romfs/savefs to SD Card (see "Setup")
 - Dark mode (WIP) (See "Setup")
-- Version spoofer
+- Data rescue on application crash
+- 
 - Server changer (for use with [SBServer](https://github.com/trinitro21/sbserver))
 
 To do:
@@ -65,4 +66,4 @@ This option changes the color scheme of the application to suit dark themes (thr
 
 It's not a setting in the plugin, but a flag file in `/PTC3PLG/config/darkPalette.flag`
 
-**This setting only changes text colors.**
+**This setting only changes text colors.** Customization of these colors will be coming soon!

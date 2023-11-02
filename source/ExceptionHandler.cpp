@@ -27,6 +27,57 @@ namespace CTRPluginFramework {
         *(u32*)1337 = 0xBEEF; // Trigger an exception intentionally
     }
 
+    void Exception::Error(std::string s, const char* f, s32 line){
+        if (f != NULL)
+            s += Utils::Format("\n(Called by %s:%d)",f,line);
+        StringVector vec = {
+            "Rescue programs",
+            "Rescue GRP pages",
+            "Rescue clipboard",
+            "\uE071 Return to \uE073HOME Menu"
+        };
+        std::string _2w[2] = {Color::Red << "\u3000●⊃", Color::Lime << "\u3000⊂●"};
+        StringVector kv;
+        Keyboard k(s);
+
+        mcuSetSleep(false);
+        while (true){
+            kv = {
+                vec[0] + _2w[(bool)(Exception::excepSet.rescue & EXCEPRESCUE_PROGRAM)],
+                vec[1] + _2w[(bool)(Exception::excepSet.rescue & EXCEPRESCUE_GRAPHICS)],
+                vec[2] + _2w[(bool)(Exception::excepSet.rescue & EXCEPRESCUE_CLIPBOARD)],
+                "",
+                vec[3]
+            };
+            k.Populate(kv);
+            k.ChangeEntrySound(0, SoundEngine::Event::SELECT);
+            k.ChangeEntrySound(1, SoundEngine::Event::SELECT);
+            k.ChangeEntrySound(2, SoundEngine::Event::SELECT);
+            k.ChangeEntrySound(4, SoundEngine::Event::CANCEL);
+            int res = k.Open();
+            if (res > 2) break;
+            switch (res){
+                case 0:
+                    Exception::excepSet.rescue ^= EXCEPRESCUE_PROGRAM;
+                    break;
+                case 1:
+                    Exception::excepSet.rescue ^= EXCEPRESCUE_GRAPHICS;
+                    break;
+                case 2:
+                    Exception::excepSet.rescue ^= EXCEPRESCUE_CLIPBOARD;
+                    break;
+            }
+        }
+        Config::Get().recoverFromException = true;
+        Config::Get().wasExceptionFatal = false;
+        Config::Get().clearCache = true;
+        Config::Get().lastExcepDumpID = 0;
+        if (excepSet.rescue) Exception::RescueIfRequired();
+        CYX::Finalize();
+        mcuSetSleep(true);
+        Process::ReturnToHomeMenu();
+    }
+
     void Exception::BuildRescueScreen(u8 mode, u32 i, u32 j, std::string& s2){
         std::string s;
         switch (mode){
@@ -50,7 +101,8 @@ namespace CTRPluginFramework {
     }
 
     void Exception::RescueIfRequired(){
-        std::string fname = Utils::Format(DUMP_PATH"/%016X.cyxdmp",osGetTime()/1000);
+        u64 dumpNum = osGetTime()/1000;
+        std::string fname = Utils::Format(DUMP_PATH"/%016X.cyxdmp",dumpNum);
         File outf; std::string s1;
         if (!Directory::IsExists(DUMP_PATH)) Directory::Create(DUMP_PATH);
         if (File::Open(outf, fname, File::Mode::RWC | File::Mode::SYNC)==0){
@@ -127,6 +179,7 @@ namespace CTRPluginFramework {
                 blobCatIdx++;
                 currentBlob++;
             }
+            Config::Get().lastExcepDumpID = dumpNum;
         }
         outf.Close();
         BuildRescueScreen(1, 0, 0, fname);
@@ -332,6 +385,10 @@ namespace CTRPluginFramework {
         Screen bot = OSD::GetBottomScreen();
         bool touchP, oldTouchP;
         
+        Config::Get().recoverFromException = true;
+        Config::Get().wasExceptionFatal = true;
+        Config::Get().clearCache = true;
+        Config::Get().lastExcepDumpID = 0;
         BuildExceptionData(excep, regs);
 
         qrcodegen::QrCode __q = qrcodegen::QrCode::encodeText(base64_encode((u8*)dataBuffer, dataLength, false).c_str(), qrcodegen::QrCode::Ecc::MEDIUM);
