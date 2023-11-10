@@ -31,26 +31,6 @@ namespace CTRPluginFramework {
         APIFSTRUCT_ENCODINGS = (APIFSTRUCT_ANSI|APIFSTRUCT_UTF16)
     };
 
-    enum BasicAPI_Flags { // Project flags
-        APIFLAG_READ_SYSINFO    = BIT( 0), APIFLAG_BIT_READ_SYSINFO    =  0, // Access basic info, such as system language and region
-        APIFLAG_READ_FWINFO     = BIT( 1), APIFLAG_BIT_READ_FWINFO     =  1, // Access firmware version info
-        APIFLAG_READ_HWINFO     = BIT( 2), APIFLAG_BIT_READ_HWINFO     =  2, // Access hardware info, such as 3D slider state, headset mode and Wi-Fi strength
-        APIFLAG_FS_ACC_SAFE     = BIT(16), APIFLAG_BIT_FS_ACC_SAFE     = 16, // Allow use of a private folder (/homefs/[project name])
-        APIFLAG_FS_ACC_XREF_RO  = BIT(17), APIFLAG_BIT_FS_ACC_XREF_RO  = 17, // Access files cross-project (read-only)
-        APIFLAG_FS_ACC_XREF_RW  = BIT(18), APIFLAG_BIT_FS_ACC_XREF_RW  = 18, // Access files cross-project (with write permissions)
-        APIFLAG_FS_ACC_SD_RO    = BIT(19), APIFLAG_BIT_FS_ACC_SD_RO    = 19, // Access the entire SD Card (read-only)
-        APIFLAG_FS_ACC_SD_RW    = BIT(20), APIFLAG_BIT_FS_ACC_SD_RW    = 20, // Access the entire SD Card (with write permissions)
-        
-        // All flags set
-        APIFLAG_ADMIN = BIT(23)-1,
-
-        APIFLAG_FS_ACCESS_XREF = (APIFLAG_FS_ACC_XREF_RO|APIFLAG_FS_ACC_XREF_RW),
-        APIFLAG_FS_ACCESS_SD = (APIFLAG_FS_ACC_SD_RO|APIFLAG_FS_ACC_SD_RW),
-
-        // Default flag
-        APIFLAG_DEFAULT     = (APIFLAG_READ_SYSINFO | APIFLAG_READ_HWINFO)
-    };
-
     class BasicAPI {
     typedef struct FileStruct {
         u32 handle;

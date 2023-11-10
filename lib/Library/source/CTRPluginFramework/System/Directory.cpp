@@ -95,9 +95,9 @@ namespace CTRPluginFramework
     }
 
     /*
-    ** IsExists
+    ** Exists
     ************/
-    int    Directory::IsExists(const std::string &path)
+    int    Directory::Exists(const std::string &path)
     {
         FSPath     fsPath(path);
 

@@ -104,7 +104,7 @@ namespace CTRPluginFramework {
         u64 dumpNum = osGetTime()/1000;
         std::string fname = Utils::Format(DUMP_PATH"/%016X.cyxdmp",dumpNum);
         File outf; std::string s1;
-        if (!Directory::IsExists(DUMP_PATH)) Directory::Create(DUMP_PATH);
+        if (!Directory::Exists(DUMP_PATH)) Directory::Create(DUMP_PATH);
         if (File::Open(outf, fname, File::Mode::RWC | File::Mode::SYNC)==0){
             u32 currentBlob = 0; u8 blobCat = 0, blobCatIdx = 0;
             u32 fcount =
@@ -391,7 +391,7 @@ namespace CTRPluginFramework {
         Config::Get().lastExcepDumpID = 0;
         BuildExceptionData(excep, regs);
 
-        qrcodegen::QrCode __q = qrcodegen::QrCode::encodeText(base64_encode((u8*)dataBuffer, dataLength, false).c_str(), qrcodegen::QrCode::Ecc::MEDIUM);
+        qrcodegen::QrCode __q = qrcodegen::QrCode::encodeText(Base64::Encode((u8*)dataBuffer, dataLength).c_str(), qrcodegen::QrCode::Ecc::MEDIUM);
         qr = &__q;
 
         while (true) {

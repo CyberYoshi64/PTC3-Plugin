@@ -6,7 +6,9 @@
 #define CONFIG_HEADER       *(u64*)"CYX$CFG0"
 #define CONFIG_VERSION      2
 #define PLUGINDISCLAIMERVER 1
-#define CONFIG_FILE_PATH    CONFIG_PATH"/sys.cyxcfg"
+#define CONFIG_FILE_PATH    CONFIG_PATH "/sys.cyxcfg"
+
+//// Older config versions
 
 typedef struct {
     u64     magic;
@@ -19,6 +21,8 @@ typedef struct {
     } cyx;
 } PACKED Config_v1;
 
+//// Latest version
+
 typedef struct {
     u64     magic;                          // File magic (see CONFIG_HEADER)
     u32     version;                        // File version (see CONFIG_VERSION)
@@ -30,16 +34,39 @@ typedef struct {
     u16     pluginDisclAgreed       : 12;   // Version of plugin disclaimer agreed to
     u64     lastExcepDumpID;                // Last exception dump ID (for Quick Dump Restore)
     struct  cyx {                           // CYX Settings
-        bool    enableAPI;                  // CYX API activation status
-        bool    fontdefStrict;              // Restrict/Loosen FONTDEF calls
-    } cyx;
+        bool    enableAPI           : 1;    // CYX API activation status
+        bool    fontdefStrict       : 1;    // Restrict/Loosen FONTDEF calls
+        u16     pad1                : 14;
+        struct server {
+            u8      serverType;             // Server Type (see Config::Enums::CYX::ServerType)
+            u8      pad1;
+            u16     pad2;
+            char    serverName[28];         // Custom server domain
+        } PACKED server;
+    } PACKED cyx;
 } PACKED Config_v2;
 
+//// Config functions
+
 typedef Config_v2 ConfigStruct;
+#define CONFIGS_SIZE_CYX_SERVER sizeof(ConfigStruct::cyx::server)
+#define CONFIGS_SIZE_CYX        sizeof(ConfigStruct::cyx)
+#define CONFIGS_SIZE            sizeof(ConfigStruct)
 
 namespace CTRPluginFramework {
     class Config {
     public:
+        class Enums {
+        public:
+            class CYX {
+            public:
+                enum ServerType {
+                    VANILLA = 0,        // Original server (SmileBoom)
+                    GENERIC,            // Custom SBServer
+                    STUB_TOKEN = 16,   // Stub service token
+                };
+            };
+        };
         static void New(void);
         static void Load(void);
         static void Save(void);

@@ -185,23 +185,29 @@ namespace CTRPluginFramework {
         return cmdbuf[1];
     }
 
-    //Stubbed functions, this prevents formatting the save data archive as well as updating secure nand values
+    // Stubbed - SB3 doesn't need this besides the initial format.
     int fsFormatSaveData(int *a1, int a2, int a3, int a4, int a5, int a6, int a7, int a8, int a9, int a10, char a11) {
-        DEBUG("fsFormatSaveData called, removing save directory.\n");
-        std::string dir;
-        Utils::ConvertUTF16ToUTF8(dir, OnionSave::dataPath);
-        Directory::Remove(dir);
-        Directory::Create(dir);
+        DEBUG("fsFormatSaveData called but the save data will not be removed.\n");
+        // std::string dir;
+        // Utils::ConvertUTF16ToUTF8(dir, OnionSave::dataPath);
+        // Directory::Remove(dir);
+        // Directory::Create(dir);
         return 0;
     }
+
+    // Stubbed
     int fsSetThisSaveDataSecureValue(u32 a1, u64 a2) { //0x086E00C0
         DEBUG("fsSetThisSaveDataSecureValue called with secure value 0x%016llX, ignoring.\n", a2);
         return 0;
     }
+
+    // Stubbed
     int Obsoleted_5_0_fsSetSaveDataSecureValue(u64 a1, u32 a2, u32 a3, u8 a4) { // 0x08650140
         DEBUG("fsSetThisSaveDataSecureValue called with secure value 0x%016llX, ignoring.\n", a1);
         return 0;
     }
+
+    // Stubbed
     int fsSetSaveDataSecureValue(u64 a1, u32 a2, u64 a3, u8 a4 ) { // 0x08750180
         DEBUG("fsSetThisSaveDataSecureValue called with secure value 0x%016llX, ignoring.\n", a1);
         return 0;

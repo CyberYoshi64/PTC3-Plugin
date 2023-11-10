@@ -1,9 +1,15 @@
 #include "CYXConfirmDlg.hpp"
 
 namespace CTRPluginFramework {
-    u32 CYXConfirmDlg::coolDown;
+    u32 CYXConfirmDlg::coolDown = 0;
+    u32 CYXConfirmDlg::useCount = 0;
+    u32 CYXConfirmDlg::useTimer = 1;
 
     void CYXConfirmDlg::DoTheThing(){
+        if (useTimer) {
+            if (!--useTimer)
+                CYX::apiEnableFlag(APIFLAG_ALLOW_TOGGLE);
+        }
         if (coolDown){
             coolDown--;
             return;
@@ -21,9 +27,21 @@ namespace CTRPluginFramework {
             default:
                 break;
             }
+            ++useCount *= (!!useTimer);
+            if (useCount >= 5) {
+                CYX::apiDisableFlag(APIFLAG_ALLOW_TOGGLE);
+                OSD::Notify("Too many requests! Please wait for 30 sec to request again.", Color::White, Color::Maroon);
+            }
+            useTimer = 1800;
             coolDown = 60;
             ___confirmWaiting = false;
         }
+    }
+
+    void CYXConfirmDlg::ResetUse() {
+        useTimer = 1;
+        useCount = 0;
+        CYX::apiEnableFlag(APIFLAG_ALLOW_TOGGLE);
     }
 
     int CYXConfirmDlg::BasicAPI_XREF_RW(){

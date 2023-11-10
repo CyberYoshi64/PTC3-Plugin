@@ -10,13 +10,13 @@ namespace CTRPluginFramework {
         PANIC("experiment1(): PANIC() Test", __FILE, __LINE);
     }
     void experiment2(MenuEntry* entry) {
-        ERROR("experiment2(): ERROR() Test");
+        ERROR_F("experiment2(): ERROR_F() Test", __FILE, __LINE);
     }
     void experiment3(MenuEntry* entry) {
-        ERROR_F("experiment3(): ERROR_F() Test", __FILE, __LINE);
+        DANG("experiment3(): DANG() Test", __FILE, __LINE);
     }
     void experiment4(MenuEntry* entry) {
-        DANG("experiment4(): DANG() Test", __FILE, __LINE);
+        DANG("experiment4(): There is no experiment.", __FILE, __LINE);
     }
 
     void restoreRescueDump(MenuEntry *entry) {
@@ -37,13 +37,17 @@ namespace CTRPluginFramework {
     void serverAdrChg(MenuEntry *entry){
         std::string srvName;
         Keyboard kbd("");
-        kbd.Populate({"Reset to original", "Specify custom server", "\uE072 Back"});
+        kbd.Populate({
+            "Reset to original",
+            "Specify custom server",
+            "\uE072 Back"
+        });
         kbd.ChangeEntrySound(2, SoundEngine::Event::CANCEL);
         int kbdres = kbd.Open();
         if (kbdres < 0 || kbdres >= 2) return;
         PLGSET(PLGFLG_EXPERIMENTS);
-        PLGSET(PLGFLG_SBSERVER);
         if (kbdres == 0) {
+            Config::Get().cyx.server.serverType = Config::Enums::CYX::ServerType::VANILLA;
             CYX::ReplaceServerName(SBSERVER_DEFAULT_NAME1, SBSERVER_DEFAULT_NAME2);
             return;
         } else {
@@ -67,8 +71,9 @@ namespace CTRPluginFramework {
                 return;
             }
             while (strlen(srvName.c_str())>SBSERVER_URL_MAXLEN) srvName.resize(srvName.size()-1);
-            MessageBox e("Server name changer", srvName+"\n\nIs this correct?", DialogType::DialogYesNo, ClearScreen::Both);
-            if (e()){
+            if (MessageBox("Server name changer", srvName+"\n\nIs this correct?", DialogType::DialogYesNo, ClearScreen::Both)()){
+                sprintf(Config::Get().cyx.server.serverName, "%s", srvName.c_str());
+                Config::Get().cyx.server.serverType = Config::Enums::CYX::ServerType::GENERIC;
                 CYX::ReplaceServerName(srvName, srvName);
             } else {
                 MessageBox("Cancelled operation", "No changes were made.")();
@@ -130,81 +135,6 @@ namespace CTRPluginFramework {
         }
         Config::Get().pluginDisclAgreed = plgDisclVer;
     }
-    u8 cyxAPItoggle_handleSeverity(int index, u8 mode){
-        switch (index){
-        case 1: // SysInfo
-            break;
-        case 2: // FWInfo
-            break;
-        case 3: // HWInfo
-            break;
-        case 4: // SafeDir
-            break;
-        case 5: // XREF
-            if (mode == 3 && !MessageBox("You're about to enable write access to other projects.\nOnly enable this setting if you trust the programs in this project.\n\nContinue anyway?", DialogType::DialogYesNo, ClearScreen::Both)())
-                return 0;
-            break;
-        case 6: // SDAccess
-            if (mode == 3 && !MessageBox("You're about to enable write access to the SD Card.\nOnly enable this setting if you trust the programs in this project.\n\nContinue anyway?", DialogType::DialogYesNo, ClearScreen::Both)())
-                return 0;
-            break;
-        }
-        return mode;
-    }
-    void cyxAPItoggle_getMsg(std::string& out, int index, u8 mode){
-        switch (index){
-        case -1:
-            out = "";
-            break;
-        case 0:
-            switch (mode){
-                case 0: out="Disabled access to the CYX API."; break;
-                case 1: out="Enabled access to the CYX API."; break;
-            }
-            break;
-        case 1:
-            switch (mode){
-                case 0: out="Disabled access to system info."; break;
-                case 1: out="Enabled access to system info."; break;
-            }
-            break;
-        case 2:
-            switch (mode){
-                case 0: out="Disabled access to firmware info."; break;
-                case 1: out="Enabled access to firmware info."; break;
-            }
-            break;
-        case 3:
-            switch (mode){
-                case 0: out="Disabled access to hardware info."; break;
-                case 1: out="Enabled access to hardware info."; break;
-            }
-            break;
-        case 4:
-            switch (mode){
-                case 0: out="Disabled access to the current project's safe folder."; break;
-                case 1:
-                    CYX::CreateHomeFolder();
-                    out="Enabled access to the current project's safe folder.";
-                    break;
-            }
-            break;
-        case 5:
-            switch (mode){
-                case 0: out="Disabled access to other projects."; break;
-                case 1: out="Enabled read access to other projects."; break;
-                case 3: out="Enabled read/write access to other projects."; break;
-            }
-            break;
-        case 6:
-            switch (mode){
-                case 0: out="Disabled access to the SD Card."; break;
-                case 1: out="Enabled read access to the SD Card."; break;
-                case 3: out="Enabled read/write access to the SD Card."; break;
-            }
-            break;
-        }
-    }
     void cyxAPItoggle(MenuEntry* entry){
         if (!CYX::basControllerFunc.funcAddr) {
             MessageBox("The CONTROLLER function was not hooked. Check for an updated plugin.")();
@@ -212,82 +142,70 @@ namespace CTRPluginFramework {
         }
         bool api = CYX::GetAPIAvailability();
         std::string staticMsg =
-            "CYX API settings for \""+CYX::g_currentProject+
-            "\"\nDisclaimer:\n"
-            "This feature is experimental and may cause\n"
-            "instability.\nSelect the below options with care.";
+            ToggleDrawMode(Render::UNDERLINE) +
+            "CYX API settings for \""+CYX::g_currentProject+"\"" +
+            ToggleDrawMode(Render::UNDERLINE) +
+            "\n\nDisclaimer:\n"
+            "The API features are experimental and may\n"
+            "cause instability or modify other projects' data.\n\n"
+            "For project-specific flags, refer to the 'CYX'\n"
+            "section of the SmileTool and/or the CFGSET API\n"
+            "function.";
         Keyboard kbd(""); int kres;
-        StringVector opt; opt.resize(8);
-        opt[7] = "\uE072 Back";
+        StringVector opt; opt.resize(2);
+        opt[1] = "\uE072 Back";
         std::string _2w[3] = {"●⊃", Color::Red << "●⊃", Color::Lime << "⊂●"};
         std::string _3w[5] = {"●\u3000⊃", Color::Red << "●\u3000⊃", Color::Orange << "⊂●⊃", "", Color::Lime << "⊂\u3000●"};
         std::string message = "";
-        bool w[7] = {0,0,0,0,0,1,1};
-        u8 b[7] = {0,0,1,2,16,17,19};
+        bool w[1] = {0};
+        u8 b[1] = {0};
         u8 __tmp;
         while (true){
             kbd.DisplayTopScreen = true;
-            kbd.GetMessage() = staticMsg + "\n\n" << Color(0x60FF00FF) << message;
-            if (CYX::WasCYXAPIUsed()){
-                kbd.GetMessage() +=
-                    Color(0xFF8800FF) << "\n\nThe CYX API has been utilized.\n" <<
-                    "Disabling the API can result in unexpected\n" <<
-                    "behaviour, typically the program throwing an error." + ResetColor();
-            }
+            kbd.GetMessage() = staticMsg;
             opt[0] = "Enable API  " + _2w[1+api];
-            opt[1] = "Read SysInfo  ";
-            opt[2] = "Read Firmware Info  ";
-            opt[3] = "Read Hardware Info  ";
-            opt[4] = "Allow safe dir  ";
-            opt[5] = "Cross-project access  ";
-            opt[6] = "SD Card access  ";
+            /*
+            opt[1] = "Allow BASIC toggle  ";
             if (api){
-                for (int i=1; i<7; i++){
+                for (int i=1; i<2; i++){
                     opt[i] = opt[i] + (
                         w[i] ? _3w[1+((BasicAPI::flags>>b[i])&3)] : _2w[1+((BasicAPI::flags>>b[i])&1)]
                     );
                 }
             } else {
-                for (int i=1; i<7; i++){
+                for (int i=1; i<2; i++){
                     opt[i] = Color::Gray << opt[i] + (
                         w[i] ? _3w[0] : _2w[0]
                     );
                 }
             }
+            */
             kbd.Populate(opt, 0);
-            for (int i=0; i<7; i++)
+            for (int i=0; i<1; i++)
                 kbd.ChangeEntrySound(i, SoundEngine::Event::DESELECT);
-            kbd.ChangeEntrySound(7, SoundEngine::Event::CANCEL);
+            kbd.ChangeEntrySound(1, SoundEngine::Event::CANCEL);
             kres = kbd.Open();
-            switch (kres){
-            case 0:
+            if (kres == 0) {
                 Config::Get().cyx.enableAPI = __tmp = api = !api;
                 CYX::SetAPIAvailability(api);
                 CYX::DiscardAPIUse();
-                break;
-            case 1: case 2: case 3: case 4:
-            case 5: case 6:
+            } else if (kres > 0 && kres < 1) {
                 if (api){
                     if (w[kres]){
                         __tmp = (BasicAPI::flags>>b[kres])&3;
                         __tmp = (__tmp + 1 + (__tmp==1)) & 3;
-                        __tmp = cyxAPItoggle_handleSeverity(kres, __tmp);
                         BasicAPI::flags &= ~(3<<b[kres]);
                         BasicAPI::flags |= (__tmp<<b[kres]);
                         
                     } else {
                         __tmp = (BasicAPI::flags>>b[kres])&1;
-                        __tmp = cyxAPItoggle_handleSeverity(kres, !__tmp);
                         BasicAPI::flags &= ~(1<<b[kres]);
                         BasicAPI::flags |= (__tmp<<b[kres]);
                     }
                 }
-                break;
-            default:
+            } else {
                 return;
             }
-            if (!api) kres=-1;
-            cyxAPItoggle_getMsg(message, kres, __tmp);
         }
     }
     void grpFixMe(MenuEntry* entry){
@@ -610,58 +528,42 @@ namespace CTRPluginFramework {
 
     }
 
-    int tokenHookerFunc(){
-        *(u8*)Hooks::offsets.nnActConnectRequired = 0;
-        *(u8*)Hooks::offsets.nnActNetworkTimeValidated = 1;
-
-        memset((char*)Hooks::offsets.petcAccountToken, 0, 512); // Set a bogus token here
-        sprintf((char*)Hooks::offsets.petcAccountToken,
-            "QUFCQiwgb2ghIEhlbGxvIHRoZXJlLCBzaXIgb3IgbWFkYW0hIEkgaG9wZSBpIGFpbid0IGludHJ1ZGluZyB0aGUgcGVhY2UgaGVyZSAuLi4K"
-        );
-        
-        return 0; // Indicate success
-    }
-    int nnActIsNetworkAccountStub(){
-        return 1; // What do you expect? We spoof it to say "Yes".
-    }
-
-    RT_HOOK tokenHook = {0};
-    RT_HOOK nnActIsNetworkAccountHook = {0};
     void tokenHooker(MenuEntry* entry){
-        if (!tokenHook.funcAddr) {// Set up function hook
-            rtInitHook(&tokenHook, Hooks::offsets.petcSessionTokenFunc, (u32)tokenHookerFunc);
-            rtInitHook(&nnActIsNetworkAccountHook, Hooks::offsets.nnActIsNetworkAccountFunc, (u32)nnActIsNetworkAccountStub); // EUR-only!
-        }
-
-        Keyboard k(ToggleDrawMode(Render::FontDrawMode::BOLD | Render::FontDrawMode::UNDERLINE) + "Server session token - Hook Test" + ToggleDrawMode(Render::FontDrawMode::BOLD | Render::FontDrawMode::UNDERLINE) + "\n\nIf enabled, the session token used with\nthe SmileBASIC server will be a dummy token.\n\nYou may not use this with the official server\nas it will be rejected immediately.\n\nState: " + (StringVector){Color::Red<<"Disabled",Color::Lime<<"Enabled"}[tokenHook.isEnabled] + ResetColor(), (StringVector){"Hook function","Revert to original","Toggle IsNetworkAccount()"});
+        std::string m;
+        Keyboard k(
+            ToggleDrawMode(Render::FontDrawMode::BOLD | Render::FontDrawMode::UNDERLINE) +
+            "Server session token - Hook Test" +
+            ToggleDrawMode(Render::FontDrawMode::BOLD | Render::FontDrawMode::UNDERLINE) +
+            "\n\nIf enabled, the session token used with\nthe SmileBASIC server will be a dummy token.\n\n"
+            "You may not use this with the official server\nas it will be rejected immediately.\n\n"
+            "State: " + (StringVector){
+                Color::Red<<"Disabled",
+                Color::Lime<<"Enabled"
+            }[CYX::petcServiceTokenHook.isEnabled] + ResetColor(),
+            
+            (StringVector){
+                "Hook function",
+                "Revert to original"
+            }
+        );
         int res = k.Open();
         if (res < 0) return;
 
-        // Ensure values are at a safe state for NNID login
-        *(u8*)Hooks::offsets.nnActConnectRequired = 1;
-        *(u8*)Hooks::offsets.nnActNetworkTimeValidated = 0;
-        memset((char*)Hooks::offsets.petcAccountToken, 0, 512);
-
-        std::string m;
+        CYX::ResetServerLoginState();
         if (res == 0 || res == 1) {
-            if (res==0 && !tokenHook.isEnabled){
+            if (res==0){
                 m = "The hook has been enabled.\nThis is for a rough test with a custom server and will not be useful on the official servers.";
-                rtEnableHook(&tokenHook);
-            } else if (res==1 && tokenHook.isEnabled) {
+                rtEnableHook(&CYX::petcServiceTokenHook);
+                rtEnableHook(&CYX::nnActIsNetworkAccountHook);
+            } else if (res==1) {
                 m = "The hook has been disabled.\nPlease sign back into Nintendo Network to obtain a valid session token.";
-                rtDisableHook(&tokenHook);
-            } else {
-                m = "The login state was reset.";
-                if (!tokenHook.isEnabled) m += "\nPlease sign back into Nintendo Network to obtain a valid session token.";
+                rtDisableHook(&CYX::petcServiceTokenHook);
+                rtDisableHook(&CYX::nnActIsNetworkAccountHook);
             }
-        } else if (res == 2) {
-            if (nnActIsNetworkAccountHook.isEnabled) {
-                rtDisableHook(&nnActIsNetworkAccountHook);
-                m = "nn::act::IsNetworkAccount has been unhooked.";
-            } else {
-                rtEnableHook(&nnActIsNetworkAccountHook);
-                m = "nn::act::IsNetworkAccount has been hooked. I'd not try to use SmileBoom's server tho";
-            }
+
+            Config::Get().cyx.server.serverType |= Config::Enums::CYX::ServerType::STUB_TOKEN;
+            if (!res)
+                Config::Get().cyx.server.serverType ^= Config::Enums::CYX::ServerType::STUB_TOKEN;
         }
         MessageBox(m, DialogType::DialogOk, ClearScreen::Both)();
     }

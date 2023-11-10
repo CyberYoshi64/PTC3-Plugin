@@ -13,13 +13,14 @@ namespace CTRPluginFramework {
     FontOffFunc CYX::fontOff;
     u16* CYX::basicFontMap = NULL;
     u32 CYX::patch_FontGetOffset[2] = {0};
-    u32 CYX::patch_FontGetOffsetNew[2] = {0xE3A00001,0xE3A00001};
+    u32 CYX::patch_FontGetOffsetNew[2] = {0xE3A00001,0xE3A00001}; // asm "mov r0, #1"
     std::string CYX::g_currentProject = "";
     RT_HOOK CYX::clipboardFunc = {0};
     RT_HOOK CYX::basControllerFunc = {0};
     RT_HOOK CYX::scrShotStub = {0};
     Hook CYX::soundHook;
     Hook CYX::soundHook2;
+    bool CYX::forceDisableSndOnPause = false;
     char CYX::introText[512] = "SmileBASIC-CYX " STRING_VERSION "\nBuild " STRING_BUILD "\n\n2022-2023 CyberYoshi64\n\n";
     char CYX::bytesFreeText[32] = " bytes free\n\n";
     bool CYX::provideCYXAPI = true;
@@ -33,16 +34,18 @@ namespace CTRPluginFramework {
     u32 CYX::cyxUpdateSDMCStats = 0;
     u64 CYX::askQuickRestore = 0;
     bool CYX::wouldExit = false;
-    std::string CYX::exitMessage = "";
+    std::string CYX::exitMessage;
     u32 CYX::helpPageColors[14] = {
         0xFFFFFFFF, 0xFF000818,
         0xFFFFFFFF, 0xFF0060D0,
         0xFFFFFFFF, 0xFF082098,
         0xFFFFFFFF, 0xFF042060,
         0xFFFFFFFF, 0xFF001030,
-        0xFFFFFFFF, 0xFFC04000, // This is technically out of bounds in the
-        0xFF808080, 0xFF000000, // original but I want some more colors ;.;
+        0xFFFFFFFF, 0xFFC04000, // This is technically out of bounds in the original
+        0xFF808080, 0xFF000000, // but I want some more colors in ma help pages! ;_;
     };
+    RT_HOOK CYX::petcServiceTokenHook;
+    RT_HOOK CYX::nnActIsNetworkAccountHook;
 
     void setCYXStuff(void){
         CYX::SetAPIAvailability(Config::Get().cyx.enableAPI);
@@ -63,19 +66,25 @@ namespace CTRPluginFramework {
         basicFontMap = (u16*)Hooks::offsets.fontMapBuf;
         fontOff = (FontOffFunc)Hooks::offsets.funcFontGetOff;
         Process::Write32(Hooks::offsets.helpPagePal, (u32)helpPageColors);
-        Process::Write32(Hooks::offsets.helpPageDefCol + 0, helpPageColors[1]);
-        Process::Write32(Hooks::offsets.helpPageDefCol + 4, helpPageColors[0]);
+        Process::Write32(Hooks::offsets.helpPageDefCol + 0, helpPageColors[1]); // Default text FG
+        Process::Write32(Hooks::offsets.helpPageDefCol + 4, helpPageColors[0]); // Default help BG
         Process::CopyMemory(patch_FontGetOffset, (void*)(Hooks::offsets.funcFontGetOff+0x3c), 8);
         rtInitHook(&basControllerFunc, Hooks::offsets.funcController, (u32)CYX::controllerFuncHook);
         rtEnableHook(&basControllerFunc);
+        rtInitHook(&petcServiceTokenHook, Hooks::offsets.petcSessionTokenFunc, (u32)CYX::petcTokenHookFunc);
+        rtInitHook(&nnActIsNetworkAccountHook, Hooks::offsets.nnActIsNetworkAccountFunc, (u32)CYX::nnActIsNetworkAccountStub);
+        *(char**)Hooks::offsets.bootText = introText;
+        *(char**)(Hooks::offsets.bootText+4) = bytesFreeText;
+
+        // These 2 hooks must be MitM, I just want their thread ID's for later
         soundHook.InitializeForMitm(Hooks::offsets.nnSndSoundThreadEntry1, (u32)SoundThreadHook);
         soundHook.SetFlags(USE_LR_TO_RETURN|MITM_MODE|EXECUTE_OI_AFTER_CB);
         soundHook.Enable();
         soundHook2.InitializeForMitm(Hooks::offsets.nnSndSoundThreadEntry2, (u32)SoundThreadHook2);
         soundHook2.SetFlags(USE_LR_TO_RETURN|MITM_MODE|EXECUTE_OI_AFTER_CB);
         soundHook2.Enable();
-        *(char**)Hooks::offsets.bootText = introText;
-        *(char**)(Hooks::offsets.bootText+4) = bytesFreeText;
+        
+        // Load Config and set act appropriately
         Config::Load();
         if (Config::Get().clearCache){
             Directory::Remove(CACHE_PATH);
@@ -83,11 +92,19 @@ namespace CTRPluginFramework {
         }
         if (Config::Get().recoverFromException){
             askQuickRestore = Config::Get().lastExcepDumpID;
-            Config::Get().lastExcepDumpID = false;
-            Config::Get().wasExceptionFatal = false;
+            Config::Get().lastExcepDumpID = 0;
             Config::Get().recoverFromException = false;
         }
+        if (Config::Get().cyx.server.serverType) {
+            CYX::ReplaceServerName(Config::Get().cyx.server.serverName, Config::Get().cyx.server.serverName);
+            if (Config::Get().cyx.server.serverType & Config::Enums::CYX::ServerType::STUB_TOKEN){
+                rtEnableHook(&petcServiceTokenHook);
+                rtEnableHook(&nnActIsNetworkAccountHook);
+            }
+        }
         setCYXStuff();
+
+        // Other initializations
         BasicAPI::Initialize();
         if (res = StringArchive::Init()) {
             OSD::Notify(Utils::Format("StringArchive::Init() -> 0x%08X", res));
@@ -106,8 +123,8 @@ namespace CTRPluginFramework {
         if (g_currentProject=="") return;
         File f;
         std::string path=PROJECTSET_PATH"/P"+g_currentProject+".bin";
-        if (!Directory::IsExists(CONFIG_PATH)) Directory::Create(CONFIG_PATH);
-        if (!Directory::IsExists(PROJECTSET_PATH)) Directory::Create(PROJECTSET_PATH);
+        if (!Directory::Exists(CONFIG_PATH)) Directory::Create(CONFIG_PATH);
+        if (!Directory::Exists(PROJECTSET_PATH)) Directory::Create(PROJECTSET_PATH);
         if (File::Open(f, path, File::RWC | File::TRUNCATE) == File::SUCCESS){
             ProjectSettings p; memset(&p, 0xFF, sizeof(p));
             p.magic = PRJSETFILEMAGIC;
@@ -133,6 +150,7 @@ namespace CTRPluginFramework {
             }
         }
         if (BasicAPI::flags & APIFLAG_FS_ACC_SAFE) CreateHomeFolder();
+        CYXConfirmDlg::ResetUse();
     }
     void CYX::TrySave(){cyxSaveTimer = 0;}
     void CYX::MenuTick(){
@@ -185,7 +203,6 @@ namespace CTRPluginFramework {
             if (!didUpdateManually){
                 SaveProjectSettings();
             }
-            Config::Save();
             cyxSaveTimer = 1800;
         } else {
            cyxSaveTimer--; 
@@ -201,7 +218,7 @@ namespace CTRPluginFramework {
     }
     bool CYX::WouldOpenMenu(){
         if (mirror.isInBasic){
-            SoundEngine::PlayMenuSound(SoundEngine::Event::CANCEL);
+            SoundEngine::PlayMenuSound(SoundEngine::Event::DESELECT);
             return false;
         }
         return true;
@@ -233,7 +250,7 @@ namespace CTRPluginFramework {
     bool CYX::WasCYXAPIUsed(){
         return wasCYXAPIused;
     }
-    int CYX::scrShotStubFunc() {
+    int CYX::scrShotStubFunc() { // Gnahh... I can't find this stinker in the code.
         return 0;
     }
     void CYX::CYXAPI_Out(BASICGenericVariable* out){
@@ -372,6 +389,19 @@ namespace CTRPluginFramework {
         return 0;
     }
 
+    u32 CYX::apiGetFlags(void) {
+        return BasicAPI::flags;
+    }
+    void CYX::apiToggleFlag(u32 flag) {
+        BasicAPI::flags ^= flag;
+    }
+    void CYX::apiEnableFlag(u32 flag) {
+        BasicAPI::flags |= flag;
+    }
+    void CYX::apiDisableFlag(u32 flag) {
+        BasicAPI::flags &= ~flag;
+    }
+
     // Editor strings are merely buffers, so the string has to be crafted
     // with a given length parameter.
     void CYX::UTF16toUTF8(std::string& out, u16* str, u32 len){
@@ -415,6 +445,8 @@ namespace CTRPluginFramework {
         if (!bytfre || strlen(bytfre)>sizeof(bytesFreeText)) return;
         sprintf(bytesFreeText, "%s", bytfre);
     }
+    
+    // To be moved to Config for customizability
     void CYX::SetDarkMenuPalette(){
         *(u32*)(Hooks::offsets.colorKeybBack) = 0xFF100800;
         *(u32*)(Hooks::offsets.colorSearchBack) = 0xFFFFA000;
@@ -442,6 +474,8 @@ namespace CTRPluginFramework {
         return out;
     }
 
+    // Quite bold, however, I doubt SmileBoom can push out updates
+    // so I'd say this strictness is granted.
     bool CYX::isPTCVersionValid(u32 ver){
         if ((u8)(ver>>24) != 3) return false;
         if ((u8)(ver>>16) > 6) return false;
@@ -470,8 +504,8 @@ namespace CTRPluginFramework {
 
     void CYX::CreateHomeFolder(const std::string& s){
         std::string path = HOMEFS_PATH"/P"+s;
-        if (!Directory::IsExists(HOMEFS_PATH)) Directory::Create(HOMEFS_PATH);
-        if (!Directory::IsExists(path)) Directory::Create(path);
+        if (!Directory::Exists(HOMEFS_PATH)) Directory::Create(HOMEFS_PATH);
+        if (!Directory::Exists(path)) Directory::Create(path);
     }
     void CYX::CreateHomeFolder(){
         CreateHomeFolder(g_currentProject);
@@ -518,7 +552,9 @@ namespace CTRPluginFramework {
                 index = h.blobName[i][3] - '0';
                 f.Read(editorInstance->programSlot[index].text, h.blobBufSize[i]);
                 editorInstance->programSlot[index].text_len = editorInstance->programSlot[index].text_og_len = h.blobDataLen[i] / 2;
+                editorInstance->programSlot[index].chars_left = 1048576 - editorInstance->programSlot[index].text_len;
                 Process::WriteString((u32)editorInstance->programSlot[index].file_name, h.blobName[i]+5, StringFormat::Utf16);
+                editorInstance->programSlot[index].file_name_len = MAX(0, strlen(h.blobName[i]+5));
             } else if (strncmp(h.blobName[i],"CLP",3)==0){
                 index = h.blobName[i][3] - '0';
                 f.Read(editorInstance->clipboardData, h.blobBufSize[i]);
@@ -535,12 +571,13 @@ namespace CTRPluginFramework {
         MessageBox(LANG("success"), LANG("operationGood"))();
     }
 
-    void CYX::SoundThreadHook(){
+    // Thanks to the CTGP-7 Open Source Project!
+    void CYX::SoundThreadHook(){ // SoundThreadImpl
         svcGetThreadId(&std::get<0>(soundThreadsInfo[0]), CUR_THREAD_HANDLE);
         std::get<1>(soundThreadsInfo[0]) = (u32*)getThreadLocalStorage();
         ctrpfHook__ExecuteOriginalFunction();
     }
-    void CYX::SoundThreadHook2(){
+    void CYX::SoundThreadHook2(){ // SoundThread2
         svcGetThreadId(&std::get<0>(soundThreadsInfo[1]), CUR_THREAD_HANDLE);
         std::get<1>(soundThreadsInfo[1]) = (u32*)getThreadLocalStorage();
         ctrpfHook__ExecuteOriginalFunction();
@@ -548,8 +585,8 @@ namespace CTRPluginFramework {
 
 	void CYX::playMusicAlongCTRPF(bool playMusic) {
 		static bool isPlayMusic = false;
-		//if (forceDisableSndOnPause)
-		//	playMusic = false;
+		if (forceDisableSndOnPause)
+			playMusic = false;
 		if (isPlayMusic == playMusic) return;
 		isPlayMusic = playMusic;
 		static u32 tlsBackup[2];
@@ -576,4 +613,26 @@ namespace CTRPluginFramework {
             svcCloseHandle(soundThreadHandle);
         }
 	}
+
+    void CYX::ResetServerLoginState(){
+        *(u8*)Hooks::offsets.nnActConnectRequired = 1;
+        *(u8*)Hooks::offsets.nnActNetworkTimeValidated = 0;
+        memset((char*)Hooks::offsets.petcAccountToken, 0, 512);
+    }
+
+    int CYX::petcTokenHookFunc(){
+        *(u8*)Hooks::offsets.nnActConnectRequired = 0;
+        *(u8*)Hooks::offsets.nnActNetworkTimeValidated = 1;
+
+        memset((char*)Hooks::offsets.petcAccountToken, 0, 512); // Set a bogus token here
+        sprintf((char*)Hooks::offsets.petcAccountToken,
+            "QUFCQiwgb2ghIEhlbGxvIHRoZXJlLCBzaXIgb3IgbWFkYW0hIEkgaG9wZSBpIGFpbid0IGludHJ1ZGluZyB0aGUgcGVhY2UgaGVyZSAuLi4K"
+        );
+        
+        return 0; // Indicate success
+    }
+    int CYX::nnActIsNetworkAccountStub(){
+        return 1; // What do you expect? We spoof it to say "Yes".
+    }
+
 }

@@ -80,8 +80,8 @@ namespace CTRPluginFramework
          * \brief Determines whether the specified file exists
          * \param path The file to check
          * \return
-         * 0: File doesn't exists \n
-         * 1: File exists \n
+         * 0: File doesn't exist
+         * 1: File exists
          * Either a value in \ref OPResult or an error code from FS service
          */
         static int  Exists(const std::string &path);

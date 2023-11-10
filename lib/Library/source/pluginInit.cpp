@@ -156,12 +156,12 @@ namespace CTRPluginFramework
         {
             std::string path = "/luma/plugins/ActionReplay";
 
-            if (!Directory::IsExists(path))
+            if (!Directory::Exists(path))
                 Directory::Create(path);
 
             path += Utils::Format("/%016llX", Process::GetTitleID());
 
-            if (!Directory::IsExists(path))
+            if (!Directory::Exists(path))
                 Directory::Create(path);
 
             Directory::ChangeWorkingDirectory(path + "/");

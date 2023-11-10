@@ -23,7 +23,7 @@ namespace CTRPluginFramework {
     void Config::Load(){
         File f; bool isOK = true;
         isOK = (File::Open(f, CONFIG_FILE_PATH, File::READ)>=0);
-        f.Read(&data, sizeof(data));
+        f.Read(&data, CONFIGS_SIZE);
         isOK &= (data.magic == CONFIG_HEADER);
         isOK &= (data.version <= CONFIG_VERSION);
         if (isOK){
@@ -39,7 +39,7 @@ namespace CTRPluginFramework {
         data.magic = CONFIG_HEADER;
         data.version = CONFIG_VERSION;
         if (File::Open(f, CONFIG_FILE_PATH, File::RWC | File::TRUNCATE)>=0){
-            f.Write(&data, sizeof(data));
+            f.Write(&data, CONFIGS_SIZE);
         }
         f.Close();
     }

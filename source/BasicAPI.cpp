@@ -577,7 +577,7 @@ namespace CTRPluginFramework {
         if (!basicapi__HavePermission(false)){
             APIOUT(outv, (s32)-1); return 1;
         }
-        APIOUT(outv, (s32)Directory::IsExists(fpath));
+        APIOUT(outv, (s32)Directory::Exists(fpath));
         return 0;
     }
     int BasicAPI::Func_CHKFILE(BASICAPI_FUNCVARS){
@@ -606,8 +606,8 @@ namespace CTRPluginFramework {
             f.Dump((u32)CYX::editorInstance->clipboardData, sizeof(CYX::editorInstance->clipboardData));
         }
         f.Close();
-        if (!Directory::IsExists(HOMEFS_PATH)) Directory::Create(HOMEFS_PATH);
-        if (!Directory::IsExists(HOMEFS_SHARED_PATH)) Directory::Create(HOMEFS_SHARED_PATH);
+        if (!Directory::Exists(HOMEFS_PATH)) Directory::Create(HOMEFS_PATH);
+        if (!Directory::Exists(HOMEFS_SHARED_PATH)) Directory::Create(HOMEFS_SHARED_PATH);
         return 0;
     }
     int BasicAPI::Func_EXIT(BASICAPI_FUNCVARS){
@@ -639,53 +639,55 @@ namespace CTRPluginFramework {
         Utils::ConvertUTF16ToUTF8(arg1, arg1_16); arg1_16.clear(); strupper(arg1);
         bool condition1 = false;
 
-        if (arg1 == "SYSINFO"){
-            flags &= ~APIFLAG_READ_SYSINFO;
-            if (val) flags |= APIFLAG_READ_SYSINFO;
-            return 0;
-        }
-        if (arg1 == "FWINFO"){
-            flags &= ~APIFLAG_READ_FWINFO;
-            if (val) flags |= APIFLAG_READ_FWINFO;
-            return 0;
-        }
-        if (arg1 == "HWINFO"){
-            flags &= ~APIFLAG_READ_HWINFO;
-            if (val) flags |= APIFLAG_READ_HWINFO;
-            return 0;
-        }
-        if (arg1 == "SAFEDIR"){
-            flags &= ~APIFLAG_FS_ACC_SAFE;
-            if (val) flags |= APIFLAG_FS_ACC_SAFE;
-            return 0;
-        }
-        if (arg1 == "PRJ_ACCESS"){
-            condition1 = flags & APIFLAG_FS_ACC_XREF_RW;
-            flags &= ~APIFLAG_FS_ACCESS_XREF;
-            if (val & 1) flags |= APIFLAG_FS_ACC_XREF_RO;
-            if (val & 2) {
-                flags |= APIFLAG_FS_ACC_XREF_RO;
-                if (!condition1){
-                    setCTRPFConfirm(CYXCONFIRM_BASICAPI_XREF_RW, 0);
-                    condition1 = waitCTRPFConfirm();
-                }
-                if (condition1) flags |= APIFLAG_FS_ACC_XREF_RW;
+        if (flags & APIFLAG_ALLOW_TOGGLE){
+            if (arg1 == "SYSINFO"){
+                flags &= ~APIFLAG_READ_SYSINFO;
+                if (val) flags |= APIFLAG_READ_SYSINFO;
+                return 0;
             }
-            return 0;
-        }
-        if (arg1 == "SD_ACCESS"){
-            condition1 = flags & APIFLAG_FS_ACC_SD_RW;
-            flags &= ~APIFLAG_FS_ACCESS_SD;
-            if (val & 1) flags |= APIFLAG_FS_ACC_SD_RO;
-            if (val & 2) {
-                flags |= APIFLAG_FS_ACC_SD_RO;
-                if (!condition1){
-                    setCTRPFConfirm(CYXCONFIRM_BASICAPI_SD_RW, 0);
-                    condition1 = waitCTRPFConfirm();
-                }
-                if (condition1) flags |= APIFLAG_FS_ACC_SD_RW;
+            if (arg1 == "FWINFO"){
+                flags &= ~APIFLAG_READ_FWINFO;
+                if (val) flags |= APIFLAG_READ_FWINFO;
+                return 0;
             }
-            return 0;
+            if (arg1 == "HWINFO"){
+                flags &= ~APIFLAG_READ_HWINFO;
+                if (val) flags |= APIFLAG_READ_HWINFO;
+                return 0;
+            }
+            if (arg1 == "SAFEDIR"){
+                flags &= ~APIFLAG_FS_ACC_SAFE;
+                if (val) flags |= APIFLAG_FS_ACC_SAFE;
+                return 0;
+            }
+            if (arg1 == "PRJ_ACCESS"){
+                condition1 = flags & APIFLAG_FS_ACC_XREF_RW;
+                flags &= ~APIFLAG_FS_ACCESS_XREF;
+                if (val & 1) flags |= APIFLAG_FS_ACC_XREF_RO;
+                if (val & 2) {
+                    flags |= APIFLAG_FS_ACC_XREF_RO;
+                    if (!condition1){
+                        setCTRPFConfirm(CYXCONFIRM_BASICAPI_XREF_RW, 0);
+                        condition1 = waitCTRPFConfirm();
+                    }
+                    if (condition1) flags |= APIFLAG_FS_ACC_XREF_RW;
+                }
+                return 0;
+            }
+            if (arg1 == "SD_ACCESS"){
+                condition1 = flags & APIFLAG_FS_ACC_SD_RW;
+                flags &= ~APIFLAG_FS_ACCESS_SD;
+                if (val & 1) flags |= APIFLAG_FS_ACC_SD_RO;
+                if (val & 2) {
+                    flags |= APIFLAG_FS_ACC_SD_RO;
+                    if (!condition1){
+                        setCTRPFConfirm(CYXCONFIRM_BASICAPI_SD_RW, 0);
+                        condition1 = waitCTRPFConfirm();
+                    }
+                    if (condition1) flags |= APIFLAG_FS_ACC_SD_RW;
+                }
+                return 0;
+            }
         }
         return 0;
     }

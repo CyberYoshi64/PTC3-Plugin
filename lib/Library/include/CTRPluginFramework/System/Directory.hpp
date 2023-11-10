@@ -57,9 +57,9 @@ namespace CTRPluginFramework
          * \param path The directory to check
          * \return
          * 1: Exists
-         * 0: Doesn't exists
+         * 0: Doesn't exist
          */
-        static  int     IsExists(const std::string &path);
+        static  int     Exists(const std::string &path);
 
         /**
          * \brief Open a directory

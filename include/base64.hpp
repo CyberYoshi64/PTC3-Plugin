@@ -1,42 +1,40 @@
-//
-//  base64 encoding and decoding with C++.
-//  Version: 2.rc.04 (release candidate) — EDITED
-//
-
-/*
-   Changes made:
-   
-      - Use Nintendo 3DS types of variables
-*/
-
-#ifndef BASE64_H_C0CE2A47_D10E_42C9_A27C_C883944E704A
-#define BASE64_H_C0CE2A47_D10E_42C9_A27C_C883944E704A
+#ifndef BASE64_HPP
+#define BASE64_HPP
 
 #include <string>
-#include "types.h"
+#include <string.h>
+#include <vector>
+#include "Utils.hpp"
 
-#if __cplusplus >= 201703L
-#include <string_view>
-#endif  // __cplusplus >= 201703L
+namespace CTRPluginFramework {
+    class Base64 {
+    public:
+        enum Mode {
+            SET_STD = 0,
+            SET_URL,
+            SET_PTC,
+            SET_MAX = 7,
+            NO_PADDING = BIT(3),
+            STRIP_LINES = BIT(4),
+            STRIP_SPACE = BIT(5),
+            LAX_DECODE = BIT(6),
+        };
+        enum State {
+            SUCCESS,       // Success
+            BAD_SET,       // Invalid character set
+            BAD_CHAR,      // Invalid character in Base64 string
+            BAD_STRING,    // Badly formatted string
+        };
+        static const char* Sets[];
+        static int EncodeInto(std::string& out, const u8* data, u32 len, u32 mode = Mode::SET_STD);
+        static int DecodeInto(std::string& out, const std::string& data, u32 mode = Mode::SET_STD);
+        static int EncodeInto(char* out, const u8* data, u32 len, u32 mode = Mode::SET_STD);
+        static int DecodeInto(char* out, const std::string& data, u32 mode = Mode::SET_STD);
+        static std::string Encode(const u8* data, u32 len, u32 mode = Mode::SET_STD);
+        static std::string Decode(const std::string& data, u32 mode = Mode::SET_STD);
+        static u32 CalcSizeRaw(u32 len);
+        static u32 CalcSize(u32 len);
+    };
+} // namespace CTRPluginFramework
 
-std::string base64_encode     (std::string const& s, bool url = false);
-std::string base64_encode_pem (std::string const& s);
-std::string base64_encode_mime(std::string const& s);
-
-std::string base64_decode(std::string const& s, bool remove_linebreaks = false);
-std::string base64_encode(u8 const*, u32 len, bool url = false);
-
-#if __cplusplus >= 201703L
-//
-// Interface with std::string_view rather than const std::string&
-// Requires C++17
-// Provided by Yannic Bonenberger (https://github.com/Yannic)
-//
-std::string base64_encode     (std::string_view s, bool url = false);
-std::string base64_encode_pem (std::string_view s);
-std::string base64_encode_mime(std::string_view s);
-
-std::string base64_decode(std::string_view s, bool remove_linebreaks = false);
-#endif  // __cplusplus >= 201703L
-
-#endif /* BASE64_H_C0CE2A47_D10E_42C9_A27C_C883944E704A */
+#endif

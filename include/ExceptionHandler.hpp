@@ -65,6 +65,8 @@ namespace CTRPluginFramework {
         u32 blobDataLen[16];
         u8 padding[112];
     } PACKED CYXDumpHeader;
+
+    #define CYXDumpHeaderSize sizeof(CYXDumpHeader)
     
     typedef struct ExceptionSettings_s {
         u32 version;

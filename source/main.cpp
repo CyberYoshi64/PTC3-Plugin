@@ -2,7 +2,6 @@
 #include "main.hpp"
 #include "BasicAPI.hpp"
 #include "save.hpp"
-#include "ptm.h"
 
 // Patterns of functions to try replace with custom ones
 u8 fsMountArchivePat1[] = {0x10, 0x00, 0x97, 0xE5, 0xD8, 0x20, 0xCD, 0xE1, 0x00, 0x00, 0x8D};
@@ -83,6 +82,7 @@ namespace CTRPluginFramework {
 
     void menuClose(){
         CYX::TrySave();
+        Config::Save();
     }
 
     void deleteSecureVal() {
@@ -430,10 +430,14 @@ namespace CTRPluginFramework {
         settings.MainTextColor = Color(0xD0D0D0FF);
 		settings.WaitTimeToBoot = Seconds(5+(!System::IsNew3DS()*1));
         ToggleTouchscreenForceOn();
-        if(!Directory::IsExists(TOP_DIR)) Directory::Create(TOP_DIR);
-        if(!Directory::IsExists(RESOURCES_PATH)) Directory::Create(RESOURCES_PATH);
-        if(!Directory::IsExists(HOMEFS_PATH)) Directory::Create(HOMEFS_PATH);
-        if(!Directory::IsExists(HOMEFS_SHARED_PATH)) Directory::Create(HOMEFS_SHARED_PATH);
+        if(!Directory::Exists(TOP_DIR)) Directory::Create(TOP_DIR);
+        if(!Directory::Exists(RESOURCES_PATH)) Directory::Create(RESOURCES_PATH);
+#if EXTDATA_PATH_SEPERATE
+        if(!Directory::Exists(EXTDATA_PATH)) Directory::Create(EXTDATA_PATH);
+#endif
+        if(!Directory::Exists(SAVEDATA_PATH)) Directory::Create(SAVEDATA_PATH);
+        if(!Directory::Exists(HOMEFS_PATH)) Directory::Create(HOMEFS_PATH);
+        if(!Directory::Exists(HOMEFS_SHARED_PATH)) Directory::Create(HOMEFS_SHARED_PATH);
         Directory::ChangeWorkingDirectory(RESOURCES_PATH);
         u64 tid = Process::GetTitleID();
         sprintf(g_ProcessTID, "%016lX", tid);
@@ -468,8 +472,8 @@ namespace CTRPluginFramework {
 
     // Called when process ends
     void OnProcessExit(void) {
-        ToggleTouchscreenForceOn();
         CYX::Finalize();
+        ToggleTouchscreenForceOn();
     }
 
     void InitMenu(PluginMenu &menu) {

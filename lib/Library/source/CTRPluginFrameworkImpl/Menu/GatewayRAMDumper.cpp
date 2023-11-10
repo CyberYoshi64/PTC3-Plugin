@@ -280,7 +280,7 @@ namespace CTRPluginFramework
         std::string path("Dumps");
 
         // Create Dump directory if doesn't exists
-        if (!Directory::IsExists(path))
+        if (!Directory::Exists(path))
             Directory::Create(path);
 
         // Assemble path

@@ -13,8 +13,11 @@ namespace CTRPluginFramework {
     class CYXConfirmDlg {
     public:
         static void DoTheThing(void);
+        static void ResetUse(void);
     private:
         static u32 coolDown;
+        static u32 useCount; // Per minute; used to disable CFGSET if spammed
+        static u32 useTimer; // Per minute; used to disable CFGSET if spammed
         static int BasicAPI_XREF_RW(void);
         static int BasicAPI_SD_RW(void);
         static int BasicAPI_ToHOME(void);

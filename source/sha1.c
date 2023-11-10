@@ -1,19 +1,8 @@
 /*
-SHA-1 in C
+SHA-1 in C - edited
 By Steve Reid <steve@edmweb.com>
 100% Public Domain
-
-Test Vectors (from FIPS PUB 180-1)
-"abc"
-  A9993E36 4706816A BA3E2571 7850C26C 9CD0D89D
-"abcdbcdecdefdefgefghfghighijhijkijkljklmklmnlmnomnopnopq"
-  84983E44 1C3BD26E BAAE4AA1 F95129E5 E54670F1
-A million repetitions of "a"
-  34AA973C D4C4DAA4 F61EEB2B DBAD2731 6534016F
 */
-
-/* #define LITTLE_ENDIAN * This should be #define'd already, if true. */
-/* #define SHA1HANDSOFF * Copies data before messing with it. */
 
 #define SHA1HANDSOFF
 
@@ -48,17 +37,10 @@ A million repetitions of "a"
 
 
 /* Hash a single 512-bit block. This is the core of the algorithm. */
-
-void SHA1Transform(
-    u32 state[5],
-    const unsigned char buffer[64]
-)
-{
+void SHA1Transform(u32 state[5], const u8 buffer[64]) {
     u32 a, b, c, d, e;
-
-    typedef union
-    {
-        unsigned char c[64];
+    typedef union {
+        u8 c[64];
         u32 l[16];
     } CHAR64LONG16;
 
@@ -74,13 +56,11 @@ void SHA1Transform(
      */
     CHAR64LONG16 *block = (const CHAR64LONG16 *) buffer;
 #endif
-    /* Copy context->state[] to working vars */
     a = state[0];
     b = state[1];
     c = state[2];
     d = state[3];
     e = state[4];
-    /* 4 rounds of 20 operations each. Loop unrolled. */
     R0(a, b, c, d, e, 0);
     R0(e, a, b, c, d, 1);
     R0(d, e, a, b, c, 2);
@@ -161,27 +141,19 @@ void SHA1Transform(
     R4(d, e, a, b, c, 77);
     R4(c, d, e, a, b, 78);
     R4(b, c, d, e, a, 79);
-    /* Add the working vars back into context.state[] */
     state[0] += a;
     state[1] += b;
     state[2] += c;
     state[3] += d;
     state[4] += e;
-    /* Wipe variables */
     a = b = c = d = e = 0;
 #ifdef SHA1HANDSOFF
     memset(block, '\0', sizeof(block));
 #endif
 }
 
-
 /* SHA1Init - Initialize new context */
-
-void SHA1Init(
-    SHA1_CTX * context
-)
-{
-    /* SHA1 initialization constants */
+void SHA1Init(SHA1_CTX *context) {
     context->state[0] = 0x67452301;
     context->state[1] = 0xEFCDAB89;
     context->state[2] = 0x98BADCFE;
@@ -192,28 +164,18 @@ void SHA1Init(
 
 
 /* Run your data through this. */
-
-void SHA1Update(
-    SHA1_CTX * context,
-    const unsigned char *data,
-    u32 len
-)
-{
+void SHA1Update(SHA1_CTX *context, const u8 *data, u32 len) {
     u32 i, j;
-
     j = context->count[0];
     if ((context->count[0] += len << 3) < j)
         context->count[1]++;
     context->count[1] += (len >> 29);
     j = (j >> 3) & 63;
-    if ((j + len) > 63)
-    {
+    if ((j + len) > 63) {
         memcpy(&context->buffer[j], data, (i = 64 - j));
         SHA1Transform(context->state, context->buffer);
         for (; i + 63 < len; i += 64)
-        {
             SHA1Transform(context->state, &data[i]);
-        }
         j = 0;
     }
     else
@@ -223,63 +185,34 @@ void SHA1Update(
 
 
 /* Add padding and return the message digest. */
+void SHA1Final(u8 digest[20], SHA1_CTX *context) {
+    u32 i;
+    u8 finalcount[8], c;
 
-void SHA1Final(
-    unsigned char digest[20],
-    SHA1_CTX * context
-)
-{
-    unsigned i;
-
-    unsigned char finalcount[8];
-
-    unsigned char c;
-
-#if 0    /* untested "improvement" by DHR */
-    /* Convert context->count to a sequence of bytes
-     * in finalcount.  Second element first, but
-     * big-endian order within element.
-     * But we do it all backwards.
-     */
-    unsigned char *fcp = &finalcount[8];
-
-    for (i = 0; i < 2; i++)
-    {
-        u32 t = context->count[i];
-
-        int j;
-
-        for (j = 0; j < 4; t >>= 8, j++)
-            *--fcp = (unsigned char) t}
-#else
     for (i = 0; i < 8; i++)
-    {
-        finalcount[i] = (unsigned char) ((context->count[(i >= 4 ? 0 : 1)] >> ((3 - (i & 3)) * 8)) & 255);      /* Endian independent */
-    }
-#endif
+        finalcount[i] = (u8)((context->count[(i >= 4 ? 0 : 1)] >> ((3 - (i & 3)) * 8)) & 255);      /* Endian independent */
+    
     c = 0200;
     SHA1Update(context, &c, 1);
-    while ((context->count[0] & 504) != 448)
-    {
+    while ((context->count[0] & 504) != 448) {
         c = 0000;
         SHA1Update(context, &c, 1);
     }
-    SHA1Update(context, finalcount, 8); /* Should cause a SHA1Transform() */
+    SHA1Update(context, finalcount, 8);
     for (i = 0; i < 20; i++)
-    {
-        digest[i] = (u8)
-            ((context->state[i >> 2] >> ((3 - (i & 3)) * 8)) & 255);
-    }
-    /* Wipe variables */
+        digest[i] = (u8)((context->state[i >> 2] >> ((3 - (i & 3)) * 8)) & 255);
+
     memset(context, '\0', sizeof(*context));
     memset(&finalcount, '\0', sizeof(finalcount));
 }
 
-void SHA1(
-    char *hash_out,
-    const char *str,
-    u32 len)
-{
+void SHA1FinalTemp(u8 digest[20], SHA1_CTX *context) {
+    SHA1_CTX tempCtx;
+    memcpy(&tempCtx, context, sizeof(SHA1_CTX));
+    SHA1Final(digest, &tempCtx);
+}
+
+void SHA1(u8 *hash_out, const u8 *str, u32 len) {
     SHA1_CTX ctx;
     u32 ii;
 
