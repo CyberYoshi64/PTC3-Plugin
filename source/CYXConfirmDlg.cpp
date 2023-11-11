@@ -5,16 +5,16 @@ namespace CTRPluginFramework {
     u32 CYXConfirmDlg::useCount = 0;
     u32 CYXConfirmDlg::useTimer = 1;
 
-    void CYXConfirmDlg::DoTheThing(){
+    void CYXConfirmDlg::DoTheThing() {
         if (useTimer) {
             if (!--useTimer)
                 CYX::apiEnableFlag(APIFLAG_ALLOW_TOGGLE);
         }
-        if (coolDown){
+        if (coolDown) {
             coolDown--;
             return;
-        } else if (___confirmWaiting){
-            switch (___confirmID){
+        } else if (___confirmWaiting) {
+            switch (___confirmID) {
             case CYXCONFIRM_BASICAPI_XREF_RW:
                 ___confirmRes = BasicAPI_XREF_RW();
                 break;
@@ -44,13 +44,13 @@ namespace CTRPluginFramework {
         CYX::apiEnableFlag(APIFLAG_ALLOW_TOGGLE);
     }
 
-    int CYXConfirmDlg::BasicAPI_XREF_RW(){
+    int CYXConfirmDlg::BasicAPI_XREF_RW() {
         return MessageBox(
             "A program wants to enable write access to other projects.\n\nOnly grant this permission if you trust the programs running in this project.\nContinue?\n(If you decline, this project can still read data from other projects.)",
             DialogType::DialogYesNo
         )();
     }
-    int CYXConfirmDlg::BasicAPI_SD_RW(){
+    int CYXConfirmDlg::BasicAPI_SD_RW() {
         return MessageBox(
             "A program wants to enable write access to the SD Card.\n" << Color::Orange <<
             "This will supersede permissions for the safe directory and access to other projects.\n" << Color::Red <<
@@ -59,7 +59,7 @@ namespace CTRPluginFramework {
             DialogType::DialogYesNo
         )();
     }
-    int CYXConfirmDlg::BasicAPI_ToHOME(){
+    int CYXConfirmDlg::BasicAPI_ToHOME() {
         return MessageBox(
             "A program wants to close SmileBASIC.\nDo you want to continue?\n\n(You may lose unsaved changes.)",
             DialogType::DialogYesNo

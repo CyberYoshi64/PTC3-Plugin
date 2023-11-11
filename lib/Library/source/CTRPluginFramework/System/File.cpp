@@ -192,26 +192,9 @@ namespace CTRPluginFramework
         return (SUCCESS);
     }
 
-    int     File::WriteLine(std::string line, LineBreakType linebreakType)
+    int     File::WriteLine(std::string line)
     {
-        switch (linebreakType)
-        {
-            case CRLF:
-            {
-                line += "\r\n";
-                break;
-            }
-            case CR:
-            {
-                line += "\r";
-                break;
-            }
-            default: // I'm being leniant here
-            {
-                line += "\n";
-                break;
-            }
-        }
+        line += "\n";
         return (Write(line.c_str(), line.size()));
     }
 
@@ -263,7 +246,7 @@ namespace CTRPluginFramework
 
     void    File::Rewind(void) const
     {
-        Lock    _lock(_mutex);
+        Lock    lock(_mutex);
 
         _offset = 0;
     }
@@ -273,6 +256,19 @@ namespace CTRPluginFramework
         Lock    lock(_mutex);
 
         return (FSFILE_Flush(_handle));
+    }
+
+    int     File::Clear(void) const
+    {
+        Lock    lock(_mutex);
+
+        if (!_isOpen)
+            return (NOT_OPEN);
+
+        Result  res = FSFILE_SetSize(_handle, 0);
+        if (R_SUCCEEDED(res))
+            _offset = 0;
+        return (res);
     }
 
     u64     File::GetSize(void) const
@@ -347,7 +343,7 @@ namespace CTRPluginFramework
 
     int     File::Inject(u32 address, u32 length) const
     {
-        Lock    _lock(_mutex);
+        Lock    lock(_mutex);
 
         if (!_isOpen) return (NOT_OPEN);
         if (!(_mode & READ)) return (INVALID_MODE);

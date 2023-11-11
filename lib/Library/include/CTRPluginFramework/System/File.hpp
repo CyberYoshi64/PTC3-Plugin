@@ -20,13 +20,6 @@ namespace CTRPluginFramework
             END  ///< Seek relative to the end of the file
         };
 
-        enum LineBreakType
-        {
-            LF,   ///< Unix line-break style
-            CRLF, ///< MS-DOS/Windows line-break style
-            CR    ///< Macintosh line-break style
-        };
-
         enum Mode
         {
             READ = 1,           ///< Gives read permission
@@ -125,11 +118,10 @@ namespace CTRPluginFramework
         /**
          * \brief Write a string to file (auto-append a line break)
          * \param line Text to write
-         * \param linebreakType Line breakt type — 0=Win, 1=Unix, 2=Mac
          * \return
          * Either a value in \ref OPResult or an error code from FS service
          */
-        int     WriteLine(std::string line, LineBreakType linebreakType = LF);
+        int     WriteLine(std::string line);
 
         /**
          * \brief Set the position in the file
@@ -157,6 +149,13 @@ namespace CTRPluginFramework
          * Either a value in \ref OPResult or an error code from FS service
          */
         int     Flush(void) const;
+
+        /**
+         * \brief Clears a file's content
+         * \return
+         * Either a value in \ref OPResult or an error code from FS service
+         */
+        int     Clear(void) const;
 
         /**
          * \brief Get the size of the file

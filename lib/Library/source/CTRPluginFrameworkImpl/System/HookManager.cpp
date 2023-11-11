@@ -61,15 +61,18 @@ static NAKED void   SetHookContextInTLS(HookContext *ctx)
 static inline u32 ARMBranchLink(const void *src, const void *dst)
 {
     u32 instrBase = 0xEB000000;
-    u32 off = (u32)((const u8 *)dst - ((const u8 *)src + 8));
-
+    /* off is actually a signed 26 bits integer, stored as a signed 24 bits integer (off a>> 2). Therefore, we need to sign extend it*/
+    s32 off = (s32)((const u8 *)dst - ((const u8 *)src + 8));
+    off = (off << 6) >> 6;
     return instrBase | ((off >> 2) & 0xFFFFFF);
 }
 
 static inline u32 ARMBranch(const void *src, const void *dst)
 {
     u32 instrBase = 0xEA000000;
-    u32 off = (u32)((const u8 *)dst - ((const u8 *)src + 8));
+    /* off is actually a signed 26 bits integer, stored as a signed 24 bits integer (off a>> 2). Therefore, we need to sign extend it */
+    s32 off = (s32)((const u8 *)dst - ((const u8 *)src + 8));
+    off = (off << 6) >> 6;
 
     return instrBase | ((off >> 2) & 0xFFFFFF);
 }
@@ -95,7 +98,7 @@ static inline u32 ARM__STR_LR_PC(u32 offset)
 static __attribute__((noinline)) void     GenerateAsm(AsmWrapper& asmWrapper, HookContext& ctx)
 {
     u32     flags = ctx.flags;
-    vu32 *  code = &asmWrapper.code[0];
+    vu32 *  code = asmWrapper.code;
     vu32 *  ldrLrCb = nullptr;
     vu32 *  ldrLr;
     vu32 *  strLr;
@@ -176,9 +179,13 @@ static __attribute__((noinline)) void     GenerateAsm(AsmWrapper& asmWrapper, Ho
         *code++ = DecodeARMBranch((vu32 *)ctx.targetAddress);
         *code = ctx.callbackAddress2;
 
-        *ldrLrCb = ARM__LDR_LR_PC(u32(code) - u32(ldrLrCb) - 16);
-        *ldrLrSub = ARM__LDR_LR_PC(u32(code) - u32(ldrLrSub) - 12);
-        *ldrLrCb2 = ARM__LDR_LR_PC(u32(code) - u32(ldrLrCb2) - 8);
+        if (ldrLrCb)
+            *ldrLrCb = ARM__LDR_LR_PC(u32(code) - u32(ldrLrCb) - 16); // (code - 8) - (ldrLrCb - 8)
+
+        *ldrLrSub = ARM__LDR_LR_PC(u32(code) - u32(ldrLrSub) - 12); // (code - 4) - (ldrLrCb - 8)
+
+        if (ldrLrCb2)
+            *ldrLrCb2 = ARM__LDR_LR_PC(u32(code) - u32(ldrLrCb2) - 8); // (code - 0) - (ldrLrCb - 8)
 
         return;
     }
@@ -188,6 +195,7 @@ static __attribute__((noinline)) void     GenerateAsm(AsmWrapper& asmWrapper, Ho
 
     if (flags & EXECUTE_OI_BEFORE_CB)
         *code++ = ctx.overwrittenInstr;
+
 
     if (flags & USE_LR_TO_RETURN)
     {

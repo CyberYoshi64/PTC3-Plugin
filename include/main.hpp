@@ -11,7 +11,6 @@
 #include "Config.hpp"
 #include "Utils.hpp"
 #include "Misc.hpp"
-#include "MemDispOSD.hpp"
 #include "save.hpp"
 #include "PetitCYX.hpp"
 #include "ExceptionHandler.hpp"
@@ -41,10 +40,6 @@
 // Both savedata and extdata use the same folder to be in-line with PetitCom BIG :)
 #define SAVEDATA_PATH       TOP_DIR "/savefs" // In SB3, save:/config.dat
 #define EXTDATA_PATH        TOP_DIR "/savefs" // In SB3, data:/[projects]
-
-#ifdef EXTDATA_PATH_SEPERATE
-#undef EXTDATA_PATH_SEPERATE
-#endif
 
 #define PROJECTSET_PATH     CONFIG_PATH "/prjSet" // Project-specific configurations
 #define HOMEFS_SHARED_PATH  HOMEFS_PATH "/shared" // Shared project home folder

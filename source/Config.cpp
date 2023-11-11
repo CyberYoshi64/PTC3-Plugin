@@ -3,7 +3,7 @@
 namespace CTRPluginFramework {
     ConfigStruct Config::data = {0};
 
-    void Config::New(){
+    void Config::New() {
         memset(&data, 0, sizeof(data));
         data.magic = CONFIG_HEADER;
         data.version = CONFIG_VERSION;
@@ -11,7 +11,7 @@ namespace CTRPluginFramework {
         data.clearCache = true;
     }
 
-    void config__convV1(ConfigStruct& data, File& f){
+    void config__convV1(ConfigStruct& data, File& f) {
         Config_v1 o;
         f.Seek(0, File::SET);
         f.Read(&o, sizeof(o));
@@ -20,7 +20,7 @@ namespace CTRPluginFramework {
         data.cyx.fontdefStrict = o.cyx.fontdefStrict;
     }
 
-    void Config::Load(){
+    void Config::Load() {
         File f; bool isOK = true;
         isOK = (File::Open(f, CONFIG_FILE_PATH, File::READ)>=0);
         f.Read(&data, CONFIGS_SIZE);
@@ -34,11 +34,11 @@ namespace CTRPluginFramework {
 
         if (!isOK) New();
     }
-    void Config::Save(){
+    void Config::Save() {
         File f;
         data.magic = CONFIG_HEADER;
         data.version = CONFIG_VERSION;
-        if (File::Open(f, CONFIG_FILE_PATH, File::RWC | File::TRUNCATE)>=0){
+        if (File::Open(f, CONFIG_FILE_PATH, File::RWC | File::TRUNCATE)>=0) {
             f.Write(&data, CONFIGS_SIZE);
         }
         f.Close();

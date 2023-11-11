@@ -70,7 +70,6 @@ namespace CTRPluginFramework {
     }
 
     void menuTick(){
-        PluginMenu* menu = PluginMenu::GetRunningInstance();
         BasicAPI::MenuTick();
         CYX::MenuTick();
         CYXConfirmDlg::DoTheThing();
@@ -82,7 +81,6 @@ namespace CTRPluginFramework {
 
     void menuClose(){
         CYX::TrySave();
-        Config::Save();
     }
 
     void deleteSecureVal() {
@@ -428,8 +426,9 @@ namespace CTRPluginFramework {
         settings.BackgroundSecondaryColor = Color(0x001010FF);
         settings.CustomKeyboard.BackgroundSecondary = Color(0x001010FF);
         settings.MainTextColor = Color(0xD0D0D0FF);
-		settings.WaitTimeToBoot = Seconds(5+(!System::IsNew3DS()*1));
-        ToggleTouchscreenForceOn();
+		settings.WaitTimeToBoot = Seconds(
+            System::IsNew3DS() ? 5.0 : 6.5
+        );
         if(!Directory::Exists(TOP_DIR)) Directory::Create(TOP_DIR);
         if(!Directory::Exists(RESOURCES_PATH)) Directory::Create(RESOURCES_PATH);
 #if EXTDATA_PATH_SEPERATE
@@ -439,6 +438,7 @@ namespace CTRPluginFramework {
         if(!Directory::Exists(HOMEFS_PATH)) Directory::Create(HOMEFS_PATH);
         if(!Directory::Exists(HOMEFS_SHARED_PATH)) Directory::Create(HOMEFS_SHARED_PATH);
         Directory::ChangeWorkingDirectory(RESOURCES_PATH);
+        ToggleTouchscreenForceOn();
         u64 tid = Process::GetTitleID();
         sprintf(g_ProcessTID, "%016lX", tid);
         LightLock_Init(&regLock);
@@ -456,7 +456,7 @@ namespace CTRPluginFramework {
                     CYX::playMusicAlongCTRPF(isGoingToPause);
                 };
                 if (CheckRevision()) {
-                    if (File::Exists(CONFIG_PATH"/darkPalette.flag") == 1)
+                    if (File::Exists(CONFIG_PATH"/darkPalette.flag") > 0)
                         CYX::SetDarkMenuPalette();
                     DEBUG("\nCYX initialized, starting game.\n---\n\n");
                 } else {
@@ -465,7 +465,7 @@ namespace CTRPluginFramework {
                 }
             } else {
                 g_region = REGION_MAX2;
-                DEBUG("\nCYX failed to initialize with error code %08X; bailing out!\n\n", res);
+                DEBUG("\nCYX failed to initialize with error code %08X; bailing out!\n\n", cyxres);
             }
         }
     }
@@ -487,8 +487,6 @@ namespace CTRPluginFramework {
             new MenuEntry("Set FONTDEF strictness", nullptr, fontGetAddrPatch, "Allow FONTDEF to modify the [X] character (or help simplify using a custom non-standard font map)"),
             new MenuEntry("Reset GRP display", grpFixMe, "The graphic pages have to be cleared/reloaded to flush the display buffer."),
             new MenuEntry("Change editor ruler color", nullptr, editorRulerPalette, "Choose from one of a few palettes for the editor ruler."),
-            new MenuEntry("Memory Display", MemDisplayOSD::OSDFunc),
-            new MenuEntry("Memory Display Settings", nullptr, MemDisplayOSD::setup),
             new MenuEntry("Restore CYX rescue dump", nullptr, restoreRescueDump, "Restore a CYX rescue dump that is obtained when the plugin closes abnormally, i.e. during a critical error or an exception."),
             new MenuEntry("Correct file HMAC", nullptr, validateFile, "Select a file to fix its HMAC signature footer. Fixing the signature will make the file eligible for upload to the SmileBASIC server."),
             new MenuEntry("Server session token hooking", nullptr, tokenHooker, "This hook will replace the obtainment of the NNID-based session token for the SmileBASIC server with a dummy one. This option is only for use as a test with custom servers and is discouraged to be used for the official server."),
@@ -518,7 +516,7 @@ namespace CTRPluginFramework {
         }
     }
 
-    const std::string about =
+const std::string about =
         "SmileBASIC-CYX\n"
         "2022-2023 CyberYoshi64\n\n"
         "May not be used seperately.";
@@ -530,7 +528,7 @@ namespace CTRPluginFramework {
             g_osKernelVer = osGetKernelVersion();
             osGetSystemVersionDataString(&g_osNVer, &g_osCVer, g_osSysVer, sizeof(g_osSysVer));
         } else {
-            if (CYX::exitMessage.size())
+            if (CYX::wouldExit)
                 MessageBox("An error occured while setting up CYX.\n\n"+CYX::exitMessage+Utils::Format("\n(Error code %08X)", cyxres))();
             else
                 MessageBox("This application is not supported and will be closed.")();
@@ -541,16 +539,16 @@ namespace CTRPluginFramework {
             Process::ReturnToHomeMenu();
             return 1;
         }
+        warnIfSDTooBig();
 
-        PluginMenu *menu = new PluginMenu("Main Menu", VER_MAJOR, VER_MINOR, VER_MICRO, about, false);
+        PluginMenu *menu = new PluginMenu("CYX", VER_MAJOR, VER_MINOR, VER_MICRO, about, true);
 
         menu->SynchronizeWithFrame(true);
-        menu->ShowWelcomeMessage(false);
+        menu->ShowWelcomeMessage(true);
         menu->Callback(menuTick);
         menu->OnOpening = menuOpen;
         menu->OnClosing = menuClose;
 
-        warnIfSDTooBig();
         InitMenu(*menu);
         menu->Run();
         delete menu;

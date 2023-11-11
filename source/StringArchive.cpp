@@ -32,7 +32,7 @@ namespace CTRPluginFramework {
         
         entryCount = h.entries;
         entries = (StringArchiveEntry*)malloc(h.entries * STRINGARCHIVEENTRY_SIZE);
-        for (u32 i = 0; i < entryCount; i++){
+        for (u32 i = 0; i < entryCount; i++) {
             arcFile.Read(&entries[i], STRINGARCHIVEENTRY_SIZE);
             if (entries[i].fileOffset + entries[i].length > arcFile.GetSize())
                 return STRINGARCHIVE_LOAD_OFFSET_OOB;
@@ -52,7 +52,7 @@ namespace CTRPluginFramework {
     void StringArchive::Get(std::string& out, u32 id) {
         if (!id) return;
         if (isArchiveReady) {
-            for (u32 i = 0; i < entryCount; i++){
+            for (u32 i = 0; i < entryCount; i++) {
                 if (entries[i].stringID == id) {
                     arcFile.Seek(entries[i].fileOffset, File::SeekPos::SET);
                     out.resize(entries[i].length);
@@ -62,24 +62,11 @@ namespace CTRPluginFramework {
             }
         }
     }
-    void StringArchive::Get(std::string& out, std::string& id) {
+    void StringArchive::Get(std::string& out, const std::string& id) {
         if (!id.length()) return;
         if (isArchiveReady) {
-            for (u32 i = 0; i < entryCount; i++){
+            for (u32 i = 0; i < entryCount; i++) {
                 if (entries[i].stringName == id) {
-                    arcFile.Seek(entries[i].fileOffset, File::SeekPos::SET);
-                    out.resize(entries[i].length);
-                    arcFile.Read(&out[0], entries[i].length);
-                    break;
-                }
-            }
-        }
-    }
-    void StringArchive::Get(std::string& out, const char* id) {
-        if (!*id) return;
-        if (isArchiveReady) {
-            for (u32 i = 0; i < entryCount; i++){
-                if (strncmp(entries[i].stringName, id, 20) == 0) {
                     arcFile.Seek(entries[i].fileOffset, File::SeekPos::SET);
                     out.resize(entries[i].length);
                     arcFile.Read(&out[0], entries[i].length);
@@ -97,7 +84,7 @@ namespace CTRPluginFramework {
         #endif
         if (!id) return "";
         if (isArchiveReady) {
-            for (u32 i = 0; i < entryCount; i++){
+            for (u32 i = 0; i < entryCount; i++) {
                 if (entries[i].stringID == id) {
                     arcFile.Seek(entries[i].fileOffset, File::SeekPos::SET);
                     s.resize(entries[i].length);
@@ -108,7 +95,7 @@ namespace CTRPluginFramework {
         }
         return s;
     }
-    std::string StringArchive::Get(std::string& id) {
+    std::string StringArchive::Get(const std::string& id) {
         #if DEBUG
             std::string s = Utils::Format("[ID: %s]", id.c_str());
         #else
@@ -116,27 +103,8 @@ namespace CTRPluginFramework {
         #endif
         if (!id.length()) return "";
         if (isArchiveReady) {
-            for (u32 i = 0; i < entryCount; i++){
-                if (entries[i].stringName == id) {
-                    arcFile.Seek(entries[i].fileOffset, File::SeekPos::SET);
-                    s.resize(entries[i].length);
-                    arcFile.Read(&s[0], entries[i].length);
-                    break;
-                }
-            }
-        }
-        return s;
-    }
-    std::string StringArchive::Get(const char* id) {
-        #if DEBUG
-            std::string s = Utils::Format("[ID: %s]", id);
-        #else
-            std::string s = "";
-        #endif
-        if (!*id) return "";
-        if (isArchiveReady) {
-            for (u32 i = 0; i < entryCount; i++){
-                if (strncmp(entries[i].stringName, id, 20) == 0) {
+            for (u32 i = 0; i < entryCount; i++) {
+                if (!strncmp(id.c_str(), entries[i].stringName, 20)) {
                     arcFile.Seek(entries[i].fileOffset, File::SeekPos::SET);
                     s.resize(entries[i].length);
                     arcFile.Read(&s[0], entries[i].length);
@@ -150,7 +118,7 @@ namespace CTRPluginFramework {
     std::string StringArchive::GetName(u32 id) {
         std::string s = "";
         if (isArchiveReady) {
-            for (u32 i = 0; i < entryCount; i++){
+            for (u32 i = 0; i < entryCount; i++) {
                 if (entries[i].stringID == id) {
                     s = entries[i].stringName;
                     break;
@@ -162,8 +130,8 @@ namespace CTRPluginFramework {
     u32 StringArchive::GetID(std::string& id) {
         std::string s = "";
         if (isArchiveReady) {
-            for (u32 i = 0; i < entryCount; i++){
-                if (entries[i].stringName == id)
+            for (u32 i = 0; i < entryCount; i++) {
+                if (!strncmp(id.c_str(), entries[i].stringName, 20))
                     return entries[i].stringID;
             }
         }
@@ -172,7 +140,7 @@ namespace CTRPluginFramework {
     u32 StringArchive::GetID(const char* id) {
         std::string s = "";
         if (isArchiveReady) {
-            for (u32 i = 0; i < entryCount; i++){
+            for (u32 i = 0; i < entryCount; i++) {
                 if (strncmp(entries[i].stringName, id, 20) == 0)
                     return entries[i].stringID;
             }

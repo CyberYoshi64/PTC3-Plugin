@@ -47,7 +47,7 @@ namespace CTRPluginFramework {
     RT_HOOK CYX::petcServiceTokenHook;
     RT_HOOK CYX::nnActIsNetworkAccountHook;
 
-    void setCYXStuff(void){
+    void setCYXStuff(void) {
         CYX::SetAPIAvailability(Config::Get().cyx.enableAPI);
         CYX::SetFontGetAddressStrictness(Config::Get().cyx.fontdefStrict);
     }
@@ -86,11 +86,11 @@ namespace CTRPluginFramework {
         
         // Load Config and set act appropriately
         Config::Load();
-        if (Config::Get().clearCache){
+        if (Config::Get().clearCache) {
             Directory::Remove(CACHE_PATH);
             Config::Get().clearCache = false;
         }
-        if (Config::Get().recoverFromException){
+        if (Config::Get().recoverFromException) {
             askQuickRestore = Config::Get().lastExcepDumpID;
             Config::Get().lastExcepDumpID = 0;
             Config::Get().recoverFromException = false;
@@ -107,25 +107,28 @@ namespace CTRPluginFramework {
         // Other initializations
         BasicAPI::Initialize();
         if (res = StringArchive::Init()) {
-            OSD::Notify(Utils::Format("StringArchive::Init() -> 0x%08X", res));
+            wouldExit = true;
+            exitMessage = Utils::Format("StringArchive::Init() failed with status code 0x%08X", res);
+            return res;
         }
+        forceDisableSndOnPause = !(System::IsCitra()||System::IsNew3DS());
         wouldExit = false;
         return 0;
     }
 
-    void CYX::Finalize(){
+    void CYX::Finalize() {
         StringArchive::Exit();
         BasicAPI::Finalize();
         SaveProjectSettings();
         Config::Save();
     }
-    void CYX::SaveProjectSettings(){
+    void CYX::SaveProjectSettings() {
         if (g_currentProject=="") return;
         File f;
         std::string path=PROJECTSET_PATH"/P"+g_currentProject+".bin";
         if (!Directory::Exists(CONFIG_PATH)) Directory::Create(CONFIG_PATH);
         if (!Directory::Exists(PROJECTSET_PATH)) Directory::Create(PROJECTSET_PATH);
-        if (File::Open(f, path, File::RWC | File::TRUNCATE) == File::SUCCESS){
+        if (File::Open(f, path, File::RWC | File::TRUNCATE) == File::SUCCESS) {
             ProjectSettings p; memset(&p, 0xFF, sizeof(p));
             p.magic = PRJSETFILEMAGIC;
             p.apiFlags = BasicAPI::flags;
@@ -141,7 +144,7 @@ namespace CTRPluginFramework {
             if (File::Open(f, path, File::READ) == File::SUCCESS)
                 f.Read(&p, sizeof(p));
             f.Close();
-            if (p.magic != PRJSETFILEMAGIC){
+            if (p.magic != PRJSETFILEMAGIC) {
                 MessageBox(LANG("warn"), Utils::Format(LANG("cyxSettingsInvalid").c_str(), g_currentProject.c_str()))();
                 File::Remove(path);
                 BasicAPI::flags = APIFLAG_DEFAULT;
@@ -152,42 +155,43 @@ namespace CTRPluginFramework {
         if (BasicAPI::flags & APIFLAG_FS_ACC_SAFE) CreateHomeFolder();
         CYXConfirmDlg::ResetUse();
     }
-    void CYX::TrySave(){cyxSaveTimer = 0;}
-    void CYX::MenuTick(){
+    void CYX::TrySave() {cyxSaveTimer = 0;}
+    void CYX::MenuTick() {
         std::string str;
         bool doUpdate = (!cyxSaveTimer);
         bool didUpdateManually = false;
 
-        if (Config::Get().pluginDisclAgreed < PLUGINDISCLAIMERVER){
+        if (Config::Get().pluginDisclAgreed < PLUGINDISCLAIMERVER) {
             pluginDisclaimer(NULL);
+            doUpdate = true;
         }
         
-        if (wouldExit){
+        if (wouldExit) {
             DANG(exitMessage, __FILE, __LINE);
             wouldExit = false;
         }
 
-        if (askQuickRestore){
-            if (MessageBox(LANG("question"), LANG("cyxQuickRescueAsk"), DialogType::DialogYesNo)()){
+        if (askQuickRestore) {
+            if (MessageBox(LANG("question"), LANG("cyxQuickRescueAsk"), DialogType::DialogYesNo)()) {
                 RestoreRescueDump(Utils::Format(DUMP_PATH"/%016X.cyxdmp",askQuickRestore));
             }
             askQuickRestore = 0;
         }
 
         UpdateMirror();
-        if (mirror.diff.currentProject || !g_currentProject.size()){
+        if (mirror.diff.currentProject || !g_currentProject.size()) {
             doUpdate = true; didUpdateManually = true;
             SaveProjectSettings();
             UTF16toUTF8(g_currentProject="", activeProject->currentProject);
             if (g_currentProject==""||g_currentProject==PTC_WORKSPACE_EXTDATANAME) g_currentProject=PTC_WORKSPACE_CYXNAME;
             LoadProjectSettings();
         }
-        if (mirror.isInBasic && mirror.isBasicRunningTime == 3 && mirror.isBasicRunning2 != mirror.isBasicRunning){
+        if (mirror.isInBasic && mirror.isBasicRunningTime == 3 && mirror.isBasicRunning2 != mirror.isBasicRunning) {
             mirror.isBasicRunning2 = mirror.isBasicRunning;
         }
-        if (mirror.diff.isInBasic){
+        if (mirror.diff.isInBasic) {
             if (!mirror.isInBasic) doUpdate = true;
-            if (R_SUCCEEDED(frdInit())){
+            if (R_SUCCEEDED(frdInit())) {
                 if (mirror.isDirectMode) {
                     str = Utils::Format(LANG("friendListHeader").c_str(), Utils::Format(LANG("friendListEditing").c_str(), g_currentProject.c_str()).c_str());
                 } else if (mirror.isInBasic) {
@@ -199,15 +203,16 @@ namespace CTRPluginFramework {
             }
             frdExit();
         }
-        if (doUpdate){
-            if (!didUpdateManually){
+        if (doUpdate) {
+            if (!didUpdateManually) {
                 SaveProjectSettings();
             }
             cyxSaveTimer = 1800;
+            Config::Save();
         } else {
            cyxSaveTimer--; 
         }
-        if (!cyxUpdateSDMCStats){
+        if (!cyxUpdateSDMCStats) {
             FSUSER_GetArchiveResource(&g_sdmcArcRes, SYSTEM_MEDIATYPE_SD);
             sdmcFreeSpace = (float)g_sdmcArcRes.clusterSize * g_sdmcArcRes.freeClusters;
             sdmcTotalSpace = (float)g_sdmcArcRes.clusterSize * g_sdmcArcRes.totalClusters;
@@ -216,14 +221,14 @@ namespace CTRPluginFramework {
             cyxUpdateSDMCStats--;
         }
     }
-    bool CYX::WouldOpenMenu(){
-        if (mirror.isInBasic){
+    bool CYX::WouldOpenMenu() {
+        if (mirror.isInBasic) {
             SoundEngine::PlayMenuSound(SoundEngine::Event::DESELECT);
             return false;
         }
         return true;
     }
-    void CYX::UpdateMirror(){
+    void CYX::UpdateMirror() {
         mirror.diff.currentProject = memcmp(activeProject->currentProject, mirror.currentProject, sizeof(mirror.currentProject))!=0;
         memcpy(mirror.currentProject, activeProject->currentProject, sizeof(mirror.currentProject));
         mirror.diff.isDirectMode = mirror.isDirectMode != *(u8*)Hooks::offsets.basicIsDirect;
@@ -235,41 +240,41 @@ namespace CTRPluginFramework {
         ++mirror.isBasicRunningTime *= !(mirror.diff.isBasicRunning);
     }
 
-    void CYX::SetAPIAvailability(bool enabled){
+    void CYX::SetAPIAvailability(bool enabled) {
         provideCYXAPI = enabled;
     }
-    bool CYX::GetAPIAvailability(){
+    bool CYX::GetAPIAvailability() {
         return provideCYXAPI;
     }
-    void CYX::DiscardAPIUse(){
+    void CYX::DiscardAPIUse() {
         wasCYXAPIused = false;
     }
-    void CYX::SetAPIUse(bool enabled){
+    void CYX::SetAPIUse(bool enabled) {
         wasCYXAPIused = enabled;
     }
-    bool CYX::WasCYXAPIUsed(){
+    bool CYX::WasCYXAPIUsed() {
         return wasCYXAPIused;
     }
     int CYX::scrShotStubFunc() { // Gnahh... I can't find this stinker in the code.
         return 0;
     }
-    void CYX::CYXAPI_Out(BASICGenericVariable* out){
+    void CYX::CYXAPI_Out(BASICGenericVariable* out) {
         if (out >= (BASICGenericVariable*)cyxApiLastOutv) return;
         out->type = SBVARRAW_STRING;
         out->data = editorInstance->clipboardLength;
         out->data2 = editorInstance->clipboardData;
     }
-    void CYX::CYXAPI_Out(BASICGenericVariable* out, s32 i){
+    void CYX::CYXAPI_Out(BASICGenericVariable* out, s32 i) {
         if (out >= (BASICGenericVariable*)cyxApiLastOutv) return;
         out->type = SBVARRAW_INTEGER;
         out->data = i;
     }
-    void CYX::CYXAPI_Out(BASICGenericVariable* out, double f){
+    void CYX::CYXAPI_Out(BASICGenericVariable* out, double f) {
         if (out >= (BASICGenericVariable*)cyxApiLastOutv) return;
         out->type = SBVARRAW_DOUBLE;
         *(double*)&out->data = f;
     }
-    void CYX::CYXAPI_Out(BASICGenericVariable* out, const char* s){
+    void CYX::CYXAPI_Out(BASICGenericVariable* out, const char* s) {
         if (out >= (BASICGenericVariable*)cyxApiLastOutv) return;
         u32 o = cyxApiTextOut.size(), l;
         Utils::ConvertUTF8ToUTF16(CYX::cyxApiTextOut, s);
@@ -278,7 +283,7 @@ namespace CTRPluginFramework {
         out->data = l;
         out->data2 = (void*)(cyxApiTextOut.c_str() + o);
     }
-    void CYX::CYXAPI_Out(BASICGenericVariable* out, const std::string& s){
+    void CYX::CYXAPI_Out(BASICGenericVariable* out, const std::string& s) {
         if (out >= (BASICGenericVariable*)cyxApiLastOutv) return;
         u32 o = cyxApiTextOut.size(), l;
         Utils::ConvertUTF8ToUTF16(CYX::cyxApiTextOut, s);
@@ -288,10 +293,10 @@ namespace CTRPluginFramework {
         out->data2 = (void*)(cyxApiTextOut.c_str() + o);
     }
 
-    s32 CYX::argGetInteger(BASICGenericVariable* arg){
+    s32 CYX::argGetInteger(BASICGenericVariable* arg) {
         if (!arg) return 0;
         if (!arg->type) return 0;
-        switch (arg->type){
+        switch (arg->type) {
             case SBVARRAW_INTEGER:
                 return *(s32*)&arg->data;
             case SBVARRAW_DOUBLE:
@@ -301,11 +306,11 @@ namespace CTRPluginFramework {
         }
         return 0;
     }
-    void CYX::argGetString(string16& out, BASICGenericVariable* arg){
+    void CYX::argGetString(string16& out, BASICGenericVariable* arg) {
         out.clear();
         if (!arg) return;
         if (!arg->type) return;
-        switch (arg->type){
+        switch (arg->type) {
             case SBVARRAW_INTEGER:
                 Utils::ConvertUTF8ToUTF16(out, Utils::Format("%ld",*(s32*)&arg->data));
                 break;
@@ -317,20 +322,20 @@ namespace CTRPluginFramework {
                 break;
         }
     }
-    void CYX::argGetString(u16** ptr, u32* len, BASICGenericVariable* arg){
+    void CYX::argGetString(u16** ptr, u32* len, BASICGenericVariable* arg) {
         *ptr = NULL;
         *len = 0;
         if (!arg) return;
         if (!arg->type) return;
-        if (arg->type == SBVARRAW_STRING){
+        if (arg->type == SBVARRAW_STRING) {
             *ptr = (u16*)arg->data2;
             *len = arg->data;
         }
     }
-    double CYX::argGetFloat(BASICGenericVariable* arg){
+    double CYX::argGetFloat(BASICGenericVariable* arg) {
         if (!arg) return 0;
         if (!arg->type) return 0;
-        switch (arg->type){
+        switch (arg->type) {
             case SBVARRAW_INTEGER:
                 return *(s32*)&arg->data;
             case SBVARRAW_DOUBLE:
@@ -340,8 +345,8 @@ namespace CTRPluginFramework {
         }
         return 0;
     }
-    u8 CYX::getSBVariableType(u32 rawType){
-        switch(rawType){
+    u8 CYX::getSBVariableType(u32 rawType) {
+        switch(rawType) {
             case SBVARRAW_INTEGER: return VARTYPE_INT;
             case SBVARRAW_DOUBLE: return VARTYPE_DOUBLE;
             case SBVARRAW_STRING: return VARTYPE_STRING;
@@ -351,15 +356,15 @@ namespace CTRPluginFramework {
         return VARTYPE_NONE;
     }
     // Function stub
-    int CYX::stubBASICFunction(void* ptr, u32 selfPtr, BASICGenericVariable* outv, u32 outc, void* a4, u32 argc, BASICGenericVariable* argv){
+    int CYX::stubBASICFunction(void* ptr, u32 selfPtr, BASICGenericVariable* outv, u32 outc, void* a4, u32 argc, BASICGenericVariable* argv) {
         return 0;
     }
-    int CYX::controllerFuncHook(void* ptr, u32 selfPtr, BASICGenericVariable* outv, u32 outc, void* a4, u32 argc, BASICGenericVariable* argv){
+    int CYX::controllerFuncHook(void* ptr, u32 selfPtr, BASICGenericVariable* outv, u32 outc, void* a4, u32 argc, BASICGenericVariable* argv) {
         u8 type; bool isCYX=false;
         if (argc<1) return 0;
         type = getSBVariableType(argv->type);
-        if (type != VARTYPE_NONE){
-            switch (type){
+        if (type != VARTYPE_NONE) {
+            switch (type) {
                 case VARTYPE_STRING: isCYX=true; break;
                 case VARTYPE_INT:
                     if (argv->data != 0) return 3;
@@ -369,12 +374,12 @@ namespace CTRPluginFramework {
                     break;
             }
         }
-        if (provideCYXAPI && isCYX){
+        if (provideCYXAPI && isCYX) {
             cyxApiOutc = outc;
             cyxApiLastOutv = (u32)(outv+outc);
             CYX::cyxApiTextOut.clear();
             int res=BasicAPI::Parse(argv, argc, outv, outc);
-            switch (res){
+            switch (res) {
                 case 0: case 1: break;
                 case 2: return 1; // Silent exit
                 case 3: return 2; // Non-fatal quit
@@ -404,16 +409,16 @@ namespace CTRPluginFramework {
 
     // Editor strings are merely buffers, so the string has to be crafted
     // with a given length parameter.
-    void CYX::UTF16toUTF8(std::string& out, u16* str, u32 len){
+    void CYX::UTF16toUTF8(std::string& out, u16* str, u32 len) {
         string16 s16; s16.append(str, len);
         Utils::ConvertUTF16ToUTF8(out, s16);
     }
-    void CYX::UTF16toUTF8(std::string& out, u16* str){
+    void CYX::UTF16toUTF8(std::string& out, u16* str) {
         string16 s16 = str;
         Utils::ConvertUTF16ToUTF8(out, s16);
     }
 
-    void CYX::ReplaceServerName(const  std::string& saveURL, const std::string& loadURL){
+    void CYX::ReplaceServerName(const  std::string& saveURL, const std::string& loadURL) {
         char buf[50] = {0};
         sprintf(buf, "%s" SBSERVER_LOAD_LOAD2, loadURL.c_str());
         strcpy((char*)Hooks::offsets.serverLoad2[0], buf);
@@ -439,7 +444,7 @@ namespace CTRPluginFramework {
         strcpy((char*)Hooks::offsets.serverPurchase2, buf);
     }
 
-    void CYX::ChangeBootText(const char* text, const char* bytfre){
+    void CYX::ChangeBootText(const char* text, const char* bytfre) {
         if (!text || strlen(text)>sizeof(introText)) return;
         sprintf(introText, "%s", text);
         if (!bytfre || strlen(bytfre)>sizeof(bytesFreeText)) return;
@@ -447,7 +452,7 @@ namespace CTRPluginFramework {
     }
     
     // To be moved to Config for customizability
-    void CYX::SetDarkMenuPalette(){
+    void CYX::SetDarkMenuPalette() {
         *(u32*)(Hooks::offsets.colorKeybBack) = 0xFF100800;
         *(u32*)(Hooks::offsets.colorSearchBack) = 0xFFFFA000;
         *(u32*)(Hooks::offsets.colorFileCreatorBack) = 0xFFC0FF80;
@@ -458,14 +463,14 @@ namespace CTRPluginFramework {
         *(u32*)(Hooks::offsets.colorSetKeyTL) = 0xFFFFA800;
     }
 
-    std::string CYX::GetProgramSlotFileName(u8 slot){
+    std::string CYX::GetProgramSlotFileName(u8 slot) {
         if (slot >= 4) return "";
         std::string f;
         UTF16toUTF8(f, editorInstance->programSlot[slot].file_name, editorInstance->programSlot[slot].file_name_len);
         return f;
     }
 
-    std::string CYX::PTCVersionString(u32 ver){
+    std::string CYX::PTCVersionString(u32 ver) {
         std::string out;
         out += Utils::Format("%d.",(ver>>24)&255);
         out += Utils::Format("%d.",(ver>>16)&255);
@@ -476,7 +481,7 @@ namespace CTRPluginFramework {
 
     // Quite bold, however, I doubt SmileBoom can push out updates
     // so I'd say this strictness is granted.
-    bool CYX::isPTCVersionValid(u32 ver){
+    bool CYX::isPTCVersionValid(u32 ver) {
         if ((u8)(ver>>24) != 3) return false;
         if ((u8)(ver>>16) > 6) return false;
         if ((u8)(ver>>8) > 3) return false;
@@ -484,16 +489,16 @@ namespace CTRPluginFramework {
         return true;
     }
 
-    std::string CYX::ColorPTCVerValid(u32 ver, u32 ok, u32 ng){
+    std::string CYX::ColorPTCVerValid(u32 ver, u32 ok, u32 ng) {
         char c[5]={0}; c[0]=0x1b;
-        if (CYX::isPTCVersionValid(ver)){
-            if (ok == CYX__COLORVER_NOCOLOR){
+        if (CYX::isPTCVersionValid(ver)) {
+            if (ok == CYX__COLORVER_NOCOLOR) {
                 return ResetColor();
             } else {
                 return ""<<Color(ok);
             }
         } else {
-            if (ng == CYX__COLORVER_NOCOLOR){
+            if (ng == CYX__COLORVER_NOCOLOR) {
                 return ResetColor();
             } else {
                 return ""<<Color(ng);
@@ -502,27 +507,27 @@ namespace CTRPluginFramework {
         return (c);
     }
 
-    void CYX::CreateHomeFolder(const std::string& s){
+    void CYX::CreateHomeFolder(const std::string& s) {
         std::string path = HOMEFS_PATH"/P"+s;
         if (!Directory::Exists(HOMEFS_PATH)) Directory::Create(HOMEFS_PATH);
         if (!Directory::Exists(path)) Directory::Create(path);
     }
-    void CYX::CreateHomeFolder(){
+    void CYX::CreateHomeFolder() {
         CreateHomeFolder(g_currentProject);
     }
-    std::string CYX::GetExtDataFolderName(){
+    std::string CYX::GetExtDataFolderName() {
         if (g_currentProject == PTC_WORKSPACE_CYXNAME) return PTC_WORKSPACE_EXTDATANAME;
         return g_currentProject;
     }
-    std::string CYX::GetHomeFolder(){
+    std::string CYX::GetHomeFolder() {
         return HOMEFS_PATH"/P"+g_currentProject;
     }
-    std::string CYX::GetHomeFolder(std::string project){
+    std::string CYX::GetHomeFolder(std::string project) {
         if (project == PTC_WORKSPACE_EXTDATANAME) return HOMEFS_PATH "/P" PTC_WORKSPACE_CYXNAME;
         return HOMEFS_PATH"/P"+project;
     }
 
-    void CYX::SetFontGetAddressStrictness(bool on){
+    void CYX::SetFontGetAddressStrictness(bool on) {
         if (on)
             Process::CopyMemory((char*)(Hooks::offsets.funcFontGetOff+0x3c), patch_FontGetOffset, 8);
         else
@@ -532,34 +537,34 @@ namespace CTRPluginFramework {
 
     void CYX::RestoreRescueDump(const std::string& path) {
         File f;
-        if (File::Open(f, path, File::READ)){
+        if (File::Open(f, path, File::READ)) {
             MessageBox(LANG("error"), LANG("fileOpenFail"))();
             return;
         }
         CYXDumpHeader h;
         f.Read(&h, sizeof(h));
-        if (h.magic != *(u64*)CYXDMPHDR_MAGIC){
+        if (h.magic != *(u64*)CYXDMPHDR_MAGIC) {
             MessageBox(LANG("error"), LANG("fileSignatureFail"))();
             return;
         }
-        if (h.version != CYXDMPHDR_VERSION){
+        if (h.version != CYXDMPHDR_VERSION) {
             MessageBox(LANG("error"), LANG("fileVersionMismatch"))();
             return;
         }
-        for (u32 i=0; i<h.blobCount; i++){
+        for (u32 i=0; i<h.blobCount; i++) {
             u32 index;
-            if (strncmp(h.blobName[i],"PRG",3)==0){
+            if (strncmp(h.blobName[i],"PRG",3)==0) {
                 index = h.blobName[i][3] - '0';
                 f.Read(editorInstance->programSlot[index].text, h.blobBufSize[i]);
                 editorInstance->programSlot[index].text_len = editorInstance->programSlot[index].text_og_len = h.blobDataLen[i] / 2;
                 editorInstance->programSlot[index].chars_left = 1048576 - editorInstance->programSlot[index].text_len;
                 Process::WriteString((u32)editorInstance->programSlot[index].file_name, h.blobName[i]+5, StringFormat::Utf16);
                 editorInstance->programSlot[index].file_name_len = MAX(0, strlen(h.blobName[i]+5));
-            } else if (strncmp(h.blobName[i],"CLP",3)==0){
+            } else if (strncmp(h.blobName[i],"CLP",3)==0) {
                 index = h.blobName[i][3] - '0';
                 f.Read(editorInstance->clipboardData, h.blobBufSize[i]);
                 editorInstance->clipboardLength = h.blobDataLen[i] / 2;
-            } else if (strncmp(h.blobName[i],"GRP",3)==0){
+            } else if (strncmp(h.blobName[i],"GRP",3)==0) {
                 index = h.blobName[i][3] - '0';
                 f.Read(GraphicPage->grp[index].workBuf, h.blobBufSize[i]);
                 memcpy(GraphicPage->grp[index].dispBuf, GraphicPage->grp[index].workBuf, h.blobBufSize[i]);
@@ -591,21 +596,20 @@ namespace CTRPluginFramework {
 		isPlayMusic = playMusic;
 		static u32 tlsBackup[2];
 		static s32 prioBackup[2];
-        for (u32 i = 0; i < 2; i++){
+        for (u32 i = 0; i < 2; i++) {
             u32 soundThreadID = std::get<0>(soundThreadsInfo[i]);
             u32* soundThreadTls = std::get<1>(soundThreadsInfo[i]);
             Handle soundThreadHandle; bool perf=true;
             if (R_FAILED(svcOpenThread(&soundThreadHandle, CUR_PROCESS_HANDLE, soundThreadID))) perf=false;
             if (soundThreadID == 0xFFFFFFFF) perf=false;
             if (soundThreadHandle == 0) perf=false;
-            if (perf){
+            if (perf) {
                 if (playMusic) {
                     tlsBackup[i] = *soundThreadTls;
                     *soundThreadTls = THREADVARS_MAGIC;
                     svcGetThreadPriority(&prioBackup[i], soundThreadHandle);
                     svcSetThreadPriority(soundThreadHandle, FwkSettings::Get().ThreadPriority - 1);
-                }
-                else {
+                } else {
                     *soundThreadTls = tlsBackup[i];
                     svcSetThreadPriority(soundThreadHandle, prioBackup[i]);
                 }
@@ -614,13 +618,13 @@ namespace CTRPluginFramework {
         }
 	}
 
-    void CYX::ResetServerLoginState(){
+    void CYX::ResetServerLoginState() {
         *(u8*)Hooks::offsets.nnActConnectRequired = 1;
         *(u8*)Hooks::offsets.nnActNetworkTimeValidated = 0;
         memset((char*)Hooks::offsets.petcAccountToken, 0, 512);
     }
 
-    int CYX::petcTokenHookFunc(){
+    int CYX::petcTokenHookFunc() {
         *(u8*)Hooks::offsets.nnActConnectRequired = 0;
         *(u8*)Hooks::offsets.nnActNetworkTimeValidated = 1;
 
@@ -631,7 +635,7 @@ namespace CTRPluginFramework {
         
         return 0; // Indicate success
     }
-    int CYX::nnActIsNetworkAccountStub(){
+    int CYX::nnActIsNetworkAccountStub() {
         return 1; // What do you expect? We spoof it to say "Yes".
     }
 

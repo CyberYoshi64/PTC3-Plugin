@@ -48,10 +48,10 @@ namespace CTRPluginFramework
 
     static int  g_mode = NORMAL;
 
-    static const char g_cyxText[] = "SmileBASIC-CYX";
+    // DO NOT REMOVE THIS COPYRIGHT NOTICE
     static const char g_ctrpfText[] = "Powered by CTRPluginFramework";
-    static const char g_copyrightText[] = "(c) The Pixellizer Group, CyberYoshi64";
-    static u32 g_textXpos[3] = { 0 };
+    static const char g_copyrightText[] = "Copyright (c) The Pixellizer Group";
+    static u32 g_textXpos[2] = { 0 };
 
     PluginMenuTools::PluginMenuTools(std::string &about, HexEditor &hexEditor) :
         _about(about),
@@ -78,7 +78,51 @@ namespace CTRPluginFramework
             Preferences::MenuHotkeys = keys;
     }
 
-    void    PluginMenuTools::UpdateSettings(void) {}
+    void    PluginMenuTools::UpdateSettings(void)
+    {
+        //using MenuItemIter =  MenuFolderImpl::MenuItemIter;
+
+        // Settings
+        auto item = _settingsMenu.begin() + 2;
+
+        if (Preferences::IsEnabled(Preferences::UseFloatingBtn)) (*item++)->AsMenuEntryImpl().Enable();
+        else (*item++)->AsMenuEntryImpl().Disable();
+
+        if (Preferences::IsEnabled(Preferences::AutoSaveCheats)) (*item++)->AsMenuEntryImpl().Enable();
+        else (*item++)->AsMenuEntryImpl().Disable();
+
+        if (Preferences::IsEnabled(Preferences::AutoSaveFavorites)) (*item++)->AsMenuEntryImpl().Enable();
+        else (*item++)->AsMenuEntryImpl().Disable();
+
+        if (Preferences::IsEnabled(Preferences::AutoLoadCheats)) (*item++)->AsMenuEntryImpl().Enable();
+        else (*item++)->AsMenuEntryImpl().Disable();
+
+        if (Preferences::IsEnabled(Preferences::AutoLoadFavorites)) (*item)->AsMenuEntryImpl().Enable();
+        else (*item)->AsMenuEntryImpl().Disable();
+
+        item = _miscellaneousMenu.begin();
+
+        // Misc.
+
+
+        if (Preferences::IsEnabled(Preferences::DisplayLoadedFiles)) (*item++)->AsMenuEntryTools().Enable();
+        else (*item++)->AsMenuEntryTools().Disable();
+
+        if (Preferences::IsEnabled(Preferences::WriteLoadedFiles)) (*item++)->AsMenuEntryTools().Enable();
+        else (*item++)->AsMenuEntryTools().Disable();
+
+        if (Preferences::IsEnabled(Preferences::DrawTouchCursor)) (*item++)->AsMenuEntryTools().Enable();
+        else (*item++)->AsMenuEntryTools().Disable();
+
+        if (Preferences::IsEnabled(Preferences::DrawTouchPosition)) (*item++)->AsMenuEntryTools().Enable();
+        else (*item++)->AsMenuEntryTools().Disable();
+
+        if (Preferences::IsEnabled(Preferences::ShowTopFps)) (*item++)->AsMenuEntryTools().Enable();
+        else (*item++)->AsMenuEntryTools().Disable();
+
+        if (Preferences::IsEnabled(Preferences::ShowBottomFps)) (*item)->AsMenuEntryTools().Enable();
+        else (*item)->AsMenuEntryTools().Disable();
+    }
 
     using   FsTryOpenFileType = u32(*)(u32, u16*, u32);
 
@@ -509,14 +553,13 @@ namespace CTRPluginFramework
 
         _hexEditorEntry = new MenuEntryTools("Hex Editor", [] { g_mode = HEXEDITOR; }, Icon::DrawGrid);
         _mainMenu.Append(_hexEditorEntry);
-        // _mainMenu.Append(new MenuEntryTools("Gateway RAM Dumper", [] { g_mode = GWRAMDUMP; }, Icon::DrawRAM));
-        // _mainMenu.Append(new MenuEntryTools("Screenshots", nullptr, Icon::DrawUnsplash, new u32(SCREENSHOT)));
-        // _mainMenu.Append(new MenuEntryTools("Miscellaneous", nullptr, Icon::DrawMore, new u32(MISCELLANEOUS)));
+        _mainMenu.Append(new MenuEntryTools("Gateway RAM Dumper", [] { g_mode = GWRAMDUMP; }, Icon::DrawRAM));
+        _mainMenu.Append(new MenuEntryTools("Screenshots", nullptr, Icon::DrawUnsplash, new u32(SCREENSHOT)));
+        _mainMenu.Append(new MenuEntryTools("Miscellaneous", nullptr, Icon::DrawMore, new u32(MISCELLANEOUS)));
         _mainMenu.Append(new MenuEntryTools("Settings", nullptr, Icon::DrawSettings, this));
-        if (!System::IsCitra()) {
-            _mainMenu.Append(new MenuEntryTools("Shutdown", Shutdown, Icon::DrawShutdown));
-            _mainMenu.Append(new MenuEntryTools("Reboot", Reboot, Icon::DrawRestart));
-        }
+        _mainMenu.Append(new MenuEntryTools("Shutdown", Shutdown, Icon::DrawShutdown));
+        _mainMenu.Append(new MenuEntryTools("Reboot", Reboot, Icon::DrawRestart));
+
         // Screenshots menu
         _screenshotMenu.Append(new MenuEntryTools("Change screenshot settings", ScreenshotMenuCallback, Icon::DrawSettings));
         _screenshotMenu.Append((g_screenshotEntry = new MenuEntryTools( "Screenshot: " << Color::LimeGreen << KeysToString(Screenshot::Hotkeys)
@@ -536,17 +579,16 @@ namespace CTRPluginFramework
         _settingsMenu.Append(new MenuEntryTools("Set backlight (Experimental)", EditBacklight, false, false));
         _settingsMenu.Append(new MenuEntryTools("Use floating button", [] { Preferences::Toggle(Preferences::UseFloatingBtn); }, true, Preferences::IsEnabled(Preferences::UseFloatingBtn)));
 
-        // _settingsMenu.Append(new MenuEntryTools("Auto-save enabled cheats", [] { Preferences::Toggle(Preferences::AutoSaveCheats); }, true, Preferences::IsEnabled(Preferences::AutoSaveCheats)));
-        // _settingsMenu.Append(new MenuEntryTools("Auto-save favorites", [] { Preferences::Toggle(Preferences::AutoSaveFavorites); }, true, Preferences::IsEnabled(Preferences::AutoSaveFavorites)));
-        // _settingsMenu.Append(new MenuEntryTools("Auto-load enabled cheats at starts", [] { Preferences::Toggle(Preferences::AutoLoadCheats); }, true, Preferences::IsEnabled(Preferences::AutoLoadCheats)));
-        // _settingsMenu.Append(new MenuEntryTools("Auto-load favorites at starts", [] { Preferences::Toggle(Preferences::AutoLoadFavorites); }, true, Preferences::IsEnabled(Preferences::AutoSaveFavorites)));
-        // _settingsMenu.Append(new MenuEntryTools("Load enabled cheats now", [] { Preferences::LoadSavedEnabledCheats(); }, nullptr));
-        // _settingsMenu.Append(new MenuEntryTools("Load favorites now", [] { Preferences::LoadSavedFavorites(); }, nullptr));
+        _settingsMenu.Append(new MenuEntryTools("Auto-save enabled cheats", [] { Preferences::Toggle(Preferences::AutoSaveCheats); }, true, Preferences::IsEnabled(Preferences::AutoSaveCheats)));
+        _settingsMenu.Append(new MenuEntryTools("Auto-save favorites", [] { Preferences::Toggle(Preferences::AutoSaveFavorites); }, true, Preferences::IsEnabled(Preferences::AutoSaveFavorites)));
+        _settingsMenu.Append(new MenuEntryTools("Auto-load enabled cheats at starts", [] { Preferences::Toggle(Preferences::AutoLoadCheats); }, true, Preferences::IsEnabled(Preferences::AutoLoadCheats)));
+        _settingsMenu.Append(new MenuEntryTools("Auto-load favorites at starts", [] { Preferences::Toggle(Preferences::AutoLoadFavorites); }, true, Preferences::IsEnabled(Preferences::AutoSaveFavorites)));
+        _settingsMenu.Append(new MenuEntryTools("Load enabled cheats now", [] { Preferences::LoadSavedEnabledCheats(); }, nullptr));
+        _settingsMenu.Append(new MenuEntryTools("Load favorites now", [] { Preferences::LoadSavedFavorites(); }, nullptr));
 
         // Get strings x position
-        g_textXpos[0] = (320 - Renderer::LinuxFontSize(g_cyxText)) / 2;
-        g_textXpos[1] = (320 - Renderer::LinuxFontSize(g_ctrpfText)) / 2;
-        g_textXpos[2] = (320 - Renderer::LinuxFontSize(g_copyrightText)) / 2;
+        g_textXpos[0] = (320 - Renderer::LinuxFontSize(g_ctrpfText)) / 2;
+        g_textXpos[1] = (320 - Renderer::LinuxFontSize(g_copyrightText)) / 2;
     }
 
     bool    PluginMenuTools::operator()(EventList &eventList, Time &delta)
@@ -718,15 +760,17 @@ namespace CTRPluginFramework
             static const char *commit = COMMIT_HASH;
             static const char *compilationDate = COMPILE_DATE;
 
-            int posY = 30, posYY = 30;
+            int posY = 30, posYY = 50;
+            Renderer::DrawString("CTRPluginFramework Build:",  30, posY, blank);
+            Renderer::DrawLine(30, posY, 25 * 6, blank); posY += 10;
             Renderer::DrawString("Version: ",  30, posY, blank);    Renderer::DrawString(tagVersion,  100, posYY, blank);
             Renderer::DrawString("Commit: ",  30, posY, blank);     Renderer::DrawString(commit,  100, posYY, blank);
             Renderer::DrawString("Compiled: ",  30, posY, blank);   Renderer::DrawString(compilationDate,  100, posYY, blank);
 
-            posY = 185;
-            Renderer::DrawString(g_cyxText, g_textXpos[0], posY, Color::White);
-            Renderer::DrawString(g_ctrpfText, g_textXpos[1], posY, Color::White);
-            Renderer::DrawString(g_copyrightText, g_textXpos[2], posY, Color::White);
+
+            posY = 195;
+            Renderer::DrawString(g_ctrpfText, g_textXpos[0], posY, Color::White);
+            Renderer::DrawString(g_copyrightText, g_textXpos[1], posY, Color::White);
         }
     }
 

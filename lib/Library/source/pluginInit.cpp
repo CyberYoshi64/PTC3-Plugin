@@ -154,17 +154,7 @@ namespace CTRPluginFramework
         // Set current working directory
         if (FwkSettings::Header->isDefaultPlugin)
         {
-            std::string path = "/luma/plugins/ActionReplay";
-
-            if (!Directory::Exists(path))
-                Directory::Create(path);
-
-            path += Utils::Format("/%016llX", Process::GetTitleID());
-
-            if (!Directory::Exists(path))
-                Directory::Create(path);
-
-            Directory::ChangeWorkingDirectory(path + "/");
+            abort();
         }
         else
         {
@@ -482,12 +472,6 @@ namespace CTRPluginFramework
     {
         // Init sysfont
         Font::Initialize();
-        {
-            // If /cheats/ doesn't exists, create it // actually, we don't
-            // const char *dirpath = "/cheats";
-            // if (!Directory::IsExists(dirpath))
-            //     Directory::Create(dirpath);
-        }
 
         // Set AR file path
         Preferences::CheatsFile = "cheats.txt";
@@ -496,22 +480,6 @@ namespace CTRPluginFramework
         if (!File::Exists(Preferences::CheatsFile))
             Preferences::CheatsFile = Utils::Format("/cheats/%016llX.txt", Process::GetTitleID());
 
-        {
-            // If /Screenshots/ doesn't exists, create it // actually, we don't
-            // const char *dirpath = "/Screenshots";
-            // if (!Directory::IsExists(dirpath))
-            //     Directory::Create(dirpath);
-
-            // Set default screenshot path // actually no
-            // Screenshot::Path = dirpath;
-            // Screenshot::Path.append("/");
-
-            // Set default screenshot prefix
-            Screenshot::Prefix = "[";
-            Process::GetName(Screenshot::Prefix);
-            Screenshot::Prefix += Utils::Format(" - %08X] - Screenshot", (u32)Process::GetTitleID());
-            Screenshot::Initialize();
-        }
     }
 
     // Main thread's start

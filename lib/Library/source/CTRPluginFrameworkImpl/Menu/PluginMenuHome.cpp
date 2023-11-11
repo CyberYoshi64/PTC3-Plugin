@@ -104,15 +104,15 @@ namespace CTRPluginFramework
 
         if (!ShowNoteBottom) {
             // Check all buttons
-            // if (_showStarredBtn()) _showStarredBtn_OnClick();
+            if (_showStarredBtn()) _showStarredBtn_OnClick();
             // _hidMapperBtn();
             if (_gameGuideBtn()) _gameGuideBtn_OnClick();
             if (_searchBtn()) _searchBtn_OnClick();
             if (_arBtn()) _actionReplayBtn_OnClick();
+            if (_AddFavoriteBtn()) _StarItem();
             if (_InfoBtn()) _InfoBtn_OnClick();
-            // if (_AddFavoriteBtn()) _StarItem();
-            // if (_keyboardBtn()) _keyboardBtn_OnClick();
-            // if (_controllerBtn()) _controllerBtn_OnClick();
+            if (_keyboardBtn()) _keyboardBtn_OnClick();
+            if (_controllerBtn()) _controllerBtn_OnClick();
         }
 
         // Update UI
@@ -576,15 +576,15 @@ namespace CTRPluginFramework
         }
         else
         {
+            _showStarredBtn.Draw();
+            _hidMapperBtn.Draw();
             _gameGuideBtn.Draw();
             _searchBtn.Draw();
             _arBtn.Draw();
+            _AddFavoriteBtn.Draw();
             _InfoBtn.Draw();
-            // _showStarredBtn.Draw();
-            // _hidMapperBtn.Draw();
-            // _AddFavoriteBtn.Draw();
-            // _keyboardBtn.Draw();
-            // _controllerBtn.Draw();
+            _keyboardBtn.Draw();
+            _controllerBtn.Draw();
         }
         _toolsBtn.Draw();
     }
@@ -643,14 +643,14 @@ namespace CTRPluginFramework
 
                 if (!ShowNoteBottom)
                 {
-                    _InfoBtn.Enable(e->note.size());
                     // A folder will not have a menufunc
-                    // _keyboardBtn.Enable(false);
+                    _keyboardBtn.Enable(false);
                     // Check if folder has a note
+                    _InfoBtn.Enable(e->note.size());
                     // Enable AddFavorites icon
-                    // _AddFavoriteBtn.Enable(true);
-                    // _AddFavoriteBtn.SetState(e->_IsStarred());
-                    // _controllerBtn.Enable(false);
+                    _AddFavoriteBtn.Enable(true);
+                    _AddFavoriteBtn.SetState(e->_IsStarred());
+                    _controllerBtn.Enable(false);
                 }
                 if (e->HasNoteChanged())
                 {
@@ -667,11 +667,15 @@ namespace CTRPluginFramework
 
                 if (!ShowNoteBottom)
                 {
+                    // Check if entry has a menu func
+                    _keyboardBtn.Enable(e->MenuFunc != nullptr);
+                    // Check if entry has a note
                     _InfoBtn.Enable(note.size());
-                    // _keyboardBtn.Enable(e->MenuFunc != nullptr);
-                    // _AddFavoriteBtn.Enable(true);
-                    // _AddFavoriteBtn.SetState(e->_IsStarred());
-                    // _controllerBtn.Enable(e->_owner != nullptr && e->_owner->Hotkeys.Count() > 0);
+                    // Enable AddFavorites icon
+                    _AddFavoriteBtn.Enable(true);
+                    _AddFavoriteBtn.SetState(e->_IsStarred());
+                    // Enable controller icon
+                    _controllerBtn.Enable(e->_owner != nullptr && e->_owner->Hotkeys.Count() > 0);
                 }
                 if (e->HasNoteChanged())
                 {
@@ -682,10 +686,10 @@ namespace CTRPluginFramework
             // An error is happening
             else
             {
+                _AddFavoriteBtn.Enable(false);
                 _InfoBtn.Enable(false);
-                // _AddFavoriteBtn.Enable(false);
-                // _keyboardBtn.Enable(false);
-                // _controllerBtn.Enable(false);
+                _keyboardBtn.Enable(false);
+                _controllerBtn.Enable(false);
             }
         }
         // Buttons status
@@ -694,15 +698,16 @@ namespace CTRPluginFramework
 
         if (!ShowNoteBottom)
         {
+            // Update buttons
+            _showStarredBtn.Update(isTouched, touchPos);
+            //_hidMapperBtn.Update(isTouched, touchPos);
             _gameGuideBtn.Update(isTouched, touchPos);
             _searchBtn.Update(isTouched, touchPos);
             _arBtn.Update(isTouched, touchPos);
+            _AddFavoriteBtn.Update(isTouched, touchPos);
             _InfoBtn.Update(isTouched, touchPos);
-            // _showStarredBtn.Update(isTouched, touchPos);
-            //_hidMapperBtn.Update(isTouched, touchPos);
-            // _AddFavoriteBtn.Update(isTouched, touchPos);
-            // _keyboardBtn.Update(isTouched, touchPos);
-            // _controllerBtn.Update(isTouched, touchPos);
+            _keyboardBtn.Update(isTouched, touchPos);
+            _controllerBtn.Update(isTouched, touchPos);
         }
         _toolsBtn.Update(isTouched, touchPos);
 

@@ -54,12 +54,10 @@ namespace CTRPluginFramework {
         static int Init(void);
         
         static void Get(std::string& out, u32 id);
-        static void Get(std::string& out, std::string& id);
-        static void Get(std::string& out, const char* id);
+        static void Get(std::string& out, const std::string& id);
 
         static std::string Get(u32 id);
-        static std::string Get(std::string& id);
-        static std::string Get(const char* id);
+        static std::string Get(const std::string& id);
 
         static std::string GetName(u32 id);
         static u32 GetID(std::string& id);

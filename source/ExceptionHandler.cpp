@@ -19,7 +19,7 @@ namespace CTRPluginFramework {
     u8 Exception::dataBuffer[160]={0};
     u16 Exception::dataLength = 0;
 
-    void Exception::Panic(std::string s){
+    void Exception::Panic(std::string s) {
         panicString = s; dumpAsText = true;
         s.clear();
         
@@ -27,7 +27,7 @@ namespace CTRPluginFramework {
         *(u32*)1337 = 0xBEEF; // Trigger an exception intentionally
     }
 
-    void Exception::Error(std::string s, const char* f, s32 line){
+    void Exception::Error(std::string s, const char* f, s32 line) {
         if (f != NULL)
             s += Utils::Format("\n(Called by %s:%d)",f,line);
         StringVector vec = {
@@ -41,7 +41,7 @@ namespace CTRPluginFramework {
         Keyboard k(s);
 
         mcuSetSleep(false);
-        while (true){
+        while (true) {
             kv = {
                 vec[0] + _2w[(bool)(Exception::excepSet.rescue & EXCEPRESCUE_PROGRAM)],
                 vec[1] + _2w[(bool)(Exception::excepSet.rescue & EXCEPRESCUE_GRAPHICS)],
@@ -56,7 +56,7 @@ namespace CTRPluginFramework {
             k.ChangeEntrySound(4, SoundEngine::Event::CANCEL);
             int res = k.Open();
             if (res > 2) break;
-            switch (res){
+            switch (res) {
                 case 0:
                     Exception::excepSet.rescue ^= EXCEPRESCUE_PROGRAM;
                     break;
@@ -78,16 +78,16 @@ namespace CTRPluginFramework {
         Process::ReturnToHomeMenu();
     }
 
-    void Exception::BuildRescueScreen(u8 mode, u32 i, u32 j, std::string& s2){
+    void Exception::BuildRescueScreen(u8 mode, u32 i, u32 j, std::string& s2) {
         std::string s;
-        switch (mode){
+        switch (mode) {
             case 0: s = Utils::Format("Saving asset %d/%d ...", i+1, j); break;
         }
         
         OSD::Lock();
         Screen bot = OSD::GetBottomScreen();
         bot.DrawRect(0,0,320,240,Color(0x301820FF));
-        if (!mode){
+        if (!mode) {
             bot.DrawSysfont(s, (320-Render::GetTextWidth(s))/2, 112);
             bot.Draw(s2, (320-(s2.length()*6))/2, 144, Color::Gray, Color(0x301820FF));
         } else {
@@ -100,20 +100,20 @@ namespace CTRPluginFramework {
         OSD::Unlock();
     }
 
-    void Exception::RescueIfRequired(){
+    void Exception::RescueIfRequired() {
         u64 dumpNum = osGetTime()/1000;
         std::string fname = Utils::Format(DUMP_PATH"/%016X.cyxdmp",dumpNum);
         File outf; std::string s1;
         if (!Directory::Exists(DUMP_PATH)) Directory::Create(DUMP_PATH);
-        if (File::Open(outf, fname, File::Mode::RWC | File::Mode::SYNC)==0){
+        if (File::Open(outf, fname, File::Mode::RWC | File::Mode::SYNC)==0) {
             u32 currentBlob = 0; u8 blobCat = 0, blobCatIdx = 0;
             u32 fcount =
                 (bool)(excepSet.rescue & EXCEPRESCUE_PROGRAM)*4+
                 (bool)(excepSet.rescue & EXCEPRESCUE_GRAPHICS)*6+
                 (bool)(excepSet.rescue & EXCEPRESCUE_CLIPBOARD)*1;
             CYXDumpHeader hdr = mkHeader(excepSet.rescue, fcount);
-            while ((currentBlob < fcount) && (blobCat < 3)){
-                if (!(excepSet.rescue & (1<<blobCat))){
+            while ((currentBlob < fcount) && (blobCat < 3)) {
+                if (!(excepSet.rescue & (1<<blobCat))) {
                     blobCatIdx=0; blobCat++; continue;
                 }
                 switch (blobCat) {
@@ -130,7 +130,7 @@ namespace CTRPluginFramework {
                     hdr.blobDataLen[currentBlob] = CYX::editorInstance->programSlot[blobCatIdx].text_len * 2;
                     break;
                 case 1: // CLIP
-                    if (blobCatIdx){
+                    if (blobCatIdx) {
                         blobCatIdx=0; blobCat++; continue;
                     }
                     sprintf(hdr.blobName[currentBlob], "CLP0");
@@ -138,7 +138,7 @@ namespace CTRPluginFramework {
                     hdr.blobDataLen[currentBlob] = CYX::editorInstance->clipboardLength * 2;
                     break;
                 case 2: // GRP
-                    if (blobCatIdx >= 6){
+                    if (blobCatIdx >= 6) {
                         blobCatIdx=0; blobCat++; continue;
                     }
                     sprintf(hdr.blobName[currentBlob], "GRP%d", blobCatIdx);
@@ -150,28 +150,28 @@ namespace CTRPluginFramework {
             }
             outf.Write(&hdr, sizeof(hdr));
             currentBlob = 0, blobCat = 0, blobCatIdx = 0;
-            while ((currentBlob < fcount) && (blobCat < 3)){
+            while ((currentBlob < fcount) && (blobCat < 3)) {
                 std::string s = hdr.blobName[currentBlob];
                 BuildRescueScreen(0, currentBlob, fcount, s);
-                if (!(excepSet.rescue & (1<<blobCat))){
+                if (!(excepSet.rescue & (1<<blobCat))) {
                     blobCatIdx=0; blobCat++;
                     continue;
                 }
                 switch (blobCat) {
                 case 0: // PRG
-                    if (blobCatIdx >= 4){
+                    if (blobCatIdx >= 4) {
                         blobCatIdx=0; blobCat++; continue;
                     }
                     outf.Write(CYX::editorInstance->programSlot[blobCatIdx].text, hdr.blobBufSize[currentBlob]);
                     break;
                 case 1: // CLIP
-                    if (blobCatIdx){
+                    if (blobCatIdx) {
                         blobCatIdx=0; blobCat++; continue;
                     }
                     outf.Write(CYX::editorInstance->clipboardData, hdr.blobBufSize[currentBlob]);
                     break;
                 case 2: // GRP
-                    if (blobCatIdx >= 6){
+                    if (blobCatIdx >= 6) {
                         blobCatIdx=0; blobCat++; continue;
                     }
                     outf.Write(CYX::GraphicPage->grp[blobCatIdx].workBuf, hdr.blobBufSize[currentBlob]);
@@ -186,8 +186,8 @@ namespace CTRPluginFramework {
         Sleep(Seconds(3));
     }
 
-    std::string Exception::SadMessageRnd(){
-        switch (screenSadMessageIndex){
+    std::string Exception::SadMessageRnd() {
+        switch (screenSadMessageIndex) {
             case  0: return "That's a shame.";
             case  1: return "Kinda embarrassing.";
             case  2: return "How dare you, Cyber!";
@@ -202,16 +202,16 @@ namespace CTRPluginFramework {
         return "How unfortunate.";
     }
 
-    void Exception::BuildScreen(Screen& top, Screen& bot, u64 timer){
+    void Exception::BuildScreen(Screen& top, Screen& bot, u64 timer) {
         
         bool flag;
         double startAnimFlt;
         float qrTexScale, px, _py, py;
         u32 qrSize, iw, ih, x, y, qrViewPort;
 
-        switch (renderState){
+        switch (renderState) {
         case 0:
-            if (timer < 2){
+            if (timer < 2) {
                 top.Fade(.5); bot.Fade(.5);
             }
             startAnimFlt = sin((timer / EXCEPTIONSCREEN_DELAY) * 1.5707963267948966);
@@ -245,9 +245,9 @@ namespace CTRPluginFramework {
             if (qrTexScale >= 2) qrTexScale = (u32)qrTexScale;
             px = x+(qrViewPort - (qrSize*qrTexScale))/2;
             _py = y+(qrViewPort - (qrSize*qrTexScale))/2;
-            for (u16 ix=0; ix<qrSize; ix++){
+            for (u16 ix=0; ix<qrSize; ix++) {
                 py=_py;
-                for (u16 iy=0; iy<qrSize; iy++){
+                for (u16 iy=0; iy<qrSize; iy++) {
                     
                     iw = (u32)(px+qrTexScale) - (u32)px;
                     ih = (u32)(py+qrTexScale) - (u32)py;
@@ -257,7 +257,7 @@ namespace CTRPluginFramework {
                 px += qrTexScale;
             }
             
-            if (PLGGET(PLGFLG_PANIC)){
+            if (PLGGET(PLGFLG_PANIC)) {
                 Color bg = Color(80, 40, 16);
                 top.DrawRect(0, 192, 400, 48, bg);
                 top.Draw("The plugin panicked. This is the context given:", 4, 196, Color::Orange, bg);
@@ -267,7 +267,7 @@ namespace CTRPluginFramework {
                 top.DrawRect(0, 192, 400, 48, bg);
                 top.Draw("The crash is within SmileBASIC itself. The backtrace may help", 4, 196, Color::Magenta, bg);
                 top.Draw("diagnose the issue.", 4, 206, Color::Magenta, bg);
-                if (PLGGET(PLGFLG_EXPERIMENTS)){
+                if (PLGGET(PLGFLG_EXPERIMENTS)) {
                     top.Draw("You have used Experiments. They might have caused the problem.", 6, 220, Color::Orange, bg);
                 }
             }
@@ -301,8 +301,8 @@ namespace CTRPluginFramework {
             break;
         }
     }
-    void Exception::BuildExceptionData(ERRF_ExceptionInfo *excep, CpuRegisters *regs){
-        if (dumpAsText){
+    void Exception::BuildExceptionData(ERRF_ExceptionInfo *excep, CpuRegisters *regs) {
+        if (dumpAsText) {
             ExceptionSysDumpTxt d = {0};
             dataLength = sizeof(ExceptionSysDumpTxt);
             std::string s = panicString;
@@ -344,9 +344,9 @@ namespace CTRPluginFramework {
             u32 appTextBeg = 0x100000;
             u32 appTextEnd = appTextBeg + Process::GetTextSize();
             
-            for (u32 i=0; i < (sizeof(d.callStack)/sizeof(u32)); i++){
+            for (u32 i=0; i < (sizeof(d.callStack)/sizeof(u32)); i++) {
                 u32 v;
-                while (Process::Read32(sp+soff, v) && soff<0x7000){
+                while (Process::Read32(sp+soff, v) && soff<0x7000) {
                     soff += 4;
                     if (v&0xFFF == 0) continue; // Most likely a length property of a sort
                     if ((v>=appTextBeg&&v<appTextEnd)||(v>=plgTextBeg&&v<plgTextEnd)) {
@@ -370,7 +370,7 @@ namespace CTRPluginFramework {
         f.Close();
 
     }
-    bool excep__isTouching(UIntVector t, u16 x, u16 y, u16 w, u16 h){
+    bool excep__isTouching(UIntVector t, u16 x, u16 y, u16 w, u16 h) {
         return ((t.x >= x) && (t.y >= y) && (t.x < x+w) && (t.y < y+h));
     }
     Process::ExceptionCallbackState Exception::Handler(ERRF_ExceptionInfo *excep, CpuRegisters *regs) {
@@ -400,28 +400,28 @@ namespace CTRPluginFramework {
             keyP = Controller::GetKeysPressed();
             UIntVector t = Touch::GetPosition();
             oldTouchP = touchP; touchP = Touch::IsDown();
-            if (timer > EXCEPTIONSCREEN_DELAY){
+            if (timer > EXCEPTIONSCREEN_DELAY) {
                 if (!oldTouchP && touchP){
-                    if (excep__isTouching(t, 0, 178, 160, 20)){
+                    if (excep__isTouching(t, 0, 178, 160, 20)) {
                         excepSet.rescue ^= EXCEPRESCUE_PROGRAM;
                         SoundEngine::PlayMenuSound(
                             excepSet.rescue & EXCEPRESCUE_PROGRAM ? sndSel : sndDesel
                         );
                     }
-                    if (excep__isTouching(t, 0, 198, 160, 20)){
+                    if (excep__isTouching(t, 0, 198, 160, 20)) {
                         excepSet.rescue ^= EXCEPRESCUE_GRAPHICS;
                         SoundEngine::PlayMenuSound(
                             excepSet.rescue & EXCEPRESCUE_GRAPHICS ? sndSel : sndDesel
                         );
                     }
-                    if (excep__isTouching(t, 0, 218, 160, 20)){
+                    if (excep__isTouching(t, 0, 218, 160, 20)) {
                         excepSet.rescue ^= EXCEPRESCUE_CLIPBOARD;
                         SoundEngine::PlayMenuSound(
                             excepSet.rescue & EXCEPRESCUE_CLIPBOARD ? sndSel : sndDesel
                         );
                     }
                 }
-                if (keyP & kMask){
+                if (keyP & kMask) {
                     if (excepSet.rescue) Exception::RescueIfRequired();
                     CYX::Finalize();
                     switch (keyP) {
@@ -441,7 +441,7 @@ namespace CTRPluginFramework {
             OSD::Unlock();
         }
     }
-    CYXDumpHeader Exception::mkHeader(u16 type, u16 cnt){
+    CYXDumpHeader Exception::mkHeader(u16 type, u16 cnt) {
         CYXDumpHeader d;
         memset(&d,0,sizeof(d));
         d.magic = *(u64*)CYXDMPHDR_MAGIC;
