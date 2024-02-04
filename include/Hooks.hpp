@@ -7,6 +7,8 @@
 #define HOOKFILE_MAGIC  *(u32*)"CY$X"
 #define HOOKFILE_VER    2
 
+#define HOOK_FUNCMAP_VER    1
+
 namespace CTRPluginFramework {
     class Hooks {
         typedef struct Offsets {
@@ -55,9 +57,16 @@ namespace CTRPluginFramework {
             u32 nnSndSoundThreadEntry1;     // Sound Thread #1 Entry Point
             u32 nnSndSoundThreadEntry2;     // Sound Thread #2 Entry Point
         } Offsets;
+
     public:
+        typedef struct FuncMapFile_s {
+            u32 version;
+            std::vector<s32> ids;
+            std::vector<std::string> humanNames;
+        } FuncMapFile;
         static Offsets offsets; // Offset structure
         static Result Init();
+        static int ParseFuncMapFile(File &f, FuncMapFile* v);
     };
 }
 

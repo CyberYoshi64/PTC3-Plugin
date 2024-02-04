@@ -23,7 +23,7 @@ typedef struct {
 
 //// Latest version
 
-typedef struct {
+typedef struct Config_s {
     u64     magic;                          // File magic (see CONFIG_HEADER)
     u32     version;                        // File version (see CONFIG_VERSION)
     u16     language;                       // System language (TODO: Hook BASIC::Language field for in-app translations)
@@ -36,20 +36,24 @@ typedef struct {
     struct  cyx {                           // CYX Settings
         bool    enableAPI           : 1;    // CYX API activation status
         bool    fontdefStrict       : 1;    // Restrict/Loosen FONTDEF calls
-        u16     pad1                : 14;
-        struct server {
-            u8      serverType;             // Server Type (see Config::Enums::CYX::ServerType)
-            u8      pad1;
-            u16     pad2;
-            char    serverName[28];         // Custom server domain
-        } PACKED server;
+        u32     zero                : 30;
+        union {
+            struct {
+                struct server {
+                    u8      serverType;         // Server Type (see Config::Enums::CYX::ServerType)
+                    u64     zero   : 24;
+                    char    serverName[28];     // Custom server domain
+                } PACKED server;
+            } set;
+            u8 raw[284];
+        };
     } PACKED cyx;
 } PACKED Config_v2;
 
 //// Config functions
 
 typedef Config_v2 ConfigStruct;
-#define CONFIGS_SIZE_CYX_SERVER sizeof(ConfigStruct::cyx::server)
+#define CONFIGS_SIZE_CYX_SET    sizeof(ConfigStruct::cyx::set)
 #define CONFIGS_SIZE_CYX        sizeof(ConfigStruct::cyx)
 #define CONFIGS_SIZE            sizeof(ConfigStruct)
 
@@ -58,13 +62,10 @@ namespace CTRPluginFramework {
     public:
         class Enums {
         public:
-            class CYX {
-            public:
-                enum ServerType {
-                    VANILLA = 0,        // Original server (SmileBoom)
-                    GENERIC,            // Custom SBServer
-                    STUB_TOKEN = 16,   // Stub service token
-                };
+            enum ServerType {
+                VANILLA = 0,        // Original server (SmileBoom)
+                GENERIC,            // Custom SBServer
+                STUB_TOKEN = 16,   // Stub service token
             };
         };
         static void New(void);

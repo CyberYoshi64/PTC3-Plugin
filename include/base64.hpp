@@ -1,5 +1,4 @@
-#ifndef BASE64_HPP
-#define BASE64_HPP
+#pragma once
 
 #include <string>
 #include <string.h>
@@ -35,6 +34,4 @@ namespace CTRPluginFramework {
         static u32 CalcSizeRaw(u32 len);
         static u32 CalcSize(u32 len);
     };
-} // namespace CTRPluginFramework
-
-#endif
+}

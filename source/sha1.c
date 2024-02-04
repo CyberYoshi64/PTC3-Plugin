@@ -9,7 +9,6 @@ By Steve Reid <steve@edmweb.com>
 #include <stdio.h>
 #include <string.h>
 
-#include "types.h"
 #include "sha1.h"
 
 

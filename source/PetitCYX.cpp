@@ -21,7 +21,7 @@ namespace CTRPluginFramework {
     Hook CYX::soundHook;
     Hook CYX::soundHook2;
     bool CYX::forceDisableSndOnPause = false;
-    char CYX::introText[512] = "SmileBASIC-CYX " STRING_VERSION "\nBuild " STRING_BUILD "\n\n2022-2023 CyberYoshi64\n\n";
+    char CYX::introText[512] = "SmileBASIC-CYX " STRING_VERSION "(" BUILD_DATE ")" "\n\n2022-2023 CyberYoshi64\n\n";
     char CYX::bytesFreeText[32] = " bytes free\n\n";
     bool CYX::provideCYXAPI = true;
     bool CYX::wasCYXAPIused = false;
@@ -31,6 +31,9 @@ namespace CTRPluginFramework {
     u32 CYX::cyxSaveTimer = 0;
     u64 CYX::sdmcFreeSpace = 0;
     u64 CYX::sdmcTotalSpace = 0;
+    s32 CYX::volumeSliderValue = 0;
+    s32 CYX::rawBatteryLevel = 0;
+    u8  CYX::mcuSleep = 0;
     u32 CYX::cyxUpdateSDMCStats = 0;
     u64 CYX::askQuickRestore = 0;
     bool CYX::wouldExit = false;
@@ -53,6 +56,7 @@ namespace CTRPluginFramework {
     }
 
     Result CYX::Initialize(void) {
+#if ! PLG_DUMMY
         Result hookErr; u32 res;
         wouldExit = true;
         if (R_FAILED(hookErr = Hooks::Init())) return hookErr;
@@ -73,6 +77,7 @@ namespace CTRPluginFramework {
         rtEnableHook(&basControllerFunc);
         rtInitHook(&petcServiceTokenHook, Hooks::offsets.petcSessionTokenFunc, (u32)CYX::petcTokenHookFunc);
         rtInitHook(&nnActIsNetworkAccountHook, Hooks::offsets.nnActIsNetworkAccountFunc, (u32)CYX::nnActIsNetworkAccountStub);
+        rtEnableHook(&nnActIsNetworkAccountHook);
         *(char**)Hooks::offsets.bootText = introText;
         *(char**)(Hooks::offsets.bootText+4) = bytesFreeText;
 
@@ -95,11 +100,10 @@ namespace CTRPluginFramework {
             Config::Get().lastExcepDumpID = 0;
             Config::Get().recoverFromException = false;
         }
-        if (Config::Get().cyx.server.serverType) {
-            CYX::ReplaceServerName(Config::Get().cyx.server.serverName, Config::Get().cyx.server.serverName);
-            if (Config::Get().cyx.server.serverType & Config::Enums::CYX::ServerType::STUB_TOKEN){
+        if (Config::Get().cyx.set.server.serverType) {
+            CYX::ReplaceServerName(Config::Get().cyx.set.server.serverName, Config::Get().cyx.set.server.serverName);
+            if (Config::Get().cyx.set.server.serverType & Config::Enums::ServerType::STUB_TOKEN){
                 rtEnableHook(&petcServiceTokenHook);
-                rtEnableHook(&nnActIsNetworkAccountHook);
             }
         }
         setCYXStuff();
@@ -112,15 +116,18 @@ namespace CTRPluginFramework {
             return res;
         }
         forceDisableSndOnPause = !(System::IsCitra()||System::IsNew3DS());
+#endif
         wouldExit = false;
         return 0;
     }
 
     void CYX::Finalize() {
+#if ! PLG_DUMMY
         StringArchive::Exit();
         BasicAPI::Finalize();
         SaveProjectSettings();
         Config::Save();
+#endif
     }
     void CYX::SaveProjectSettings() {
         if (g_currentProject=="") return;
@@ -157,6 +164,7 @@ namespace CTRPluginFramework {
     }
     void CYX::TrySave() {cyxSaveTimer = 0;}
     void CYX::MenuTick() {
+#if ! PLG_DUMMY
         std::string str;
         bool doUpdate = (!cyxSaveTimer);
         bool didUpdateManually = false;
@@ -216,16 +224,33 @@ namespace CTRPluginFramework {
             FSUSER_GetArchiveResource(&g_sdmcArcRes, SYSTEM_MEDIATYPE_SD);
             sdmcFreeSpace = (float)g_sdmcArcRes.clusterSize * g_sdmcArcRes.freeClusters;
             sdmcTotalSpace = (float)g_sdmcArcRes.clusterSize * g_sdmcArcRes.totalClusters;
-            cyxUpdateSDMCStats = 2000;
+            mcuHwcInit();
+            if (System::IsCitra()) {
+                volumeSliderValue = 63;
+                rawBatteryLevel = 100;
+            } else {
+                volumeSliderValue = 0;
+                rawBatteryLevel = 0;
+                MCUHWC_GetBatteryLevel((u8*)&rawBatteryLevel);
+                MCUHWC_GetSoundSliderLevel((u8*)&volumeSliderValue);
+            }
+            MCUHWC_ReadRegister(0x18, &mcuSleep, 1);
+            mcuSleep = !(mcuSleep & 0x6C);
+            mcuHwcExit();
+            cyxUpdateSDMCStats = 24;
         } else {
             cyxUpdateSDMCStats--;
         }
+#endif
     }
+
     bool CYX::WouldOpenMenu() {
+#if ! PLG_DUMMY
         if (mirror.isInBasic) {
             SoundEngine::PlayMenuSound(SoundEngine::Event::DESELECT);
             return false;
         }
+#endif
         return true;
     }
     void CYX::UpdateMirror() {
@@ -363,18 +388,23 @@ namespace CTRPluginFramework {
         u8 type; bool isCYX=false;
         if (argc<1) return 0;
         type = getSBVariableType(argv->type);
-        if (type != VARTYPE_NONE) {
-            switch (type) {
-                case VARTYPE_STRING: isCYX=true; break;
-                case VARTYPE_INT:
-                    if (argv->data != 0) return 3;
-                    break;
-                case VARTYPE_DOUBLE:
-                    if ((int)(*(double*)&argv->data) != 0) return 3;
-                    break;
+        if (!provideCYXAPI) {
+            if (type != VARTYPE_NONE) {
+                switch (type) {
+                    case VARTYPE_STRING: isCYX=true; break;
+                    case VARTYPE_INT:
+                        if (argv->data != 0) return 3;
+                        break;
+                    case VARTYPE_DOUBLE:
+                        if ((int)(*(double*)&argv->data) != 0) return 3;
+                        break;
+                }
             }
-        }
-        if (provideCYXAPI && isCYX) {
+            if (outc){
+                outv->type = SBVARRAW_INTEGER;
+                outv->data = 1;
+            }
+        } else {
             cyxApiOutc = outc;
             cyxApiLastOutv = (u32)(outv+outc);
             CYX::cyxApiTextOut.clear();
@@ -384,11 +414,6 @@ namespace CTRPluginFramework {
                 case 2: return 1; // Silent exit
                 case 3: return 2; // Non-fatal quit
                 default: return 3; // Fatal quit
-            }
-        } else {
-            if (outc){
-                outv->type = SBVARRAW_INTEGER;
-                outv->data = 1 | (provideCYXAPI<<28);
             }
         }
         return 0;

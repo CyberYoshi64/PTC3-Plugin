@@ -47,8 +47,8 @@ namespace CTRPluginFramework {
                 basePath = OnionSave::extPath;
                 if (shouldReopen) *shouldReopen = false;
                 break;
-            default:
             case ARCH_ROMFS:
+            default:
                 basePath = OnionSave::romPath;
                 break;
             }

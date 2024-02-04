@@ -21,6 +21,10 @@ namespace CTRPluginFramework {
     FS_ArchiveResource g_sdmcArcRes;
     u32 ___pluginFlags;
     char g_regionString[4];
+    u8 g_systemModel;
+    u8 g_systemRegion;
+    u32 parentalControlFlag;
+    char g_systemRegionString[4];
     u32 *fileOperations[NUMBER_FILE_OP] = {nullptr};
     RT_HOOK fileOpHooks[NUMBER_FILE_OP] = {0};
     RT_HOOK regArchiveHook = {0};
@@ -174,7 +178,7 @@ namespace CTRPluginFramework {
             return;
         offset >>= 2;
         if (ENABLE_DEBUG) {
-            char *funcstr = (char *)""; // [nn::]fs[::]...
+            char *funcstr = (char *)"";
             char buf[10];
             switch (offset) {
             case 0:
@@ -431,13 +435,15 @@ namespace CTRPluginFramework {
         );
         if(!Directory::Exists(TOP_DIR)) Directory::Create(TOP_DIR);
         if(!Directory::Exists(RESOURCES_PATH)) Directory::Create(RESOURCES_PATH);
+        Directory::ChangeWorkingDirectory(RESOURCES_PATH);
 #if EXTDATA_PATH_SEPERATE
         if(!Directory::Exists(EXTDATA_PATH)) Directory::Create(EXTDATA_PATH);
 #endif
+#if ! PLG_DUMMY
         if(!Directory::Exists(SAVEDATA_PATH)) Directory::Create(SAVEDATA_PATH);
         if(!Directory::Exists(HOMEFS_PATH)) Directory::Create(HOMEFS_PATH);
         if(!Directory::Exists(HOMEFS_SHARED_PATH)) Directory::Create(HOMEFS_SHARED_PATH);
-        Directory::ChangeWorkingDirectory(RESOURCES_PATH);
+#endif
         ToggleTouchscreenForceOn();
         u64 tid = Process::GetTitleID();
         sprintf(g_ProcessTID, "%016lX", tid);
@@ -448,6 +454,7 @@ namespace CTRPluginFramework {
         FSUSER_GetArchiveResource(&g_sdmcArcRes, SYSTEM_MEDIATYPE_SD);
         DEBUG("\n--- Initializing hooks:\n\n");
         initOnionFSHooks(Process::GetTextSize());
+#if ! PLG_DUMMY
         DEBUG("\nLoading CYX...\n\n");
         CheckRegion();
         if (g_region != REGION_NONE) {
@@ -468,6 +475,7 @@ namespace CTRPluginFramework {
                 DEBUG("\nCYX failed to initialize with error code %08X; bailing out!\n\n", cyxres);
             }
         }
+#endif
     }
 
     // Called when process ends
@@ -477,6 +485,7 @@ namespace CTRPluginFramework {
     }
 
     void InitMenu(PluginMenu &menu) {
+#if ! PLG_DUMMY
         menu += new MenuFolder(LANG("menuMiscellaneous"), std::vector<MenuEntry *>({
             new MenuEntry("Change server location", nullptr, serverAdrChg, "Change the server address to be connected to for the NETWORK MENU."),
             new MenuEntry("Spoof VERSION system variable", nullptr, versionSpoof, "[Useless but whatever] Modify the VERSION system variable to fool BASIC programs imposing a version blocker."),
@@ -498,6 +507,9 @@ namespace CTRPluginFramework {
         }));
         menu += new MenuEntry(LANG("menuCYXAPISet"), nullptr, cyxAPItoggle, "The CYX API adds various features to BASIC.");
         menu += new MenuEntry(LANG("menuPluginDiscl"), nullptr, pluginDisclaimer, "General details about this plugin");
+#else
+        menu += new MenuEntry("Dummy entry", nullptr, nullptr, "This plugin is a dummy");
+#endif
     }
 
     void warnIfSDTooBig(void) {
@@ -516,12 +528,14 @@ namespace CTRPluginFramework {
         }
     }
 
-const std::string about =
-        "SmileBASIC-CYX\n"
-        "2022-2023 CyberYoshi64\n\n"
-        "May not be used seperately.";
+    const std::string about =
+        "SmileBASIC-CYX " STRING_VERSION "\n"
+        "Build " BUILD_DATE "\n"
+        "Commit " TOSTRING(COMMIT_HASH) "\n"
+        "2022-2024 CyberYoshi64";
 
     int main(void) {
+#if ! PLG_DUMMY
         if (g_region != REGION_NONE && g_region < REGION_MAX){
             Process::exceptionCallback = Exception::Handler;
             g_osFirmVer = osGetFirmVersion();
@@ -540,15 +554,22 @@ const std::string about =
             return 1;
         }
         warnIfSDTooBig();
-
+        
+        CFG_GetParentalControlMask(&parentalControlFlag);
+        CFGU_GetSystemModel(&g_systemModel);
+        CFGU_SecureInfoGetRegion(&g_systemRegion);
+        memcpy(g_systemRegionString, "JPNUSAEURAUSKORCHNTWNUNK" + (3 * MIN(g_systemRegion, 7)), 3);
+        g_systemRegionString[3] = 0;
+#endif
         PluginMenu *menu = new PluginMenu("CYX", VER_MAJOR, VER_MINOR, VER_MICRO, about, true);
 
         menu->SynchronizeWithFrame(true);
         menu->ShowWelcomeMessage(true);
+#if ! PLG_DUMMY
         menu->Callback(menuTick);
         menu->OnOpening = menuOpen;
         menu->OnClosing = menuClose;
-
+#endif
         InitMenu(*menu);
         menu->Run();
         delete menu;

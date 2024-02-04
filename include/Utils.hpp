@@ -6,6 +6,7 @@
 
 #define MAX(a,b)    (((a) > (b)) ? (a):(b))
 #define MIN(a,b)    (((a) < (b)) ? (a):(b))
+#define CLP(v,a,b)  (((v) < (a)) ? (a) : (((v) > (b)) ? (b) : (v)));
 
 int dateTimeToString(char *out, u64 in);
 

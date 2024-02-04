@@ -25,11 +25,12 @@
 *.a
 *.lib
 
-libcwav
-__staging*
+output
 build
 release
+libcwav
 lib/Library/debug
 lib/Library/release
+PTC3PLG.zip
 *.elf
 *.out

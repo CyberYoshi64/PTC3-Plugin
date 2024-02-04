@@ -8,7 +8,7 @@
  */
 
 #include "stdint.h"
-#include "types.h"
+#include <3ds/types.h>
 
 #if defined(__cplusplus)
 extern "C" {

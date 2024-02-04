@@ -6,13 +6,10 @@ Version: # Plugin version
     Revision: 6
 
 Targets: # Low TitleId of games which are compatibles with this plugin (empty for all)
-    - 0x00117200 # JPN
-    - 0x0016DE00 # USA
-    - 0x001A1C00 # EUR
 
 Title: SmileBASIC-CYX
 
 Summary: CyberYoshi64's eXtensions
   
 Compatibility: Any
-MemorySize: 10MiB
+MemorySize: 5MiB

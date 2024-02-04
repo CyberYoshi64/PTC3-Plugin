@@ -1,7 +1,6 @@
 #include "BasicAPI.hpp"
 
 namespace CTRPluginFramework {
-    std::vector<BasicAPI::Entry> BasicAPI::Entries = {};
     u32 BasicAPI::handleIDCounter = BASICAPI_HANDLE_START;
     std::vector<BasicAPI::QueueEntry> BasicAPI::Queue = {};
     std::vector<BasicAPI::FileStruct> BasicAPI::Files = {};
@@ -630,37 +629,19 @@ namespace CTRPluginFramework {
     }
     int BasicAPI::Func_CFGSET(BASICAPI_FUNCVARS) {
         if (argc < 2) {
-            APIOUT(outv, "EMISSING_ARGS");
             return 1;
         }
-        basicapi__ClearClipboard();
-        std::string arg1 = ""; s32 val = CYX::argGetInteger(argv+1);
-        string16 arg1_16; CYX::argGetString(arg1_16, argv);
-        Utils::ConvertUTF16ToUTF8(arg1, arg1_16); arg1_16.clear(); strupper(arg1);
+        s32 cfgType = CYX::argGetInteger(argv), len;
+        s32 val = CYX::argGetInteger(argv+1);
         bool condition1 = false;
 
         if (flags & APIFLAG_ALLOW_TOGGLE){
-            if (arg1 == "SYSINFO"){
-                flags &= ~APIFLAG_READ_SYSINFO;
-                if (val) flags |= APIFLAG_READ_SYSINFO;
-                return 0;
-            }
-            if (arg1 == "FWINFO"){
-                flags &= ~APIFLAG_READ_FWINFO;
-                if (val) flags |= APIFLAG_READ_FWINFO;
-                return 0;
-            }
-            if (arg1 == "HWINFO"){
-                flags &= ~APIFLAG_READ_HWINFO;
-                if (val) flags |= APIFLAG_READ_HWINFO;
-                return 0;
-            }
-            if (arg1 == "SAFEDIR"){
+            switch (cfgType) {
+            case BAPICFGID_SAFEDIR:
                 flags &= ~APIFLAG_FS_ACC_SAFE;
                 if (val) flags |= APIFLAG_FS_ACC_SAFE;
                 return 0;
-            }
-            if (arg1 == "PRJ_ACCESS"){
+            case BAPICFGID_PRJ_ACCESS:
                 condition1 = flags & APIFLAG_FS_ACC_XREF_RW;
                 flags &= ~APIFLAG_FS_ACCESS_XREF;
                 if (val & 1) flags |= APIFLAG_FS_ACC_XREF_RO;
@@ -673,8 +654,7 @@ namespace CTRPluginFramework {
                     if (condition1) flags |= APIFLAG_FS_ACC_XREF_RW;
                 }
                 return 0;
-            }
-            if (arg1 == "SD_ACCESS"){
+            case BAPICFGID_SD_ACCESS:
                 condition1 = flags & APIFLAG_FS_ACC_SD_RW;
                 flags &= ~APIFLAG_FS_ACCESS_SD;
                 if (val & 1) flags |= APIFLAG_FS_ACC_SD_RO;
@@ -689,7 +669,7 @@ namespace CTRPluginFramework {
                 return 0;
             }
         }
-        return 0;
+        return 1;
     }
 
     int BasicAPI::Func_CFGGET(BASICAPI_FUNCVARS) {
@@ -697,200 +677,150 @@ namespace CTRPluginFramework {
             APIOUT(outv, "EMISSING_ARGS");
             return 1;
         }
-        basicapi__ClearClipboard();
-        std::string arg1 = "";
-        string16 arg1_16; CYX::argGetString(arg1_16, argv);
-        Utils::ConvertUTF16ToUTF8(arg1, arg1_16); arg1_16.clear();
-        std::string data = ""; strupper(arg1);
+        s32 cfgType = CYX::argGetInteger(argv), len;
 
-        if (arg1 == "SYSINFO"){
-            APIOUT_I(outv, (bool)(flags & APIFLAG_READ_SYSINFO));
+        std::string s; File f;
+        Hooks::FuncMapFile* v;
+
+        switch (cfgType) {
+        case BAPICFGID__GETMAP:
+            if (File::Open(f, RESOURCES_PATH"/funcCfgMap.bin") != File::SUCCESS) {
+                APIOUT(outv, "EBADFILE");
+                return 1;
+            }
+            v = new Hooks::FuncMapFile();
+            if (!v) {
+                f.Close();
+                APIOUT(outv, "EOUTOFMEMORY");
+                return 1;
+            }
+            if (Hooks::ParseFuncMapFile(f, v)) {
+                f.Close();
+                APIOUT(outv, "EBADFILEFORMAT");
+                return 1;
+            }
+            f.Close();
+            s = "O";
+            len = MIN(v->ids.size(), v->humanNames.size());
+            for (int i = 0; i < len; i++) {
+                s += Utils::Format("%ld:%s;", v->ids[i], v->humanNames[i].c_str());
+            }
+            APIOUT(outv, s);
             return 0;
-        }
-        if (arg1 == "FWINFO"){
-            APIOUT_I(outv, (bool)(flags & APIFLAG_READ_FWINFO));
-            return 0;
-        }
-        if (arg1 == "HWINFO"){
-            APIOUT_I(outv, (bool)(flags & APIFLAG_READ_HWINFO));
-            return 0;
-        }
-        if (arg1 == "SAFEDIR"){
+        case BAPICFGID_SAFEDIR:
             APIOUT_I(outv, (bool)(flags & APIFLAG_FS_ACC_SAFE));
             return 0;
-        }
-        if (arg1 == "PRJ_ACCESS"){
+        case BAPICFGID_PRJ_ACCESS:
             APIOUT_I(outv, ((flags & APIFLAG_FS_ACCESS_XREF)>>APIFLAG_BIT_FS_ACC_XREF_RO));
             return 0;
-        }
-        if (arg1 == "SD_ACCESS"){
+        case BAPICFGID_SD_ACCESS:
             APIOUT_I(outv, ((flags & APIFLAG_FS_ACCESS_SD)>>APIFLAG_BIT_FS_ACC_SD_RO));
             return 0;
-        }
-        if (arg1 == "DIRECTMODE"){
+        case BAPICFGID_DIRECTMODE:
             APIOUT_I(outv, CYX::mirror.isDirectMode);
             return 0;
-        }
-        if (arg1 == "SDMCFREE"){
-            APIOUT(outv, (double)CYX::sdmcFreeSpace);
+        case BAPICFGID_PTC_VER:
+            APIOUT_I(outv, CYX::currentVersion);
             return 0;
-        }
-        if (arg1 == "SDMCTOTAL"){
-            APIOUT(outv, (double)CYX::sdmcTotalSpace);
+        case BAPICFGID_LANG:
+            APIOUT_I(outv, System::GetSystemLanguage());
             return 0;
-        }
-        if (arg1 == "SDMCFREE_C"){
-            APIOUT_I(outv, g_sdmcArcRes.freeClusters);
+        case BAPICFGID_LANGSTR:
+            s = "JPNENGFRADEUITASPACHNKORNEDPORRUSTWNUNK";
+            APIOUT(outv, s.substr(MIN((int)System::GetSystemLanguage(), 12), 3));
             return 0;
-        }
-        if (arg1 == "SDMCCLUSTER"){
+        case BAPICFGID_REGION:
+            APIOUT_I(outv, g_region);
+            return 0;
+        case BAPICFGID_REGIONSTR:
+            APIOUT(outv, g_regionString);
+            return 0;
+        case BAPICFGID_SYS_MODEL:
+            APIOUT_I(outv, g_systemModel);
+            return 0;
+        case BAPICFGID_SYS_REGION:
+            APIOUT_I(outv, g_systemRegion);
+            return 0;
+        case BAPICFGID_SYS_REGIONSTR:
+            APIOUT(outv, g_systemRegionString);
+            return 0;
+        case BAPICFGID_SYS_VERSTR:
+            APIOUT(outv, g_osSysVer);
+            return 0;
+        case BAPICFGID_FIRM_VER:
+            APIOUT_I(outv, g_osFirmVer);
+            return 0;
+        case BAPICFGID_KERNEL_VER:
+            APIOUT_I(outv, g_osKernelVer);
+            return 0;
+        case BAPICFGID_PARENTALFLAGS:
+            APIOUT_I(outv, parentalControlFlag);
+            return 0;
+        case BAPICFGID_ISCITRA:
+            APIOUT_I(outv, System::IsCitra());
+            return 0;
+        case BAPICFGID_VOLSLIDER:
+            APIOUT_I(outv, CYX::volumeSliderValue);
+            return 0;
+        case BAPICFGID_HEADSET:
+            APIOUT_I(outv, OS_SharedConfig->headset_connected != 0);
+            return 0;
+        case BAPICFGID_3DSLIDER:
+            APIOUT_I(outv, (double)OS_SharedConfig->slider_3d);
+            return 0;
+        case BAPICFGID_WIFILEVEL:
+            APIOUT_I(outv, OS_SharedConfig->wifi_strength);
+            return 0;
+        case BAPICFGID_BAT_LEVEL_RAW:
+            APIOUT_I(outv, CYX::rawBatteryLevel);
+            return 0;
+        case BAPICFGID_BAT_LEVEL:
+            APIOUT_I(outv, OS_SharedConfig->led_battery>>2 & 7);
+            return 0;
+        case BAPICFGID_BAT_CHARGING:
+            APIOUT_I(outv, OS_SharedConfig->led_battery & 2);
+            return 0;
+        case BAPICFGID_BAT_CHARGER:
+            APIOUT_I(outv, OS_SharedConfig->led_battery & 1);
+            return 0;
+        case BAPICFGID_CAN_SLEEP:
+            APIOUT_I(outv, CYX::mcuSleep);
+            return 0;
+        case BAPICFGID_NETWORKSTATE:
+            APIOUT_I(outv, OS_SharedConfig->network_state);
+            return 0;
+        case BAPICFGID_CYX_VER:
+            APIOUT_I(outv, VER_INTEGER);
+            return 0;
+        case BAPICFGID_CYX_VERSTR:
+            APIOUT(outv, Utils::Format(STRING_VERSION));
+            return 0;
+        case BAPICFGID_CYX_COMMIT:
+            APIOUT_I(outv, COMMIT_HASH);
+            return 0;
+        case BAPICFGID_CYX_BUILDSTR:
+            APIOUT(outv, BUILD_DATE);
+            return 0;
+        case BAPICFGID_SDMCCLUSTER:
             APIOUT_I(outv, g_sdmcArcRes.clusterSize);
             return 0;
-        }
-        if (arg1 == "SDMCSECTOR"){
+        case BAPICFGID_SDMCSECTOR:
             APIOUT_I(outv, g_sdmcArcRes.sectorSize);
             return 0;
-        }
-        if (arg1 == "SDMCTOTAL_C"){
+        case BAPICFGID_SDMCFREE:
+            APIOUT(outv, (double)CYX::sdmcFreeSpace);
+            return 0;
+        case BAPICFGID_SDMCFREE_C:
+            APIOUT_I(outv, g_sdmcArcRes.freeClusters);
+            return 0;
+        case BAPICFGID_SDMCTOTAL:
+            APIOUT(outv, (double)CYX::sdmcTotalSpace);
+            return 0;
+        case BAPICFGID_SDMCTOTAL_C:
             APIOUT_I(outv, g_sdmcArcRes.totalClusters);
             return 0;
         }
-        if (flags & APIFLAG_READ_HWINFO){
-            if (arg1 == "3DSLIDER"){
-                APIOUT_I(outv, osGet3DSliderState());
-                return 0;
-            }
-            if (arg1 == "HEADSET"){
-                APIOUT_I(outv, (s32)osIsHeadsetConnected());
-                return 0;
-            }
-            if (arg1 == "VOLSLIDER"){
-                if (System::IsCitra()) {
-                    APIOUT_I(outv, (s32)63);
-                    return 0;
-                }
-                mcuHwcInit();
-                u8 out;
-                MCUHWC_GetSoundSliderLevel(&out);
-                mcuHwcExit();
-                APIOUT_I(outv, out);
-                return 0;
-            }
-            if (arg1 == "SIGNAL"){
-                if (System::IsCitra()) {
-                    APIOUT_I(outv, 0);
-                    return 0;
-                }
-                APIOUT_I(outv, osGetWifiStrength());
-                return 0;
-            }
-            if (arg1 == "BAT_LEVEL"){
-                if (System::IsCitra()) {
-                    APIOUT_I(outv, 100);
-                    return 0;
-                }
-                mcuHwcInit();
-                u8 out;
-                MCUHWC_GetBatteryLevel(&out);
-                mcuHwcExit();
-                APIOUT_I(outv, out);
-                return 0;
-            }
-            if (arg1 == "CHARGE"){
-                if (System::IsCitra()) {
-                    APIOUT_I(outv, 1);
-                    return 0;
-                }
-                mcuHwcInit();
-                u8 out;
-                MCUHWC_ReadRegister(0xf,&out,1);
-                mcuHwcExit();
-                APIOUT_I(outv, ((out >> 4) & 1));
-                return 0;
-            }
-            if (arg1 == "CANSLEEP"){
-                if (System::IsCitra()) {
-                    APIOUT_I(outv, 0);
-                    return 0;
-                }
-                APIOUT_I(outv, mcuIsSleepEnabled());
-                return 0;
-            }
-        }
-        if (BasicAPI::flags & APIFLAG_READ_SYSINFO){
-            if (arg1 == "LANG"){
-                APIOUT_I(outv, System::GetSystemLanguage());
-                return 0;
-            } else if (arg1 == "LANG$"){
-                switch ((int)System::GetSystemLanguage()){
-                case  0: data="JPN"; break; case  1: data="ENG"; break;
-                case  2: data="FRA"; break; case  3: data="DEU"; break;
-                case  4: data="ITA"; break; case  5: data="SPA"; break;
-                case  6: data="CHN"; break; case  7: data="KOR"; break;
-                case  8: data="NED"; break; case  9: data="POR"; break;
-                case 10: data="RUS"; break; case 11: data="TWN"; break;
-                };
-                APIOUT(outv, data);
-                return 0;
-            } else if (arg1 == "CITRA"){
-                APIOUT_I(outv, System::IsCitra());
-                return 0;
-            }
-            if (arg1 == "REGION$"){
-                data.clear(); data = g_osNVer.region;
-                APIOUT(outv, data);
-                return 0;
-            }
-            if (arg1 == "REGION"){
-                data = "JUE_CKT";
-                APIOUT_I(outv, data.find(g_osNVer.region));
-                return 0;
-            }
-        }
-        if (arg1 == "VERSION"){
-            APIOUT_I(outv, VER_INTEGER);
-            return 0;
-        }
-        if (arg1 == "VERSION$"){
-            APIOUT(outv, Utils::Format(STRING_VERSION "/" STRING_BUILD));
-            return 0;
-        }
-        if (arg1 == "PTCVER"){
-            APIOUT_I(outv, CYX::currentVersion);
-            return 0;
-        }
-        if (arg1 == "PTCREG$"){
-            APIOUT(outv, g_regionString);
-            return 0;
-        }
-        if (arg1 == "PTCREG"){
-            APIOUT_I(outv, g_region);
-            return 0;
-        }
-        if (flags & APIFLAG_READ_FWINFO){
-            if (arg1 == "SYSVER$"){
-                char str[32]={0};
-                APIOUT(outv, g_osSysVer);
-                return 0;
-            }
-            if (arg1 == "FIRMVER"){
-                APIOUT_I(outv, g_osFirmVer);
-                return 0;
-            }
-            if (arg1 == "KERNELVER"){
-                APIOUT_I(outv, g_osKernelVer);
-                return 0;
-            }
-        }
-        if (arg1 == "BUILD$"){
-            APIOUT(outv, BUILD_DATE);
-            return 0;
-        }
-        if (arg1 == "COMMIT$"){
-            APIOUT(outv, COMMIT_HASH);
-            return 0;
-        }
-        APIOUT_I(outv, 0);
+        APIOUT_I(outv, -1);
         return 1;
     }
 
@@ -1072,23 +1002,96 @@ namespace CTRPluginFramework {
         return (u32)CYX::editorInstance->clipboardData;
     }
     int BasicAPI::Parse(BASICAPI_FUNCVARS) {
-        if (!Entries.size()) {
-            APIOUT(outv, "Error: Bad API state");
-            return 0;
-        }
-        std::string str = ""; string16 st2;
+        s32 funcType, len;
+        
+        std::string s; File f;
+        Hooks::FuncMapFile* v;
+        
         CYX::SetAPIUse(true);
         if (argc) {
-            CYX::argGetString(st2, argv);
-            Utils::ConvertUTF16ToUTF8(str, st2);
-            strupper(str);
+            funcType = CYX::argGetInteger(argv);
             APIOUT_I(outv, 0);
-            if (str == "HELLO") {
-                APIOUT(outv, "Hello!");
+            switch (funcType)
+            {
+            case 0:
+                APIOUT_I(outv, 0x10000001);
                 return 0;
-            }
-            for (auto i : Entries) {
-                if (str == i.id) return i.func(++argv, argc-1, outv, outc);
+            case BAPIFUNC__GETMAP:
+                if (File::Open(f, RESOURCES_PATH"/funcMap.bin") != File::SUCCESS) {
+                    APIOUT(outv, "EBADFILE");
+                    return 1;
+                }
+                v = new Hooks::FuncMapFile();
+                if (!v) {
+                    f.Close();
+                    APIOUT(outv, "EOUTOFMEMORY");
+                    return 1;
+                }
+                if (Hooks::ParseFuncMapFile(f, v)) {
+                    f.Close();
+                    APIOUT(outv, "EBADFILEFORMAT");
+                    return 1;
+                }
+                f.Close();
+                s = "O";
+                len = MIN(v->ids.size(), v->humanNames.size());
+                for (int i = 0; i < len; i++) {
+                    s += Utils::Format("%ld:%s;", v->ids[i], v->humanNames[i].c_str());
+                }
+                APIOUT(outv, s);
+                return 0;
+            case BAPIFUNC_INIT:
+                return Func_INIT(BASICAPI_FUNCVARSPASS);
+            case BAPIFUNC_EXIT:
+                return Func_EXIT(BASICAPI_FUNCVARSPASS);
+            case BAPIFUNC_CFGGET:
+                return Func_CFGGET(BASICAPI_FUNCVARSPASS);
+            case BAPIFUNC_CFGSET:
+                return Func_CFGSET(BASICAPI_FUNCVARSPASS);
+            case BAPIFUNC_OSD:
+                return Func_OSD(BASICAPI_FUNCVARSPASS);
+            case BAPIFUNC_CRASH:
+                return Func_CRASH(BASICAPI_FUNCVARSPASS);
+            case BAPIFUNC_FILES:
+                return Func_FILES(BASICAPI_FUNCVARSPASS);
+            case BAPIFUNC_FOPEN:
+                return Func_FOPEN(BASICAPI_FUNCVARSPASS);
+            case BAPIFUNC_FMODE:
+                return Func_FMODE(BASICAPI_FUNCVARSPASS);
+            case BAPIFUNC_FREAD:
+                return Func_FREAD(BASICAPI_FUNCVARSPASS);
+            case BAPIFUNC_FWRITE:
+                return Func_FWRITE(BASICAPI_FUNCVARSPASS);
+            case BAPIFUNC_FCLOSE:
+                return Func_FCLOSE(BASICAPI_FUNCVARSPASS);
+            case BAPIFUNC_FSEEK:
+                return Func_FSEEK(BASICAPI_FUNCVARSPASS);
+            case BAPIFUNC_CHKFILE:
+                return Func_CHKFILE(BASICAPI_FUNCVARSPASS);
+            case BAPIFUNC_CHKDIR:
+                return Func_CHKDIR(BASICAPI_FUNCVARSPASS);
+            case BAPIFUNC_MKFILE:
+                return Func_MKFILE(BASICAPI_FUNCVARSPASS);
+            case BAPIFUNC_MKDIR:
+                return Func_MKDIR(BASICAPI_FUNCVARSPASS);
+            case BAPIFUNC_MVFILE:
+                return Func_MVFILE(BASICAPI_FUNCVARSPASS);
+            case BAPIFUNC_MVDIR:
+                return Func_MVDIR(BASICAPI_FUNCVARSPASS);
+            case BAPIFUNC_RMFILE:
+                return Func_RMFILE(BASICAPI_FUNCVARSPASS);
+            case BAPIFUNC_RMDIR:
+                return Func_RMDIR(BASICAPI_FUNCVARSPASS);
+            case BAPIFUNC_VALIDATE:
+                return Func_VALIDATE(BASICAPI_FUNCVARSPASS);
+            case BAPIFUNC_UNIXTIME:
+                return Func_UNIXTIME(BASICAPI_FUNCVARSPASS);
+            case BAPIFUNC_FILLGRP:
+                return Func_FILLGRP(BASICAPI_FUNCVARSPASS);
+            case BAPIFUNC_SYSGCOPY:
+                return Func_SYSGCOPY(BASICAPI_FUNCVARSPASS);
+            case BAPIFUNC_SETUP_CLIP:
+                return Func_SETUP_CLIP(BASICAPI_FUNCVARSPASS);
             }
             APIOUT_I(outv, -1);
             return 1;
@@ -1096,39 +1099,10 @@ namespace CTRPluginFramework {
         return 0;
     }
 
-    void BasicAPI::AddEntry(const char* id, BasicAPIFunction func) {
-        Entries.push_back({(char*)id, func});
+    void BasicAPI::Initialize(){
+        // TODO: Something
     }
 
-    void BasicAPI::Initialize(){
-        Entries.clear();
-        AddEntry("CFGGET", Func_CFGGET);
-        AddEntry("FILES", Func_FILES);
-        AddEntry("FREAD", Func_FREAD);
-        AddEntry("FWRITE", Func_FWRITE);
-        AddEntry("OSD", Func_OSD);
-        AddEntry("UNIXTIME", Func_UNIXTIME);
-        AddEntry("FSEEK", Func_FSEEK);
-        AddEntry("FMODE", Func_FMODE);
-        AddEntry("FOPEN", Func_FOPEN);
-        AddEntry("FCLOSE", Func_FCLOSE);
-        AddEntry("CFGSET", Func_CFGSET);
-        AddEntry("MKFILE", Func_MKFILE);
-        AddEntry("MKDIR", Func_MKDIR);
-        AddEntry("CHKFILE", Func_CHKFILE);
-        AddEntry("CHKDIR", Func_CHKDIR);
-        AddEntry("RMFILE", Func_RMFILE);
-        AddEntry("RMDIR", Func_RMDIR);
-        AddEntry("MVFILE", Func_MVFILE);
-        AddEntry("MVDIR", Func_MVDIR);
-        AddEntry("SETUP_CLIP", Func_SETUP_CLIP);
-        AddEntry("FILLGRP", Func_FILLGRP);
-        AddEntry("SYSGCOPY", Func_SYSGCOPY);
-        AddEntry("INIT", Func_INIT);
-        AddEntry("EXIT", Func_EXIT);
-        AddEntry("CRASH", Func_CRASH);
-        AddEntry("VALIDATE", Func_VALIDATE);
-    }
     void BasicAPI::Finalize(){
         for (int i=0; i<Files.size(); i++){
             if (!Files[i].f) continue;

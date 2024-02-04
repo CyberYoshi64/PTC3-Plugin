@@ -90,13 +90,13 @@ namespace CTRPluginFramework {
             DEBUG("Archive buffer is full.\n");
             return;
         }
-        if (archid == 4) { // application save data
+        if (archid == ARCHIVE_SAVEDATA) { // application save data
             if (existArchiveHnd(handle) != -1) return;
             DEBUG("Adding save archive: %016lX\n", handle);
             save.entries[save.numEntries].type = ARCH_SAVE;
             save.entries[save.numEntries].archHandle = handle;
             save.entries[save.numEntries++].finished = 0;
-        } else if (archid == 6) { // Extra User Save Data
+        } else if (archid == ARCHIVE_EXTDATA) { // Extra User Save Data
             if (existArchiveHnd(handle) != -1) return;
             DEBUG("Adding extData archive: %016lX\n", handle);
             save.entries[save.numEntries].type = ARCH_EXTDATA;
@@ -109,7 +109,7 @@ namespace CTRPluginFramework {
 
     void OnionSave::addArchive(u8* arch, u64 handle) {
         char newbuf[10];
-        if (ENABLE_DEBUG) strcpydot(newbuf, (char*)arch, 10);
+        if (ENABLE_DEBUG) strncpy(newbuf, (char*)arch, 10);
         /*
             Archives starting with $ are used by Nintendo libraries
             internally. In SmileBASIC, it's to mount the SD Card for

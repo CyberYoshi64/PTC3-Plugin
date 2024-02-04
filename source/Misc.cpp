@@ -47,7 +47,7 @@ namespace CTRPluginFramework {
         if (kbdres < 0 || kbdres >= 2) return;
         PLGSET(PLGFLG_EXPERIMENTS);
         if (kbdres == 0) {
-            Config::Get().cyx.server.serverType = Config::Enums::CYX::ServerType::VANILLA;
+            Config::Get().cyx.set.server.serverType = Config::Enums::ServerType::VANILLA;
             CYX::ReplaceServerName(SBSERVER_DEFAULT_NAME1, SBSERVER_DEFAULT_NAME2);
             return;
         } else {
@@ -72,8 +72,8 @@ namespace CTRPluginFramework {
             }
             while (strlen(srvName.c_str())>SBSERVER_URL_MAXLEN) srvName.resize(srvName.size()-1);
             if (MessageBox("Server name changer", srvName+"\n\nIs this correct?", DialogType::DialogYesNo, ClearScreen::Both)()){
-                sprintf(Config::Get().cyx.server.serverName, "%s", srvName.c_str());
-                Config::Get().cyx.server.serverType = Config::Enums::CYX::ServerType::GENERIC;
+                sprintf(Config::Get().cyx.set.server.serverName, "%s", srvName.c_str());
+                Config::Get().cyx.set.server.serverType = Config::Enums::ServerType::GENERIC;
                 CYX::ReplaceServerName(srvName, srvName);
             } else {
                 MessageBox("Cancelled operation", "No changes were made.")();
@@ -561,9 +561,9 @@ namespace CTRPluginFramework {
                 rtDisableHook(&CYX::nnActIsNetworkAccountHook);
             }
 
-            Config::Get().cyx.server.serverType |= Config::Enums::CYX::ServerType::STUB_TOKEN;
+            Config::Get().cyx.set.server.serverType |= Config::Enums::ServerType::STUB_TOKEN;
             if (!res)
-                Config::Get().cyx.server.serverType ^= Config::Enums::CYX::ServerType::STUB_TOKEN;
+                Config::Get().cyx.set.server.serverType ^= Config::Enums::ServerType::STUB_TOKEN;
         }
         MessageBox(m, DialogType::DialogOk, ClearScreen::Both)();
     }

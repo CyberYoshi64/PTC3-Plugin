@@ -213,9 +213,7 @@ enum SBVariableTypes {
 };
 
 enum BasicAPI_Flags { // Project flags
-    APIFLAG_READ_SYSINFO    = BIT( 0), APIFLAG_BIT_READ_SYSINFO    =  0, // Access basic info, such as system language and region
-    APIFLAG_READ_FWINFO     = BIT( 1), APIFLAG_BIT_READ_FWINFO     =  1, // Access firmware version info
-    APIFLAG_READ_HWINFO     = BIT( 2), APIFLAG_BIT_READ_HWINFO     =  2, // Access hardware info, such as 3D slider state, headset mode and Wi-Fi strength
+    APIFLAG_NONE            = 0,
     APIFLAG_FS_ACC_SAFE     = BIT(16), APIFLAG_BIT_FS_ACC_SAFE     = 16, // Allow use of a private folder (/homefs/[project name])
     APIFLAG_FS_ACC_XREF_RO  = BIT(17), APIFLAG_BIT_FS_ACC_XREF_RO  = 17, // Access files cross-project (read-only)
     APIFLAG_FS_ACC_XREF_RW  = BIT(18), APIFLAG_BIT_FS_ACC_XREF_RW  = 18, // Access files cross-project (with write permissions)
@@ -226,11 +224,11 @@ enum BasicAPI_Flags { // Project flags
     // All flags set
     APIFLAG_ADMIN = BIT(24)-1,
 
-    APIFLAG_FS_ACCESS_XREF = (APIFLAG_FS_ACC_XREF_RO|APIFLAG_FS_ACC_XREF_RW),
-    APIFLAG_FS_ACCESS_SD = (APIFLAG_FS_ACC_SD_RO|APIFLAG_FS_ACC_SD_RW),
+    APIFLAG_FS_ACCESS_XREF = (APIFLAG_FS_ACC_XREF_RO|APIFLAG_FS_ACC_XREF_RW),   // Flags depicting permission to other project files
+    APIFLAG_FS_ACCESS_SD = (APIFLAG_FS_ACC_SD_RO|APIFLAG_FS_ACC_SD_RW),         // Flags depicting permission to SD Card access
 
     // Default flag
-    APIFLAG_DEFAULT     = (APIFLAG_READ_SYSINFO | APIFLAG_READ_HWINFO)
+    APIFLAG_DEFAULT     = APIFLAG_ALLOW_TOGGLE
 };
 
 namespace CTRPluginFramework {
@@ -302,15 +300,55 @@ namespace CTRPluginFramework {
          */
         static bool WasCYXAPIUsed();
 
-        static void LoadSettings(void);
-        static void SaveSettings(void);
+        /**
+         * @brief Replace server names
+         * 
+         * @note
+         * Custom servers very likely only use a single domain, but change my mind.
+         * 
+         * @param saveURL Replacement for save.smilebasic.com
+         * @param loadURL Replacement for load.smilebasic.com
+         */
         static void ReplaceServerName(const std::string& saveURL, const std::string& loadURL);
+
+        /**
+         * @brief Change SmileBASIC Direct Mode boot text
+         * 
+         * @param text Header text
+         * @param bytfre Text after the free byte count
+         */
         static void ChangeBootText(const char* text, const char* bytfre);
+
+        /**
+         * @brief Get the File Name of a Program Slot
+         * 
+         * @param slot PRG slot (0 - 3)
+         * @return File name (blank if no file is loaded)
+         */
         static std::string GetProgramSlotFileName(u8 slot);
+
+        /**
+         * @brief Format SmileBASIC version as string
+         * 
+         * @param ver Version integer
+         * @return Formatted string
+         */
         static std::string PTCVersionString(u32 ver);
+
+        /**
+         * @brief Validate SmileBASIC version
+         * 
+         * @param ver Version integer
+         * @return `true`, if valid. `false` otherwise. 
+         */
         static bool isPTCVersionValid(u32 ver);
+        
         static u8 getSBVariableType(u32 rawType);
+        
+        /// @brief Screenshot stub - not implemented yet
         static int scrShotStubFunc(void);
+
+        /// @brief CONTROLLER stub - implements CYX API beside the main functionality
         static int controllerFuncHook(void* ptr, u32 selfPtr, BASICGenericVariable* outv, u32 outc, void* a4, u32 argc, BASICGenericVariable* argv);
         static int stubBASICFunction(void* ptr, u32 selfPtr, BASICGenericVariable* outv, u32 outc, void* a4, u32 argc, BASICGenericVariable* argv);
 
@@ -357,11 +395,11 @@ namespace CTRPluginFramework {
         static int nnActIsNetworkAccountStub();
 
         static u32 currentVersion;
-        static BASICEditorData* editorInstance;
-        static BASICActiveProject* activeProject;
-        static BASICGRPStructs* GraphicPage;
-        static BASICTextPalette* textPalette;
-        static PTCConfig* ptcConfig;
+        static BASICEditorData* editorInstance;     // Editor instance
+        static BASICActiveProject* activeProject;   // Active Project strings
+        static BASICGRPStructs* GraphicPage;        // Graphic pages
+        static BASICTextPalette* textPalette;       // Text console palette
+        static PTCConfig* ptcConfig;                // BASIC config struct
         static std::string g_currentProject;
         static RT_HOOK clipboardFunc;
         static RT_HOOK basControllerFunc;
@@ -371,19 +409,22 @@ namespace CTRPluginFramework {
         static bool forceDisableSndOnPause;
         static string16 cyxApiTextOut;
         static u32 cyxApiOutc, cyxApiLastOutv;
-        static u16* basicFontMap;
+        static u16* basicFontMap;                   // BASIC font map
         static u32 patch_FontGetOffset[];
         static u32 patch_FontGetOffsetNew[];
         static MirroredVars mirror;
-        static FontOffFunc fontOff;
+        static FontOffFunc fontOff;                 // FONTDEF remap function
         static u64 sdmcFreeSpace;
         static u64 sdmcTotalSpace;
+        static s32 volumeSliderValue;
+        static s32 rawBatteryLevel;
+        static u8 mcuSleep;
         static u64 askQuickRestore;
         static bool wouldExit;
         static std::string exitMessage;
         static u32 helpPageColors[];
-        static RT_HOOK petcServiceTokenHook;
-        static RT_HOOK nnActIsNetworkAccountHook;
+        static RT_HOOK petcServiceTokenHook;        // Hook for nn::act::GetIndependentServiceToken()
+        static RT_HOOK nnActIsNetworkAccountHook;   // Hook for nn::act::IsNetworkAccount()
     private:
         static bool provideCYXAPI;
         static bool wasCYXAPIused;

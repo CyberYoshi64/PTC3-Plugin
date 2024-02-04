@@ -39,7 +39,7 @@ namespace CTRPluginFramework {
     }
 
     void strcpydot(char* dst, char* src, int n) {
-        while (*src != ':' && n) {
+        while (*src != ':' && *src && n) {
             *dst++ = *src++;
             n--;
         }

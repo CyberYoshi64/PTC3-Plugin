@@ -1,0 +1,202 @@
+# - NAME: Project name
+# - INCLUDE_DIRS: Directories containing include headers.
+# - SOURCE_DIRS: Directories containing source files to compile.
+# - BUILD_DIR: Directory to store build files in.
+# - OUTPUT_DIR: Directory to output the final results to.
+# - LIBRARY_DIRS: Optional; Directories containing libraries to compile against.
+# - LIBRARIES: Optional; Libraries to compile against.
+# - BUILD_FLAGS: Optional; Shared build flags.
+# - BUILD_FLAGS_CC: Optional; C build flags.
+# - BUILD_FLAGS_CXX: Optional; C++ build flags.
+# - VERSION_MAJOR: Optional; Major version number.
+#     - Default value: 0
+# - VERSION_MINOR: Optional; Minor version number.
+#     - Default value: 0
+# - VERSION_MICRO: Optional; Micro version number.
+#     - Default value: 0
+#
+# PROLOGUE #
+
+.PHONY: all bootstrap clean
+
+all: bootstrap
+
+bootstrap:
+	@[ -d $(BUILD_DIR) ] || mkdir -p $(BUILD_DIR)
+	@[ -d $(OUTPUT_DIR) ] || mkdir -p $(OUTPUT_DIR)
+
+ifeq ($(strip $(DEVKITPRO)),)
+	$(error "Please set DEVKITPRO in your environment. export DEVKITPRO=<path to>devkitPro")
+endif
+
+TOPDIR 		?= 	$(CURDIR)
+
+define createdirrule
+$(1): | $(dir $(1))
+
+ifndef $(dir $(1))_DIRECTORY_RULE_IS_DEFINED
+$(dir $(1)):
+	@mkdir -p $$@
+
+$(dir $(1))_DIRECTORY_RULE_IS_DEFINED := 1
+endif
+endef
+
+rwildcard=$(wildcard $1/$2) $(foreach d,$(wildcard $1/*),$(call rwildcard,$d,$2))
+
+BUILT_FILTER := $(patsubst %.bin,$(BUILD_DIR)/%.bin.o,$(BUILD_FILTER)) \
+		$(patsubst %.c,$(BUILD_DIR)/%.o,$(BUILD_FILTER)) \
+		$(patsubst %.cpp,$(BUILD_DIR)/%.o,$(BUILD_FILTER)) \
+		$(patsubst %.s,$(BUILD_DIR)/%.o,$(BUILD_FILTER))
+
+OBJECT_FILES := $(foreach dir,$(SOURCE_DIRS), \
+			$(patsubst %.bin,$(BUILD_DIR)/%.bin.o,$(call rwildcard,$(dir),*.bin)) \
+			$(patsubst %.c,$(BUILD_DIR)/%.o,$(call rwildcard,$(dir),*.c)) \
+			$(patsubst %.cpp,$(BUILD_DIR)/%.o,$(call rwildcard,$(dir),*.cpp)) \
+			$(patsubst %.s,$(BUILD_DIR)/%.o,$(call rwildcard,$(dir),*.s)) \
+		)
+
+OBJECT_FILES := $(filter-out $(BUILT_FILTER),$(OBJECT_FILES))
+
+ifeq ($(strip $(VERSION_MAJOR)),)
+	VERSION_MAJOR := 0
+endif
+
+ifeq ($(strip $(VERSION_MINOR)),)
+	VERSION_MINOR := 0
+endif
+
+ifeq ($(strip $(VERSION_MICRO)),)
+	VERSION_MICRO := 0
+endif
+
+LD_FLAGS := $(patsubst %,-L%/lib,$(LIBRARY_DIRS)) $(patsubst %,-l%,$(LIBRARIES))
+COMMON_CC_FLAGS := $(sort $(foreach dir,$(SOURCE_DIRS),$(patsubst %,-I$(BUILD_DIR)/%,$(dir $(call rwildcard,$(dir),*))))) $(patsubst %,-I%,$(INCLUDE_DIRS)) $(patsubst %,-I%/include,$(LIBRARY_DIRS)) -g -DVERSION_MAJOR=$(VERSION_MAJOR) -DVERSION_MINOR=$(VERSION_MINOR) -DVERSION_MICRO=$(VERSION_MICRO) $(BUILD_FLAGS)
+COMMON_CXX_FLAGS :=
+
+ifeq ($(findstring -O,$(BUILD_FLAGS)),)
+	COMMON_CC_FLAGS += -Os
+endif
+
+BUILT_FILTER := $(patsubst %.v.pica,$(BUILD_DIR)/%.shbin.o,$(BUILD_FILTER)) \
+	$(patsubst %.shlist,$(BUILD_DIR)/%.shbin.o,$(BUILD_FILTER)) \
+
+OBJECT_FILES := $(foreach dir,$(SOURCE_DIRS), \
+		$(patsubst %.v.pica,$(BUILD_DIR)/%.shbin.o,$(call rwildcard,$(dir),*.v.pica)) \
+		$(patsubst %.shlist,$(BUILD_DIR)/%.shbin.o,$(call rwildcard,$(dir),*.shlist)) \
+	) $(OBJECT_FILES)
+
+OBJECT_FILES := $(filter-out $(BUILT_FILTER),$(OBJECT_FILES))
+
+DEVKITARM := $(DEVKITPRO)/devkitARM
+
+AR := $(DEVKITARM)/bin/arm-none-eabi-ar
+AS := $(DEVKITARM)/bin/arm-none-eabi-as
+CC := $(DEVKITARM)/bin/arm-none-eabi-gcc
+CXX := $(DEVKITARM)/bin/arm-none-eabi-g++
+NM := $(DEVKITARM)/bin/arm-none-eabi-nm
+
+OUTPUT_FILES := $(OUTPUT_DIR)/$(NAME).elf $(OUTPUT_DIR)/$(NAME).3gx
+
+LD_FLAGS += -T $(TOPDIR)/3gx.ld -Os -Wl,--gc-sections,--strip-discarded,--strip-debug
+COMMON_CC_FLAGS += -mword-relocations -ffast-math -march=armv6k -mtune=mpcore -mfloat-abi=hard -mtp=soft -D__3DS__
+
+NAME ?= plugin
+PLGINFO ?= 	$(NAME).plgInfo
+
+CLANG_CC := $(subst gcc,clang,$(CC))
+CLANG_CC_EXISTS := $(shell which $(CLANG_CC) > /dev/null 2> /dev/null; echo $$?)
+ifeq ($(CLANG_CC_EXISTS),0)
+	CC := $(CLANG_CC)
+endif
+
+CLANG_CXX := $(subst g++,clang++,$(CXX))
+CLANG_CXX_EXISTS := $(shell which $(CLANG_CXX) > /dev/null 2> /dev/null; echo $$?)
+ifeq ($(CLANG_CXX_EXISTS),0)
+	CXX := $(CLANG_CXX)
+endif
+
+CC_FLAGS := $(COMMON_CC_FLAGS) $(BUILD_FLAGS_CC)
+CXX_FLAGS := $(COMMON_CC_FLAGS) $(COMMON_CXX_FLAGS) $(BUILD_FLAGS_CXX)
+
+ifeq ($(findstring -std,$(BUILD_FLAGS_CC)),)
+	CC_FLAGS += -std=gnu11
+endif
+
+ifeq ($(findstring -std,$(BUILD_FLAGS_CXX)),)
+	CXX_FLAGS += -std=gnu++11
+endif
+
+ifneq ($(ENABLE_LINK_TIME_OPTIMIZATIONS), 0)
+	CC_FLAGS += -flto=auto -ffat-lto-objects
+	CXX_FLAGS += -flto=auto -ffat-lto-objects
+endif
+
+# MAIN RULES #
+
+.PHONY: all clean
+
+all: $(OUTPUT_DIR)/$(NAME).elf $(OUTPUT_DIR)/$(NAME).3gx
+
+$(BUILD_DIR)/%.shbin.o: $(BUILD_DIR)/%.shbin.c
+	@echo $@
+	@$(CC) -c $(CC_FLAGS) -MMD -MP -MF $(BUILD_DIR)/$*.d $< -o $@
+
+define shader-as
+	$(eval CURBIN := $(patsubst %.shbin.c,%.shbin,$@))
+	@picasso -o $(CURBIN) $1
+	@cd $(dir $(CURBIN)); \
+	xxd -i $(notdir $(CURBIN)) "$(CURDIR)/$@"
+	echo "extern const u8" `(echo $(notdir $(CURBIN)) | sed -e 's/^\([0-9]\)/_\1/' | tr . _)`"[];" >> `(echo $(CURBIN) | tr . _)`.h
+	echo "extern const u32" `(echo $(notdir $(CURBIN)) | sed -e 's/^\([0-9]\)/_\1/' | tr . _)`_len";" >> `(echo $(CURBIN) | tr . _)`.h
+endef
+
+%.3gx: .WAIT %.elf
+	@echo creating $(notdir $@)
+	@3gxtool -d -s $(word 1, $^) $(TOPDIR)/$(PLGINFO) $@
+
+%.elf: .WAIT $(OBJECT_FILES)
+	@echo $@
+	@$(CXX) $(CXX_FLAGS) $^ -o $@ $(LD_FLAGS)
+	@$(NM) -CSn $@ > $(OUTPUT_DIR)/$(NAME).lst
+
+$(BUILD_DIR)/%.o: %.c
+	@echo $@
+	@$(CC) -c $(CC_FLAGS) -MMD -MP -MF $(BUILD_DIR)/$*.d $< -o $@
+
+$(BUILD_DIR)/%.o: %.cpp
+	@echo $@
+	@$(CXX) -c $(CXX_FLAGS) -MMD -MP -MF $(BUILD_DIR)/$*.d $< -o $@
+
+$(BUILD_DIR)/%.o: %.s
+	@echo $@
+	@$(CC) -c $(CC_FLAGS) -MMD -MP -MF $(BUILD_DIR)/$*.d -x assembler-with-cpp $< -o $@
+
+$(BUILD_DIR)/%.o: %.S
+	@echo $@
+	@$(CC) -c $(CC_FLAGS) -MMD -MP -MF $(BUILD_DIR)/$*.d -x assembler-with-cpp $< -o $@
+
+$(BUILD_DIR)/%.bin.o: $(BUILD_DIR)/%.bin.c
+	@echo $@
+	@$(CC) -c $(CC_FLAGS) -MMD -MP -MF $(BUILD_DIR)/$*.d $< -o $@
+
+$(BUILD_DIR)/%.bin.c: %.bin
+	@echo $@
+	@cd $(<D); \
+	xxd -i $(<F) "$(CURDIR)/$@"
+	@echo "extern const u8" `(echo $(<F) | sed -e 's/^\([0-9]\)/_\1/' | tr . _)`"[];" >> `(echo $(BUILD_DIR)/$< | tr . _)`.h
+	@echo "extern const u32" `(echo $(<F) | sed -e 's/^\([0-9]\)/_\1/' | tr . _)`_len";" >> `(echo $(BUILD_DIR)/$< | tr . _)`.h
+
+$(foreach file,$(OBJECT_FILES),$(eval $(call createdirrule,$(file))))
+$(foreach file,$(OUTPUT_FILES),$(eval $(call createdirrule,$(file))))
+
+# DEPENDS #
+
+DEPENDS	:= $(OBJECT_FILES:.o=.d)
+-include $(DEPENDS)
+
+# CLEAN #
+
+clean:
+	@rm -rf $(BUILD_DIR) $(OUTPUT_DIR)
+	@echo "Cleaned."

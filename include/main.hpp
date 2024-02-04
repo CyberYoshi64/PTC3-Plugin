@@ -7,6 +7,7 @@
 #include "commonFuncs.hpp"
 #include <csvc.h>
 #include <cmath>
+#include "nncy/ParentalControl.h"
 
 #include "Config.hpp"
 #include "Utils.hpp"
@@ -19,11 +20,13 @@
 #include "StringArchive.hpp"
 
 #ifndef COMMIT_HASH
-#define COMMIT_HASH "00000000"
+#define COMMIT_HASH 0x00000000
 #endif
 #ifndef BUILD_DATE
 #define BUILD_DATE "(unknown)"
 #endif
+
+#define PLG_DUMMY           false // Disable CYX as a whole (testing)
 
 #define ENABLE_DEBUG        false
 #define TOP_DIR             "/PTC3PLG" // Top directory (sdmc:/[TOP_DIR])
@@ -54,7 +57,6 @@
 #define STRINGIFY(x)        #x
 #define TOSTRING(x)         STRINGIFY(x)
 #define STRING_VERSION      TOSTRING(VER_MAJOR) "." TOSTRING(VER_MINOR) "." TOSTRING(VER_MICRO) "-" TOSTRING(VER_REVISION)
-#define STRING_BUILD        BUILD_DATE "-" COMMIT_HASH
 #define VER_INTEGER         ((VER_MAJOR&0xFF)<<24|(VER_MINOR&0xFF)<<16|(VER_MICRO&0xFF)<<8|(VER_REVISION&0xFF))
 
 #define WRITEREMOTE32(addr, val) (*(u32 *)(PA_FROM_VA_PTR(addr)) = (val))
@@ -122,6 +124,10 @@ namespace CTRPluginFramework {
     extern volatile bool ___confirmWaiting;
     extern u32 ___pluginFlags;
     extern char g_regionString[];
+    extern u8 g_systemModel;
+    extern u8 g_systemRegion;
+    extern u32 parentalControlFlag;
+    extern char g_systemRegionString[];
     extern FS_ArchiveResource g_sdmcArcRes;
 
     extern u32 g_osFirmVer;

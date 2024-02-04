@@ -31,4 +31,27 @@ namespace CTRPluginFramework {
         }
         return ret;
     }
+    int Hooks::ParseFuncMapFile(File &f, FuncMapFile* v) {
+        char buf[32]; s32 count, len;
+        v->ids.clear();
+        v->humanNames.clear();
+        f.Read(buf, 4);
+        v->version = *(u32*)buf;
+        if (v->version != HOOK_FUNCMAP_VER) return 1;
+        f.Read(buf, 4);
+        count = *(s32*)buf;
+        if (count > 1023) return 2;
+        for (int i = 0; i < count; i++) {
+            f.Read(buf, 4);
+            v->ids.push_back(*(s32*)buf);
+            f.Read(buf, 2);
+            len = *(u16*)buf;
+            if (len >= sizeof(buf)) return 3;
+            memset(buf, 0, sizeof(buf));
+            f.Read(buf, len);
+            buf[sizeof(buf)-1] = 0;
+            v->humanNames.push_back(buf);
+        }
+        return 0;
+    };
 }
