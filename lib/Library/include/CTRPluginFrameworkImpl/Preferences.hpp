@@ -69,7 +69,7 @@ namespace CTRPluginFramework
             u32     hotkeysCount;
             u64     hotkeysOffset;
             u32     reserved[100];
-        } PACKED;
+        } CTR_PACKED;
 
         using Header = HeaderV11;
 

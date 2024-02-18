@@ -19,7 +19,7 @@ typedef struct {
         bool    enableAPI;
         bool    fontdefStrict;
     } cyx;
-} PACKED Config_v1;
+} CTR_PACKED Config_v1;
 
 //// Latest version
 
@@ -43,12 +43,12 @@ typedef struct Config_s {
                     u8      serverType;         // Server Type (see Config::Enums::CYX::ServerType)
                     u64     zero   : 24;
                     char    serverName[28];     // Custom server domain
-                } PACKED server;
+                } CTR_PACKED server;
             } set;
             u8 raw[284];
         };
-    } PACKED cyx;
-} PACKED Config_v2;
+    } CTR_PACKED cyx;
+} CTR_PACKED Config_v2;
 
 //// Config functions
 

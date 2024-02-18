@@ -34,7 +34,7 @@ namespace CTRPluginFramework {
         char activeProject[16];
         char currentProject[16];
         u32 cyxApiFlags;
-    } PACKED ExceptionSysDump;
+    } CTR_PACKED ExceptionSysDump;
     
     typedef struct ExceptionSysDumpTxt_s {
         u32 magic;
@@ -45,7 +45,7 @@ namespace CTRPluginFramework {
         u32 plgVer;
         u32 plgFlg;
         char err[100];
-    } PACKED ExceptionSysDumpTxt;
+    } CTR_PACKED ExceptionSysDumpTxt;
 
     enum ExceptionRescueBitMask {
         EXCEPRESCUE_PROGRAM = 1,
@@ -64,7 +64,7 @@ namespace CTRPluginFramework {
         u32 blobBufSize[16];
         u32 blobDataLen[16];
         u8 padding[112];
-    } PACKED CYXDumpHeader;
+    } CTR_PACKED CYXDumpHeader;
 
     #define CYXDumpHeaderSize sizeof(CYXDumpHeader)
     

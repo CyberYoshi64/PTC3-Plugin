@@ -15,7 +15,7 @@ namespace CTRPluginFramework
     WatchPointManager   WatchPointManager::_singleton;
 
     void __ExceptionHandler(ERRF_ExceptionInfo* excep, CpuRegisters* regs);
-    u8 stack[0x1000] ALIGN(8);
+    u8 stack[0x1000] CTR_ALIGN(8);
     ERRF_ExceptionData exceptionData;
 
     static u32      GetWFAR(void)

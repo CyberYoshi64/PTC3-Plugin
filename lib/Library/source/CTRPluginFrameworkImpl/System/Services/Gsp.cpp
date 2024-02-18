@@ -348,7 +348,7 @@ namespace Services
             s32 droppedPdc0Count;
             s32 droppedPdc1Count;
             u8 data[52];
-        } PACKED;
+        } CTR_PACKED;
 
         static QueueBody g_backup;
 

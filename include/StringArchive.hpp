@@ -33,7 +33,7 @@ namespace CTRPluginFramework {
         u32 fileOffset;
         u16 length;
         u16 encoding;
-    } PACKED StringArchiveEntry;
+    } CTR_PACKED StringArchiveEntry;
    #define STRINGARCHIVEENTRY_SIZE    sizeof(StringArchiveEntry)
 
     typedef struct StringArchiveHeader_s {
@@ -41,7 +41,7 @@ namespace CTRPluginFramework {
         u32 version;
         u32 entries;
         char pad[20];
-    } PACKED StringArchiveHeader;
+    } CTR_PACKED StringArchiveHeader;
     #define STRINGARCHIVEHEADER_SIZE    sizeof(StringArchiveHeader)
     
     class StringArchive {

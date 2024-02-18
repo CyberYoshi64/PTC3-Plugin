@@ -23,11 +23,11 @@ namespace CTRPluginFramework
         u8  topFramebuffer1[400 * 240 * 2];
         u8  bottomFramebuffer0[320 * 240 * 2];
         u8  bottomFramebuffer1[320 * 240 * 2];
-    } PACKED;
+    } CTR_PACKED;
 
     // Reserve the place for the Screen objects
-    static u8  _topBuf[sizeof(ScreenImpl)] ALIGN(4);
-    static u8  _botBuf[sizeof(ScreenImpl)] ALIGN(4);
+    static u8  _topBuf[sizeof(ScreenImpl)] CTR_ALIGN(4);
+    static u8  _botBuf[sizeof(ScreenImpl)] CTR_ALIGN(4);
 
     ScreenImpl  *ScreenImpl::Top = nullptr;
     ScreenImpl  *ScreenImpl::Bottom = nullptr;

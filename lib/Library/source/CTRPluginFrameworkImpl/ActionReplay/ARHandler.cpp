@@ -25,7 +25,7 @@ namespace CTRPluginFramework
 {
     using Register = ARHandler::Register;
 
-    static u32 arStack[1000] ALIGN(8);
+    static u32 arStack[1000] CTR_ALIGN(8);
     u32     ARHandler::Offset[2] = { 0 };
     Register    ARHandler::Data[2];
     u32     ARHandler::Storage[2] = { 0 };

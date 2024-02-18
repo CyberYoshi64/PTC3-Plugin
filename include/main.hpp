@@ -2,13 +2,11 @@
 #define MAIN_HPP
 
 #include <CTRPluginFramework.hpp>
+#include "commonFuncs.hpp"
 #include "rt.h"
 #include "plgldr.h"
-#include "commonFuncs.hpp"
 #include <csvc.h>
 #include <cmath>
-#include "nncy/ParentalControl.h"
-
 #include "Config.hpp"
 #include "Utils.hpp"
 #include "Misc.hpp"
@@ -18,6 +16,7 @@
 #include "CYXConfirmDlg.hpp"
 #include "petitReimpl.hpp"
 #include "StringArchive.hpp"
+#include "nncy/ParentalControl.h"
 
 #ifndef COMMIT_HASH
 #define COMMIT_HASH 0x00000000
@@ -26,8 +25,6 @@
 #define BUILD_DATE "(unknown)"
 #endif
 
-#define PLG_DUMMY           false // Disable CYX as a whole (testing)
-
 #define ENABLE_DEBUG        false
 #define TOP_DIR             "/PTC3PLG" // Top directory (sdmc:/[TOP_DIR])
 #define CONFIG_PATH         TOP_DIR "/config" // General configurations
@@ -35,7 +32,7 @@
 #define CACHE_PATH          TOP_DIR "/cache" // Temporary data
 #define DUMP_PATH           TOP_DIR "/dumps" // Crash dumps
 #define INCOMING_PATH       TOP_DIR "/in" // Incoming data, such as packed project files
-#define DEBUGLOG_FILE       RESOURCES_PATH "/debug.log" // Log file to use in debug mode
+#define DEBUGLOG_FILE       "debug.log" // Log file to use in debug mode
 
 #define ROMFS_PATH          TOP_DIR "/datafs" // Directory containing RomFS edits
 #define HOMEFS_PATH         TOP_DIR "/homefs" // Limited folder for BASIC projects using the CYX API
@@ -47,7 +44,7 @@
 #define PROJECTSET_PATH     CONFIG_PATH "/prjSet" // Project-specific configurations
 #define HOMEFS_SHARED_PATH  HOMEFS_PATH "/shared" // Shared project home folder
 
-#define CLIPBOARDCACHE_PATH CACHE_PATH"/clip.raw"
+#define CLIPBOARDCACHE_PATH CACHE_PATH "/clip.raw"
 
 #define NUMBER_FILE_OP      9
 #define VER_MAJOR           0 // Major version
@@ -97,7 +94,7 @@ typedef u32(*fsu16u64)(u16*, u64);
 typedef u32(*fsu32u16)(u32, u16*);
 
 // svcBreak() with r0-r2 set with defined arguments
-extern "C" void customBreak(u32 a1, u32 a2, u32 a3);
+extern "C" void customBreak(u32 r0, u32 r1, u32 r2);
 
 typedef struct miniHeap_s {
     u8 data[0x10][0x200];
@@ -106,6 +103,10 @@ typedef struct miniHeap_s {
 
 namespace CTRPluginFramework {
     using StringVector = std::vector<std::string>;
+    using u32Vector = std::vector<u32>;
+
+    extern bool isCYXenabled;
+
     u32 fsRegArchiveCallback(u8* path, u32* arch, u32 isAddOnContent, u32 isAlias);
     int fsOpenArchiveFunc(u32* fsHandle, u64* out, u32 archiveID, u32 pathType, u32 pathData, u32 pathsize);
     int fsFormatSaveData(int *a1, int a2, int a3, int a4, int a5, int a6, int a7, int a8, int a9, int a10, char a11);
@@ -147,6 +148,7 @@ namespace CTRPluginFramework {
 
     // Check, if sleep mode is enabled
     bool mcuIsSleepEnabled();
+
     int strlen16(u16* str);
     void OnProcessExit(void);
     int fsSetThisSaveDataSecureValue(u32 a1, u64 a2);

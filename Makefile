@@ -32,5 +32,8 @@ BUILD_FLAGS_CXX := -fno-rtti -fno-exceptions -std=gnu++20
 
 include resources/makerules
 
-re : clean .WAIT all
-.PHONY: re
+lib:
+	@cd lib && make clean && make release && cd ..
+
+re : clean lib .WAIT all
+.PHONY: re lib

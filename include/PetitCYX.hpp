@@ -3,7 +3,7 @@
 
 #include "main.hpp"
 #include "Hooks.hpp"
-
+#include <stdio.h>
 
 #define SBSERVER_DEFAULT_NAME1	"https://save.smilebasic.com"
 #define SBSERVER_DEFAULT_NAME2	"https://load.smilebasic.com"
@@ -52,14 +52,37 @@ typedef struct PTCConfig_s {
     u32 functionColor;  // 0xAARRGGBB
     u32 backColor;      // 0xAARRGGBB
     u32 isGoldMember;   // Local-only badge
-    u32 spotPassEnabled;// Not really meaningful - 
-                        // used moreso temporarily
-} PACKED PTCConfig;
+    u32 spotPassEnabled;// Not meaningful - visual only
+} CTR_PACKED PTCConfig;
+
+typedef struct {
+    u32 state;
+    int isPreparing;
+    u32 reserved1;
+    u32 playerCount;
+    u16 passPhrase[16];
+    u32 passPhraseSize;
+    u32 reserved2;
+    s32 hostID;
+} PTCUDS;
+// 0x01D0DEB4
+
+enum PTCFileType : u16 {
+    PTCFILETYPE_TXT = 0,
+    PTCFILETYPE_DAT = 1,
+    PTCFILETYPE_PRJ = 2,
+};
+
+enum PTCFileBitMask1 : u16 {
+    PTCFILEBM_NONE = 0,             // No flag set
+    PTCFILEBM_ZLIB = BIT(1),        // File is compressed with zLib
+    PTCFILEBM_CLASSIC_IP = BIT(2),  // File is copy-protected (Classic IP)
+};
 
 typedef struct {
     u16 version;
-    u16 type;
-    u16 bitmask1;
+    PTCFileType type;
+    u16 bitmask1; // Refer to PTCFileBitMask1
     u16 icon;
     s32 dataSize;
     struct {
@@ -77,7 +100,7 @@ typedef struct {
     u32 uploaderUID;
     u64 creatorPID;
     u64 uploaderPID;
-} PACKED PTCFileHeader;
+} PTCFileHeader;
 
 typedef struct {
     char sign[4];       // should be "PCBN"
@@ -85,17 +108,17 @@ typedef struct {
     u16 contentType;    // s8/u8/s16/u16/s32/f64
     u16 dimCount;
     u32 dimensions[4];
-} PACKED PTCBinaryHeader;
+} PTCBinaryHeader;
 
 typedef struct {
     u32 dataSize;
     u32 fileCount;
-} PACKED PTCPackedProjectHeader;
+} PTCPackedProjectHeader;
 
 typedef struct {
     u32 size;
     char name[16];
-} PACKED PTCPackedProjectEntry;
+} PTCPackedProjectEntry;
 
 typedef struct BASICTextPalette_s { // EUR 3.6.0 @ 0x01D027CC
     u32 conClear; u32 conBlack;
@@ -116,7 +139,7 @@ typedef struct BASICTextPalette_s { // EUR 3.6.0 @ 0x01D027CC
 typedef struct BASICActiveProject_s { // EUR 3.6.0 @ 0x01B14B00
     u16 activeProject[15]; u16 currentProject[15];
     u16 unk1; u16 unk2;
-} PACKED BASICActiveProject;
+} CTR_PACKED BASICActiveProject;
 
 typedef struct BASICGraphicPage_s {
     void* ptr1;
@@ -127,9 +150,9 @@ typedef struct BASICGraphicPage_s {
     u32 displayedFormat; // Shown GSP format, should be 0x2 (RGBA5551)
     u32 __unk__sizeX; u32 __unk__sizeY;
     float dispScaleY; float dispScaleX; // Not a standard float/double...
-    u32 unkDbl1[2]; u32 unk8[5];
+    double unkDbl1; u32 unk8[5];
     u32 isResourceProtected; // Used by "Protected Resource" error
-} PACKED BASICGraphicPage;
+} CTR_PACKED BASICGraphicPage;
 
 typedef struct BASICGRPStructs_s { // EUR 3.6.0 @ 0x01D02A4C
     BASICGraphicPage grp[6];   // GRP0-GRP5
@@ -137,12 +160,12 @@ typedef struct BASICGRPStructs_s { // EUR 3.6.0 @ 0x01D02A4C
     BASICGraphicPage system;   // SysUI / SysBASIC
     BASICGraphicPage sys_ctpk; // Textures from sys.ctpk
     BASICGraphicPage unk1;     // Unknown data (Test?)
-} PACKED BASICGRPStructs;
+} CTR_PACKED BASICGRPStructs;
 
 typedef struct BASICGenericVariable_s {
     u32 type; u32 unk1;
     u32 data; void* data2;
-} PACKED BASICGenericVariable;
+} BASICGenericVariable;
 
 typedef struct {
     BASICGenericVariable* argc;
@@ -162,17 +185,17 @@ typedef struct BASICProgramSlot_s {
     u32 file_name_len; // Length of file name
     u32 unk1;
     u32 cursorPosition;// Used by editor to know where the cursor is
-} PACKED BASICProgramSlot;
+} CTR_PACKED BASICProgramSlot;
 
 typedef struct BASICEditorLine_s {
     u32 offset; u32 lineLen;
     u32 lineNum; u32 always_one;
-} PACKED BASICEditorLine;
+} CTR_PACKED BASICEditorLine;
 
 typedef struct BASICUndoEntry_s {
     u32 offset; u32 always_zero;
     u32 len; u16 data[0x1006];
-} PACKED BASICUndoEntry;
+} CTR_PACKED BASICUndoEntry;
 
 typedef struct BASICEditorData_s { // EUR @ 0x00F5DC9C
     u16 clipboardData[0x100000];
@@ -191,7 +214,7 @@ typedef struct BASICEditorData_s { // EUR @ 0x00F5DC9C
     u32 undoIteration;
     u32 undoTotal;
     u32 undoCount;
-} PACKED BASICEditorData;
+} CTR_PACKED BASICEditorData;
 
 enum ProgramSlotName {
     PRGSLOT_0 = 0, PRGSLOT_1,
@@ -252,7 +275,7 @@ namespace CTRPluginFramework {
         typedef struct ProjectSettings {
             u64 magic;
             u32 apiFlags;
-        } PACKED ProjectSettings;
+        } CTR_PACKED ProjectSettings;
     public:
 
         /**
@@ -400,6 +423,7 @@ namespace CTRPluginFramework {
         static BASICGRPStructs* GraphicPage;        // Graphic pages
         static BASICTextPalette* textPalette;       // Text console palette
         static PTCConfig* ptcConfig;                // BASIC config struct
+        static PTCUDS* ptcUds;                      // Multiplayer Struct
         static std::string g_currentProject;
         static RT_HOOK clipboardFunc;
         static RT_HOOK basControllerFunc;

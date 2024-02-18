@@ -2,7 +2,7 @@
 #include "3ds.h"
 #include "csvc.h"
 
-static u32 ALIGN(0x1000) HookL2Table[256] = {0};
+static u32 CTR_ALIGN(0x1000) HookL2Table[256] = {0};
 
 DescType     L1Descriptor__GetType(u32 descriptor)
 {

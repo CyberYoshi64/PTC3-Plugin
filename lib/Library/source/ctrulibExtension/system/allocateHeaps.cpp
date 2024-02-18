@@ -23,7 +23,7 @@ namespace CTRPluginFramework
         u8  topFramebuffer1[400 * 240 * 2];
         u8  bottomFramebuffer0[320 * 240 * 2];
         u8  bottomFramebuffer1[320 * 240 * 2];
-    } PACKED;
+    } CTR_PACKED;
 
     // Heap layout
     /*

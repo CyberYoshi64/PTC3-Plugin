@@ -22,7 +22,7 @@ namespace CTRPluginFramework
             void    Clear(void);
             // Return true on failure
             bool    Read(File &file);
-        } PACKED;
+        } CTR_PACKED;
 
         struct BitmapInformationHeader
         {
@@ -41,7 +41,7 @@ namespace CTRPluginFramework
             void    Clear(void);
             // Return true on failure
             bool    Read(File &file);
-        } PACKED;
+        } CTR_PACKED;
 
     public:
 
@@ -64,7 +64,7 @@ namespace CTRPluginFramework
           u8 b;
           u8 g;
           u8 r;
-       } PACKED;
+       } CTR_PACKED;
 
         BMPImage(void);
         BMPImage(void *data);

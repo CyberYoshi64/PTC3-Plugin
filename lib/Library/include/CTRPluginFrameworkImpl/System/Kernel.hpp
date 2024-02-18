@@ -31,7 +31,7 @@ struct KClassToken
 {
     const char  *name;
     u8          flags; ///< See @enum KType
-} PACKED;
+} CTR_PACKED;
 
 struct KAutoObject
 {
@@ -49,7 +49,7 @@ struct KAutoObject
 
     std::string     GetName(void);
     KType           GetType(void);
-} PACKED;
+} CTR_PACKED;
 
 struct KCodeSetMemDescriptor
 {
@@ -58,7 +58,7 @@ struct KCodeSetMemDescriptor
     u32     kBlockInfoCount;
     u32     *firstKLinkedNode;
     u32     *lastKLinkedNode;
-} PACKED;
+} CTR_PACKED;
 
 struct KCodeSet
 {
@@ -73,13 +73,13 @@ struct KCodeSet
     char    processName[8];
     u32     unknown;
     u64     titleId;
-} PACKED;
+} CTR_PACKED;
 
 struct HandleDescriptor
 {
     u32             info;
     KAutoObject     *obj;
-} PACKED;
+} CTR_PACKED;
 
 struct KThread;
 struct KObjectMutex
@@ -87,7 +87,7 @@ struct KObjectMutex
     KThread *owner;
     s16     counter1;
     s16     counter2;
-} PACKED;
+} CTR_PACKED;
 
 struct KProcessHandleTable
 {
@@ -99,7 +99,7 @@ struct KProcessHandleTable
     s16                 handlesCount;
     KObjectMutex        mutex;
     HandleDescriptor    table[0x28];
-} PACKED;
+} CTR_PACKED;
 
 struct KProcess;
 struct KThread
@@ -151,7 +151,7 @@ struct KThread
 
     KProcess * GetOwner(void);
 
-} PACKED;
+} CTR_PACKED;
 
 struct KProcess
 {
@@ -167,7 +167,7 @@ struct KProcess
     KAutoObject *   GetObjFromHandle(Handle handle);
     std::string     GetName(void);
 
-} PACKED;
+} CTR_PACKED;
 
 struct KScheduler
 {
@@ -184,7 +184,7 @@ struct KScheduler
     KThread*schedulerThread;
     u32     threadList[2];
     u32     block[0x80];
-} PACKED;
+} CTR_PACKED;
 
 struct KCoreObjectContext
 {
@@ -197,7 +197,7 @@ struct KCoreObjectContext
     KThread         schedulerThreadInstance;
     KScheduler      schedulerInstance;
     u32             block[0x344];
-} PACKED;
+} CTR_PACKED;
 
 struct KCoreContext
 {
@@ -207,7 +207,7 @@ struct KCoreContext
     u32     kthreadContext[0x400];
     u32     na3[0x400];
     KCoreObjectContext  objectContext;
-} PACKED;
+} CTR_PACKED;
 
 struct KPreemptionTimer
 {
@@ -215,7 +215,7 @@ struct KPreemptionTimer
     u32     currentTimer;
     u32     lastWatchdogTimer;
     u32     maxCpuTume1;
-} PACKED;
+} CTR_PACKED;
 
 struct KResourceLimit
 {
@@ -244,7 +244,7 @@ struct KResourceLimit
     KPreemptionTimer    timer;
 
     void    IncreaseMaxThreadLimit(void);
-} PACKED;
+} CTR_PACKED;
 
 struct KRecursiveLock
 {

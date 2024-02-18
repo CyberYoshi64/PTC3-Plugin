@@ -17,6 +17,7 @@ u8 fsSetSecValPat[] = {0x80, 0x01, 0x75, 0x08};
 u8 fsCheckPermsPat[] = {0x04, 0x10, 0x12, 0x00, 0x76, 0x46, 0x00, 0xD9};
 
 namespace CTRPluginFramework {
+    bool isCYXenabled;
     Region g_region;
     FS_ArchiveResource g_sdmcArcRes;
     u32 ___pluginFlags;
@@ -430,52 +431,53 @@ namespace CTRPluginFramework {
         settings.BackgroundSecondaryColor = Color(0x001010FF);
         settings.CustomKeyboard.BackgroundSecondary = Color(0x001010FF);
         settings.MainTextColor = Color(0xD0D0D0FF);
-		settings.WaitTimeToBoot = Seconds(
-            System::IsNew3DS() ? 5.0 : 6.5
-        );
-        if(!Directory::Exists(TOP_DIR)) Directory::Create(TOP_DIR);
-        if(!Directory::Exists(RESOURCES_PATH)) Directory::Create(RESOURCES_PATH);
-        Directory::ChangeWorkingDirectory(RESOURCES_PATH);
+        sprintf(g_ProcessTID, "%016lX", Process::GetTitleID());
+        CheckRegion();
+        isCYXenabled = (g_region > REGION_NONE) && (g_region < REGION_MAX);
+        
+        if (File::Exists(CONFIG_PATH "/disableCYX.flag"))
+            isCYXenabled = false;
+        
+        if (isCYXenabled) {
+            if(!Directory::Exists(TOP_DIR)) Directory::Create(TOP_DIR);
+            if(!Directory::Exists(RESOURCES_PATH)) Directory::Create(RESOURCES_PATH);
+            Directory::ChangeWorkingDirectory(RESOURCES_PATH);
 #if EXTDATA_PATH_SEPERATE
-        if(!Directory::Exists(EXTDATA_PATH)) Directory::Create(EXTDATA_PATH);
+            if(!Directory::Exists(EXTDATA_PATH)) Directory::Create(EXTDATA_PATH);
 #endif
-#if ! PLG_DUMMY
-        if(!Directory::Exists(SAVEDATA_PATH)) Directory::Create(SAVEDATA_PATH);
-        if(!Directory::Exists(HOMEFS_PATH)) Directory::Create(HOMEFS_PATH);
-        if(!Directory::Exists(HOMEFS_SHARED_PATH)) Directory::Create(HOMEFS_SHARED_PATH);
-#endif
+            if(!Directory::Exists(SAVEDATA_PATH)) Directory::Create(SAVEDATA_PATH);
+            if(!Directory::Exists(HOMEFS_PATH)) Directory::Create(HOMEFS_PATH);
+            if(!Directory::Exists(HOMEFS_SHARED_PATH)) Directory::Create(HOMEFS_SHARED_PATH);
+        }
         ToggleTouchscreenForceOn();
-        u64 tid = Process::GetTitleID();
-        sprintf(g_ProcessTID, "%016lX", tid);
         LightLock_Init(&regLock);
         LightLock_Init(&openLock);
         OnionSave::initDebug();
-        OnionSave::setupPackPaths();
-        FSUSER_GetArchiveResource(&g_sdmcArcRes, SYSTEM_MEDIATYPE_SD);
-        DEBUG("\n--- Initializing hooks:\n\n");
-        initOnionFSHooks(Process::GetTextSize());
-#if ! PLG_DUMMY
-        DEBUG("\nLoading CYX...\n\n");
-        CheckRegion();
-        if (g_region != REGION_NONE) {
-            if R_SUCCEEDED(cyxres = CYX::Initialize()) {
-                Process::OnPauseResume = [](bool isGoingToPause) {
-                    CYX::playMusicAlongCTRPF(isGoingToPause);
-                };
-                if (CheckRevision()) {
-                    if (File::Exists(CONFIG_PATH"/darkPalette.flag") > 0)
-                        CYX::SetDarkMenuPalette();
-                    DEBUG("\nCYX initialized, starting game.\n---\n\n");
+        if (isCYXenabled) {
+            OnionSave::setupPackPaths();
+            FSUSER_GetArchiveResource(&g_sdmcArcRes, SYSTEM_MEDIATYPE_SD);
+            DEBUG("\n--- Initializing hooks:\n\n");
+            initOnionFSHooks(Process::GetTextSize());
+            DEBUG("\nLoading CYX...\n\n");
+            if (g_region != REGION_NONE) {
+                if R_SUCCEEDED(cyxres = CYX::Initialize()) {
+                    Process::OnPauseResume = [](bool isGoingToPause) {
+                        CYX::playMusicAlongCTRPF(isGoingToPause);
+                    };
+                    if (CheckRevision()) {
+                        if (File::Exists(CONFIG_PATH"/darkPalette.flag") > 0)
+                            CYX::SetDarkMenuPalette();
+                        DEBUG("\nCYX initialized, starting game.\n---\n\n");
+                    } else {
+                        g_region = REGION_MAX;
+                        DEBUG("\nCYX initialized but the version is invalid; bailing out!\n\n");
+                    }
                 } else {
-                    g_region = REGION_MAX;
-                    DEBUG("\nCYX initialized but the version is invalid; bailing out!\n\n");
+                    g_region = REGION_MAX2;
+                    DEBUG("\nCYX failed to initialize with error code %08X; bailing out!\n\n", cyxres);
                 }
-            } else {
-                g_region = REGION_MAX2;
-                DEBUG("\nCYX failed to initialize with error code %08X; bailing out!\n\n", cyxres);
             }
         }
-#endif
     }
 
     // Called when process ends
@@ -485,31 +487,29 @@ namespace CTRPluginFramework {
     }
 
     void InitMenu(PluginMenu &menu) {
-#if ! PLG_DUMMY
-        menu += new MenuFolder(LANG("menuMiscellaneous"), std::vector<MenuEntry *>({
-            new MenuEntry("Change server location", nullptr, serverAdrChg, "Change the server address to be connected to for the NETWORK MENU."),
-            new MenuEntry("Spoof VERSION system variable", nullptr, versionSpoof, "[Useless but whatever] Modify the VERSION system variable to fool BASIC programs imposing a version blocker."),
-        }));
-        menu += new MenuFolder(LANG("menuExperiments"),
-        "These features are freshly implemented or are still work in progress. Use these at your own risk.",
-        std::vector<MenuEntry *>({
-            new MenuEntry("Set FONTDEF strictness", nullptr, fontGetAddrPatch, "Allow FONTDEF to modify the [X] character (or help simplify using a custom non-standard font map)"),
-            new MenuEntry("Reset GRP display", grpFixMe, "The graphic pages have to be cleared/reloaded to flush the display buffer."),
-            new MenuEntry("Change editor ruler color", nullptr, editorRulerPalette, "Choose from one of a few palettes for the editor ruler."),
-            new MenuEntry("Restore CYX rescue dump", nullptr, restoreRescueDump, "Restore a CYX rescue dump that is obtained when the plugin closes abnormally, i.e. during a critical error or an exception."),
-            new MenuEntry("Correct file HMAC", nullptr, validateFile, "Select a file to fix its HMAC signature footer. Fixing the signature will make the file eligible for upload to the SmileBASIC server."),
-            new MenuEntry("Server session token hooking", nullptr, tokenHooker, "This hook will replace the obtainment of the NNID-based session token for the SmileBASIC server with a dummy one. This option is only for use as a test with custom servers and is discouraged to be used for the official server."),
-            new MenuEntry("———————————", nullptr, dummyEntry),
-            new MenuEntry("experiment1", nullptr, experiment1),
-            new MenuEntry("experiment2", nullptr, experiment2),
-            new MenuEntry("experiment3", nullptr, experiment3),
-            new MenuEntry("experiment4", nullptr, experiment4),
-        }));
-        menu += new MenuEntry(LANG("menuCYXAPISet"), nullptr, cyxAPItoggle, "The CYX API adds various features to BASIC.");
-        menu += new MenuEntry(LANG("menuPluginDiscl"), nullptr, pluginDisclaimer, "General details about this plugin");
-#else
-        menu += new MenuEntry("Dummy entry", nullptr, nullptr, "This plugin is a dummy");
-#endif
+        if (isCYXenabled) {
+            menu += new MenuFolder(LANG("menuMiscellaneous"), std::vector<MenuEntry *>({
+                new MenuEntry("Change server location", nullptr, serverAdrChg, "Change the server address to be connected to for the NETWORK MENU."),
+                new MenuEntry("Spoof VERSION system variable", nullptr, versionSpoof, "[Useless but whatever] Modify the VERSION system variable to fool BASIC programs imposing a version blocker."),
+            }));
+            menu += new MenuFolder(LANG("menuExperiments"),
+            "These features are freshly implemented or are still work in progress. Use these at your own risk.",
+            std::vector<MenuEntry *>({
+                new MenuEntry("Set FONTDEF strictness", nullptr, fontGetAddrPatch, "Allow FONTDEF to modify the [X] character (or help simplify using a custom non-standard font map)"),
+                new MenuEntry("Reset GRP display", grpFixMe, "The graphic pages have to be cleared/reloaded to flush the display buffer."),
+                new MenuEntry("Change editor ruler color", nullptr, editorRulerPalette, "Choose from one of a few palettes for the editor ruler."),
+                new MenuEntry("Restore CYX rescue dump", nullptr, restoreRescueDump, "Restore a CYX rescue dump that is obtained when the plugin closes abnormally, i.e. during a critical error or an exception."),
+                new MenuEntry("Correct file HMAC", nullptr, validateFile, "Select a file to fix its HMAC signature footer. Fixing the signature will make the file eligible for upload to the SmileBASIC server."),
+                new MenuEntry("Server session token hooking", nullptr, tokenHooker, "This hook will replace the obtainment of the NNID-based session token for the SmileBASIC server with a dummy one. This option is only for use as a test with custom servers and is discouraged to be used for the official server."),
+                new MenuEntry("———————————", nullptr, dummyEntry),
+                new MenuEntry("experiment1", nullptr, experiment1),
+                new MenuEntry("experiment2", nullptr, experiment2),
+                new MenuEntry("experiment3", nullptr, experiment3),
+                new MenuEntry("experiment4", nullptr, experiment4),
+            }));
+            menu += new MenuEntry(LANG("menuCYXAPISet"), nullptr, cyxAPItoggle, "The CYX API adds various features to BASIC.");
+            menu += new MenuEntry(LANG("menuPluginDiscl"), nullptr, pluginDisclaimer, "General details about this plugin");
+        } else menu += new MenuEntry("Dummy entry", nullptr, nullptr, "This plugin is a dummy");
     }
 
     void warnIfSDTooBig(void) {
@@ -535,41 +535,41 @@ namespace CTRPluginFramework {
         "2022-2024 CyberYoshi64";
 
     int main(void) {
-#if ! PLG_DUMMY
-        if (g_region != REGION_NONE && g_region < REGION_MAX){
-            Process::exceptionCallback = Exception::Handler;
-            g_osFirmVer = osGetFirmVersion();
-            g_osKernelVer = osGetKernelVersion();
-            osGetSystemVersionDataString(&g_osNVer, &g_osCVer, g_osSysVer, sizeof(g_osSysVer));
-        } else {
-            if (CYX::wouldExit)
-                MessageBox("An error occured while setting up CYX.\n\n"+CYX::exitMessage+Utils::Format("\n(Error code %08X)", cyxres))();
-            else
-                MessageBox("This application is not supported and will be closed.")();
-            Process::ReturnToHomeMenu();
-            return 1;
+        if (isCYXenabled) {
+            if (g_region != REGION_NONE && g_region < REGION_MAX){
+                Process::exceptionCallback = Exception::Handler;
+                g_osFirmVer = osGetFirmVersion();
+                g_osKernelVer = osGetKernelVersion();
+                osGetSystemVersionDataString(&g_osNVer, &g_osCVer, g_osSysVer, sizeof(g_osSysVer));
+            } else {
+                if (CYX::wouldExit)
+                    MessageBox("An error occured while setting up CYX.\n\n"+CYX::exitMessage+Utils::Format("\n(Error code %08X)", cyxres))();
+                else
+                    MessageBox("This application is not supported and will be closed.")();
+                Process::ReturnToHomeMenu();
+                return 1;
+            }
+            if (!System::IsCitra() && (g_sdmcArcRes.clusterSize * g_sdmcArcRes.freeClusters) < 67108864 && !MessageBox("Warning — SD Card running out of space", "There's less than 64 MiB free on the SD Card.\nIt is not recommended to continue using the SD Card without freeing some space.\n\nDo you want to risk data corruption by proceeding using this plugin?\n(Declining will close the game immediately.)", DialogType::DialogOkCancel)()){
+                Process::ReturnToHomeMenu();
+                return 1;
+            }
+            warnIfSDTooBig();
+            
+            CFG_GetParentalControlMask(&parentalControlFlag);
+            CFGU_GetSystemModel(&g_systemModel);
+            CFGU_SecureInfoGetRegion(&g_systemRegion);
+            memcpy(g_systemRegionString, "JPNUSAEURAUSKORCHNTWNUNK" + (3 * MIN(g_systemRegion, 7)), 3);
+            g_systemRegionString[3] = 0;
         }
-        if (!System::IsCitra() && (g_sdmcArcRes.clusterSize * g_sdmcArcRes.freeClusters) < 67108864 && !MessageBox("Warning — SD Card running out of space", "There's less than 64 MiB free on the SD Card.\nIt is not recommended to continue using the SD Card without freeing some space.\n\nDo you want to risk data corruption by proceeding using this plugin?\n(Declining will close the game immediately.)", DialogType::DialogOkCancel)()){
-            Process::ReturnToHomeMenu();
-            return 1;
-        }
-        warnIfSDTooBig();
-        
-        CFG_GetParentalControlMask(&parentalControlFlag);
-        CFGU_GetSystemModel(&g_systemModel);
-        CFGU_SecureInfoGetRegion(&g_systemRegion);
-        memcpy(g_systemRegionString, "JPNUSAEURAUSKORCHNTWNUNK" + (3 * MIN(g_systemRegion, 7)), 3);
-        g_systemRegionString[3] = 0;
-#endif
-        PluginMenu *menu = new PluginMenu("CYX", VER_MAJOR, VER_MINOR, VER_MICRO, about, true);
+        PluginMenu *menu = new PluginMenu("CYX", VER_MAJOR, VER_MINOR, VER_MICRO, about, isCYXenabled);
 
         menu->SynchronizeWithFrame(true);
         menu->ShowWelcomeMessage(true);
-#if ! PLG_DUMMY
-        menu->Callback(menuTick);
-        menu->OnOpening = menuOpen;
-        menu->OnClosing = menuClose;
-#endif
+        if (isCYXenabled) {
+            menu->Callback(menuTick);
+            menu->OnOpening = menuOpen;
+            menu->OnClosing = menuClose;
+        }
         InitMenu(*menu);
         menu->Run();
         delete menu;

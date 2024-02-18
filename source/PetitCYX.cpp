@@ -56,7 +56,10 @@ namespace CTRPluginFramework {
     }
 
     Result CYX::Initialize(void) {
-#if ! PLG_DUMMY
+        if (!isCYXenabled) {
+            wouldExit = false;
+            return 0;
+        }
         Result hookErr; u32 res;
         wouldExit = true;
         if (R_FAILED(hookErr = Hooks::Init())) return hookErr;
@@ -116,19 +119,18 @@ namespace CTRPluginFramework {
             return res;
         }
         forceDisableSndOnPause = !(System::IsCitra()||System::IsNew3DS());
-#endif
         wouldExit = false;
         return 0;
     }
 
     void CYX::Finalize() {
-#if ! PLG_DUMMY
+        if (!isCYXenabled) return;
         StringArchive::Exit();
         BasicAPI::Finalize();
         SaveProjectSettings();
         Config::Save();
-#endif
     }
+    
     void CYX::SaveProjectSettings() {
         if (g_currentProject=="") return;
         File f;
@@ -164,7 +166,7 @@ namespace CTRPluginFramework {
     }
     void CYX::TrySave() {cyxSaveTimer = 0;}
     void CYX::MenuTick() {
-#if ! PLG_DUMMY
+        if (!isCYXenabled) return;
         std::string str;
         bool doUpdate = (!cyxSaveTimer);
         bool didUpdateManually = false;
@@ -241,16 +243,14 @@ namespace CTRPluginFramework {
         } else {
             cyxUpdateSDMCStats--;
         }
-#endif
     }
 
     bool CYX::WouldOpenMenu() {
-#if ! PLG_DUMMY
+        if (!isCYXenabled) return true;
         if (mirror.isInBasic) {
             SoundEngine::PlayMenuSound(SoundEngine::Event::DESELECT);
             return false;
         }
-#endif
         return true;
     }
     void CYX::UpdateMirror() {
