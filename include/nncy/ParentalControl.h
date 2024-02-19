@@ -7,14 +7,17 @@ extern "C" {
 
 typedef enum ParentalControlFlags {
     ACS_ENABLED = 0,                // Parental Controls is enabled
+    ACS_INTERNET_BROWSER = 1,       // Internet Browser
     ACS_SHARING_DATA = 3,           // Sharing Images/Audio/Video/Long Text Data
-    ACS_INTERNET_BROWSER = 4,       // Internet Browser
+    ACS_ONLINE_INTERACTION = 4,     // Online Interaction
     ACS_STREETPASS = 5,             // StreetPass
     ACS_FRIEND_REGISTRATION = 6,    // Friend Registration
-    ACS_ESHOP_PURCHASES = 8,        // eShop
+    ACS_DS_DOWNLOAD_PLAY = 7,       // DS Download Play
+    ACS_SHOPPING_SERVICES = 8,      // Shopping Services (eShop/MINT)
+    ACS_DISTRIB_VIDEOS = 9,         // Viewing Distributed Videos
     ACS_MIIVERSE_VIEW = 10,         // Miiverse (view)
     ACS_MIIVERSE_POST = 11,         // Miiverse (post)
-    ACS_COPPACS = 31                // "Child Online Privacy Protection"
+    ACS_COPPACS = 31                // "Child Online Privacy Protection" - only relevant to USA/Canada
 } ParentalControlFlags;
 
 Result CFG_GetParentalControlMask(u32* flags);

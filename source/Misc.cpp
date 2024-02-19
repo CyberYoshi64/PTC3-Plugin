@@ -6,19 +6,6 @@ namespace CTRPluginFramework {
     void* generalPointer[8];
     u32 generalInt;
 
-    void experiment1(MenuEntry* entry) {
-        PANIC("experiment1(): PANIC() Test", __FILE, __LINE);
-    }
-    void experiment2(MenuEntry* entry) {
-        ERROR_F("experiment2(): ERROR_F() Test", __FILE, __LINE);
-    }
-    void experiment3(MenuEntry* entry) {
-        DANG("experiment3(): DANG() Test", __FILE, __LINE);
-    }
-    void experiment4(MenuEntry* entry) {
-        DANG("experiment4(): There is no experiment.", __FILE, __LINE);
-    }
-
     void restoreRescueDump(MenuEntry *entry) {
         StringVector s;
         Directory d;

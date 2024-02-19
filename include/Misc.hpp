@@ -18,12 +18,6 @@ namespace CTRPluginFramework {
     void validateFile(MenuEntry* entry);
     
     void tokenHooker(MenuEntry* entry);
-    
-    // Experiments
-    void experiment1(MenuEntry* entry);
-    void experiment2(MenuEntry* entry);
-    void experiment3(MenuEntry* entry);
-    void experiment4(MenuEntry* entry);
 }
 
 #endif

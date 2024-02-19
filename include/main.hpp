@@ -101,6 +101,8 @@ typedef struct miniHeap_s {
     u8 entries[0x10];
 } miniHeap;
 
+extern const char* pluginSerial;
+
 namespace CTRPluginFramework {
     using StringVector = std::vector<std::string>;
     using u32Vector = std::vector<u32>;

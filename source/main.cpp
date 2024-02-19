@@ -3,6 +3,8 @@
 #include "BasicAPI.hpp"
 #include "save.hpp"
 
+const char* pluginSerial = "3GX-H-CYXZ";
+
 // Patterns of functions to try replace with custom ones
 u8 fsMountArchivePat1[] = {0x10, 0x00, 0x97, 0xE5, 0xD8, 0x20, 0xCD, 0xE1, 0x00, 0x00, 0x8D};
 u8 fsMountArchivePat2[] = {0x28, 0xD0, 0x4D, 0xE2, 0x00, 0x40, 0xA0, 0xE1, 0xA8, 0x60, 0x9F, 0xE5, 0x01, 0xC0, 0xA0, 0xE3};
@@ -432,6 +434,13 @@ namespace CTRPluginFramework {
         settings.CustomKeyboard.BackgroundSecondary = Color(0x001010FF);
         settings.MainTextColor = Color(0xD0D0D0FF);
         sprintf(g_ProcessTID, "%016lX", Process::GetTitleID());
+        
+        CFG_GetParentalControlMask(&parentalControlFlag);
+        CFGU_GetSystemModel(&g_systemModel);
+        CFGU_SecureInfoGetRegion(&g_systemRegion);
+        memcpy(g_systemRegionString, "JPNUSAEURAUSKORCHNTWNUNK" + (3 * MIN(g_systemRegion, 7)), 3);
+        g_systemRegionString[3] = 0;
+        
         CheckRegion();
         isCYXenabled = (g_region > REGION_NONE) && (g_region < REGION_MAX);
         
@@ -496,20 +505,55 @@ namespace CTRPluginFramework {
             "These features are freshly implemented or are still work in progress. Use these at your own risk.",
             std::vector<MenuEntry *>({
                 new MenuEntry("Set FONTDEF strictness", nullptr, fontGetAddrPatch, "Allow FONTDEF to modify the [X] character (or help simplify using a custom non-standard font map)"),
-                new MenuEntry("Reset GRP display", grpFixMe, "The graphic pages have to be cleared/reloaded to flush the display buffer."),
+                new MenuEntry("Reset GRP display", nullptr, [](MenuEntry* entry){
+                    PLGSET(PLGFLG_EXPERIMENTS);
+                    u32 dspX = 0xBB000000, dspY = 0x3B000000;
+                    for (u8 i=0; i<6; i++){
+                        CYX::GraphicPage->grp[i].displayedFormat = 2;
+                        CYX::GraphicPage->grp[i].__unk__sizeX = 0x200;
+                        CYX::GraphicPage->grp[i].__unk__sizeY = 0x200;
+                        CYX::GraphicPage->grp[i].dispScaleX = *(float*)&dspX;
+                        CYX::GraphicPage->grp[i].dispScaleY = *(float*)&dspY;
+                    }
+                    CYX::GraphicPage->font.displayedFormat = 2;
+                    CYX::GraphicPage->system.displayedFormat = 2;
+                }, "The graphic pages have to be cleared/reloaded to flush the display buffer."),
                 new MenuEntry("Change editor ruler color", nullptr, editorRulerPalette, "Choose from one of a few palettes for the editor ruler."),
                 new MenuEntry("Restore CYX rescue dump", nullptr, restoreRescueDump, "Restore a CYX rescue dump that is obtained when the plugin closes abnormally, i.e. during a critical error or an exception."),
                 new MenuEntry("Correct file HMAC", nullptr, validateFile, "Select a file to fix its HMAC signature footer. Fixing the signature will make the file eligible for upload to the SmileBASIC server."),
                 new MenuEntry("Server session token hooking", nullptr, tokenHooker, "This hook will replace the obtainment of the NNID-based session token for the SmileBASIC server with a dummy one. This option is only for use as a test with custom servers and is discouraged to be used for the official server."),
-                new MenuEntry("———————————", nullptr, dummyEntry),
-                new MenuEntry("experiment1", nullptr, experiment1),
-                new MenuEntry("experiment2", nullptr, experiment2),
-                new MenuEntry("experiment3", nullptr, experiment3),
-                new MenuEntry("experiment4", nullptr, experiment4),
+                new MenuEntry("———————————", nullptr, nullptr),
+                new MenuEntry("experiment1", nullptr, [](MenuEntry* entry) {
+                    PLGSET(PLGFLG_EXPERIMENTS);
+                    PANIC("experiment1(): PANIC() Test", __FILE, __LINE);
+                }),
+                new MenuEntry("experiment2", nullptr, [](MenuEntry* entry) {
+                    PLGSET(PLGFLG_EXPERIMENTS);
+                    ERROR_F("experiment2(): ERROR_F() Test", __FILE, __LINE);
+                }),
+                new MenuEntry("experiment3", nullptr, [](MenuEntry* entry) {
+                    PLGSET(PLGFLG_EXPERIMENTS);
+                    DANG("experiment3(): DANG() Test", __FILE, __LINE);
+                }),
+                new MenuEntry("experiment4", nullptr, [](MenuEntry* entry) {
+                    PLGSET(PLGFLG_EXPERIMENTS);
+                    DANG("experiment4(): There is no experiment.", __FILE, __LINE);
+                }),
             }));
             menu += new MenuEntry(LANG("menuCYXAPISet"), nullptr, cyxAPItoggle, "The CYX API adds various features to BASIC.");
             menu += new MenuEntry(LANG("menuPluginDiscl"), nullptr, pluginDisclaimer, "General details about this plugin");
         } else menu += new MenuEntry("Dummy entry", nullptr, nullptr, "This plugin is a dummy");
+        menu += new MenuEntry("About CYX", nullptr, [](MenuEntry* e){
+            std::string s = "";
+            s += Utils::Format("CYX Version: %s\n", STRING_VERSION);
+            s += Utils::Format("Built %s\n", BUILD_DATE);
+            s += Utils::Format("Commit %07X\n", COMMIT_HASH);
+            s += Utils::Format("SmileBASIC Version: %s %s\n", g_regionString, CYX::PTCVersionString(CYX::currentVersion).c_str());
+            s += Utils::Format("Current Console: %s\n", System::IsCitra() ? "Citra" : (System::IsNew3DS() ? "New 3DS" : "Old 3DS"));
+            s += Utils::Format("\n[%s]", pluginSerial);
+
+            MessageBox("About CYX Plugin", s, DialogType::DialogOk, ClearScreen::Both)();
+        }, "General details about this plugin");
     }
 
     void warnIfSDTooBig(void) {
@@ -554,17 +598,11 @@ namespace CTRPluginFramework {
                 return 1;
             }
             warnIfSDTooBig();
-            
-            CFG_GetParentalControlMask(&parentalControlFlag);
-            CFGU_GetSystemModel(&g_systemModel);
-            CFGU_SecureInfoGetRegion(&g_systemRegion);
-            memcpy(g_systemRegionString, "JPNUSAEURAUSKORCHNTWNUNK" + (3 * MIN(g_systemRegion, 7)), 3);
-            g_systemRegionString[3] = 0;
         }
         PluginMenu *menu = new PluginMenu("CYX", VER_MAJOR, VER_MINOR, VER_MICRO, about, isCYXenabled);
 
         menu->SynchronizeWithFrame(true);
-        menu->ShowWelcomeMessage(true);
+        menu->ShowWelcomeMessage(false);
         if (isCYXenabled) {
             menu->Callback(menuTick);
             menu->OnOpening = menuOpen;
