@@ -8,13 +8,13 @@
 #include <csvc.h>
 #include <cmath>
 #include "Config.hpp"
+#include "petitReimpl.hpp"
 #include "Utils.hpp"
 #include "Misc.hpp"
 #include "save.hpp"
 #include "PetitCYX.hpp"
 #include "ExceptionHandler.hpp"
 #include "CYXConfirmDlg.hpp"
-#include "petitReimpl.hpp"
 #include "StringArchive.hpp"
 #include "nncy/ParentalControl.h"
 
@@ -26,6 +26,7 @@
 #endif
 
 #define ENABLE_DEBUG        false
+#define DBG_QKSET           true
 #define TOP_DIR             "/PTC3PLG" // Top directory (sdmc:/[TOP_DIR])
 #define CONFIG_PATH         TOP_DIR "/config" // General configurations
 #define RESOURCES_PATH      TOP_DIR "/resources" // Plugin resources

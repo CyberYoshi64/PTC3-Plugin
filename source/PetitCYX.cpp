@@ -10,18 +10,27 @@ namespace CTRPluginFramework {
     BASICTextPalette* CYX::textPalette = NULL;
     BASICActiveProject* CYX::activeProject = NULL;
     PTCConfig* CYX::ptcConfig = NULL;
+    ptcScreen* CYX::ptcScreens = NULL;
     FontOffFunc CYX::fontOff;
+    PrintCharFunc CYX::printConFunc;
     u16* CYX::basicFontMap = NULL;
     u32 CYX::patch_FontGetOffset[2] = {0};
     u32 CYX::patch_FontGetOffsetNew[2] = {0xE3A00001,0xE3A00001}; // asm "mov r0, #1"
     std::string CYX::g_currentProject = "";
     RT_HOOK CYX::clipboardFunc = {0};
     RT_HOOK CYX::basControllerFunc = {0};
-    RT_HOOK CYX::scrShotStub = {0};
+    Hook CYX::sendKeyHook;
+    Hook CYX::mainThreadEntryHook;
+    Hook CYX::nnExitHook;
     Hook CYX::soundHook;
     Hook CYX::soundHook2;
     bool CYX::forceDisableSndOnPause = false;
-    char CYX::introText[512] = "SmileBASIC-CYX " STRING_VERSION "(" BUILD_DATE ")" "\n\n2022-2023 CyberYoshi64\n\n";
+    char CYX::introText[512] =
+#if DBG_QKSET
+        "SmileBASIC-CYX " STRING_VERSION "-dev (" BUILD_DATE ")\n\xA9 2022-2024 CyberYoshi64\n\n";
+#else
+        "SmileBASIC-CYX - Ver. " STRING_VERSION "\n\xA9 2022-2024 CyberYoshi64\n\n";
+#endif
     char CYX::bytesFreeText[32] = " bytes free\n\n";
     bool CYX::provideCYXAPI = true;
     bool CYX::wasCYXAPIused = false;
@@ -49,6 +58,11 @@ namespace CTRPluginFramework {
     };
     RT_HOOK CYX::petcServiceTokenHook;
     RT_HOOK CYX::nnActIsNetworkAccountHook;
+    const char16_t* langNames[] = {
+        u"ja", u"en", u"fr", u"de",
+        u"it", u"es", u"zh", u"ko",
+        u"nl", u"pt", u"ru", u"tw"
+    };
 
     void setCYXStuff(void) {
         CYX::SetAPIAvailability(Config::Get().cyx.enableAPI);
@@ -70,8 +84,10 @@ namespace CTRPluginFramework {
         textPalette = (BASICTextPalette*)Hooks::offsets.consoleTextPal;
         activeProject = (BASICActiveProject*)Hooks::offsets.activeProjStr;
         ptcConfig = (PTCConfig*)Hooks::offsets.configBuf;
+        ptcScreens = (ptcScreen*)0x01B602B8;//Hooks::offsets.screenBuf;
         basicFontMap = (u16*)Hooks::offsets.fontMapBuf;
         fontOff = (FontOffFunc)Hooks::offsets.funcFontGetOff;
+        printConFunc = (PrintCharFunc)0x1F75A4;//Hooks::offsets.funcPrintCon;
         Process::Write32(Hooks::offsets.helpPagePal, (u32)helpPageColors);
         Process::Write32(Hooks::offsets.helpPageDefCol + 0, helpPageColors[1]); // Default text FG
         Process::Write32(Hooks::offsets.helpPageDefCol + 4, helpPageColors[0]); // Default help BG
@@ -91,7 +107,19 @@ namespace CTRPluginFramework {
         soundHook2.InitializeForMitm(Hooks::offsets.nnSndSoundThreadEntry2, (u32)SoundThreadHook2);
         soundHook2.SetFlags(USE_LR_TO_RETURN|MITM_MODE|EXECUTE_OI_AFTER_CB);
         soundHook2.Enable();
+
+        // Filter some key codes, notably the screenshot code
+        sendKeyHook.InitializeForMitm(0x1F7530, (u32)sendKeyHookFunc);
+        sendKeyHook.SetFlags(USE_LR_TO_RETURN|MITM_MODE|EXECUTE_OI_AFTER_CB);
+        sendKeyHook.Enable();
         
+        mainThreadEntryHook.InitializeForMitm(0x104004, (u32)ptcMainEntryHookFunc);
+        mainThreadEntryHook.SetFlags(USE_LR_TO_RETURN|MITM_MODE|EXECUTE_OI_AFTER_CB);
+        mainThreadEntryHook.Enable();
+        nnExitHook.InitializeForMitm(0x1047A0, (u32)nnExitHookFunc);
+        nnExitHook.SetFlags(MITM_MODE|EXECUTE_OI_AFTER_CB);
+        nnExitHook.Enable();
+
         // Load Config and set act appropriately
         Config::Load();
         if (Config::Get().clearCache) {
@@ -247,10 +275,10 @@ namespace CTRPluginFramework {
 
     bool CYX::WouldOpenMenu() {
         if (!isCYXenabled) return true;
-        if (mirror.isInBasic) {
-            SoundEngine::PlayMenuSound(SoundEngine::Event::DESELECT);
-            return false;
-        }
+        //if (mirror.isInBasic) {
+        //    SoundEngine::PlayMenuSound(SoundEngine::Event::DESELECT);
+        //    return false;
+        //}
         return true;
     }
     void CYX::UpdateMirror() {
@@ -280,8 +308,27 @@ namespace CTRPluginFramework {
     bool CYX::WasCYXAPIUsed() {
         return wasCYXAPIused;
     }
-    int CYX::scrShotStubFunc() { // Gnahh... I can't find this stinker in the code.
-        return 0;
+    void CYX::sendKeyHookFunc(u32* ptr1, u32 key) {
+        if (key == 0x10023) return; // Filter screenshot key code
+        
+        // OSD::Notify(Utils::Format("%08X %08X", (u32)ptr1, key));
+        
+        __asm__ __volatile__ (
+            "@ Set registers for original function"
+            "ldr r0, %0 \n"
+            "ldr r1, %1 \n"
+            : "=m"(ptr1) : "m"(key)
+        );
+        ctrpfHook__ExecuteOriginalFunction();
+    }
+    void CYX::ptcMainEntryHookFunc(u32 r0) {
+        extern LightEvent mainEvent1;
+        LightEvent_Signal(&mainEvent1);
+        __asm__ __volatile__ ("ldr r0, %0\n" : "=m"(r0));
+        ctrpfHook__ExecuteOriginalFunction();
+    }
+    void CYX::nnExitHookFunc() {
+        ctrpfHook__ExecuteOriginalFunction();
     }
     void CYX::CYXAPI_Out(BASICGenericVariable* out) {
         if (out >= (BASICGenericVariable*)cyxApiLastOutv) return;
@@ -391,7 +438,7 @@ namespace CTRPluginFramework {
         if (!provideCYXAPI) {
             if (type != VARTYPE_NONE) {
                 switch (type) {
-                    case VARTYPE_STRING: isCYX=true; break;
+                    case VARTYPE_STRING: return 3;
                     case VARTYPE_INT:
                         if (argv->data != 0) return 3;
                         break;
@@ -404,6 +451,7 @@ namespace CTRPluginFramework {
                 outv->type = SBVARRAW_INTEGER;
                 outv->data = 1;
             }
+
         } else {
             cyxApiOutc = outc;
             cyxApiLastOutv = (u32)(outv+outc);

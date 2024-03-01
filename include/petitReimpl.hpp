@@ -1,5 +1,4 @@
-#ifndef PETITREIMPL_HPP
-#define PETITREIMPL_HPP
+#pragma once
 
 #include "main.hpp"
 #include "sha1.h"
@@ -79,6 +78,3 @@ namespace CTRPluginFramework {
         void Close();
     };
 }
-
-
-#endif

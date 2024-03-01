@@ -2,6 +2,7 @@
 #include "main.hpp"
 #include "BasicAPI.hpp"
 #include "save.hpp"
+#include "petitReimpl.hpp"
 
 const char* pluginSerial = "3GX-H-CYXZ";
 
@@ -18,7 +19,9 @@ u8 fsObsSetThisSecValPat[] = {0x40, 0x01, 0x65, 0x08};
 u8 fsSetSecValPat[] = {0x80, 0x01, 0x75, 0x08};
 u8 fsCheckPermsPat[] = {0x04, 0x10, 0x12, 0x00, 0x76, 0x46, 0x00, 0xD9};
 
+
 namespace CTRPluginFramework {
+    LightEvent mainEvent1;
     bool isCYXenabled;
     Region g_region;
     FS_ArchiveResource g_sdmcArcRes;
@@ -434,6 +437,7 @@ namespace CTRPluginFramework {
         settings.CustomKeyboard.BackgroundSecondary = Color(0x001010FF);
         settings.MainTextColor = Color(0xD0D0D0FF);
         sprintf(g_ProcessTID, "%016lX", Process::GetTitleID());
+        LightEvent_Init(&mainEvent1, RESET_ONESHOT);
         
         CFG_GetParentalControlMask(&parentalControlFlag);
         CFGU_GetSystemModel(&g_systemModel);
@@ -489,6 +493,10 @@ namespace CTRPluginFramework {
         }
     }
 
+    void StallProcess(void) {
+        LightEvent_Wait(&mainEvent1);
+    }
+
     // Called when process ends
     void OnProcessExit(void) {
         CYX::Finalize();
@@ -536,8 +544,7 @@ namespace CTRPluginFramework {
                     DANG("experiment3(): DANG() Test", __FILE, __LINE);
                 }),
                 new MenuEntry("experiment4", nullptr, [](MenuEntry* entry) {
-                    PLGSET(PLGFLG_EXPERIMENTS);
-                    DANG("experiment4(): There is no experiment.", __FILE, __LINE);
+                    MessageBox("You tried to use this function but nothing happened.")();
                 }),
             }));
             menu += new MenuEntry(LANG("menuCYXAPISet"), nullptr, cyxAPItoggle, "The CYX API adds various features to BASIC.");
@@ -554,6 +561,11 @@ namespace CTRPluginFramework {
 
             MessageBox("About CYX Plugin", s, DialogType::DialogOk, ClearScreen::Both)();
         }, "General details about this plugin");
+#if DBG_QKSET
+        menu += new MenuEntry("Quick Exit", nullptr, [](MenuEntry* e){
+            Process::ReturnToHomeMenu();
+        });
+#endif
     }
 
     void warnIfSDTooBig(void) {
@@ -579,6 +591,12 @@ namespace CTRPluginFramework {
         "2022-2024 CyberYoshi64";
 
     int main(void) {
+        PluginMenu *menu = new PluginMenu("CYX", VER_MAJOR, VER_MINOR, VER_MICRO, about, 0&&isCYXenabled);
+
+        menu->SynchronizeWithFrame(true);
+        menu->ShowWelcomeMessage(false);
+        InitMenu(*menu);
+
         if (isCYXenabled) {
             if (g_region != REGION_NONE && g_region < REGION_MAX){
                 Process::exceptionCallback = Exception::Handler;
@@ -598,17 +616,10 @@ namespace CTRPluginFramework {
                 return 1;
             }
             warnIfSDTooBig();
-        }
-        PluginMenu *menu = new PluginMenu("CYX", VER_MAJOR, VER_MINOR, VER_MICRO, about, isCYXenabled);
-
-        menu->SynchronizeWithFrame(true);
-        menu->ShowWelcomeMessage(false);
-        if (isCYXenabled) {
             menu->Callback(menuTick);
             menu->OnOpening = menuOpen;
             menu->OnClosing = menuClose;
         }
-        InitMenu(*menu);
         menu->Run();
         delete menu;
         return 0;

@@ -6,6 +6,7 @@ FTP_IP="192.168.2.180"
 FTP_PORT="5000"
 
 if ./compile.sh $1; then
+    ./toCitra.sh
     $SENDFILEPY $PLUGINFILE /PTC3PLG/resources $FTP_IP $FTP_PORT
     $SENDFILEPY $PLUGINFILE /luma/plugins/0004000000117200 $FTP_IP $FTP_PORT
     $SENDFILEPY $PLUGINFILE /luma/plugins/000400000016DE00 $FTP_IP $FTP_PORT
@@ -17,7 +18,6 @@ if ./compile.sh $1; then
     $SENDFILEPY build/lang/ENG.bin /PTC3PLG/resources/lang $FTP_IP $FTP_PORT
     $SENDFILEPY build/funcMap.bin /PTC3PLG/resources $FTP_IP $FTP_PORT
     $SENDFILEPY build/funcCfgMap.bin /PTC3PLG/resources $FTP_IP $FTP_PORT
-    ./toCitra.sh
 else
     echo "Damnit..."
 fi

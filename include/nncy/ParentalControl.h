@@ -1,13 +1,10 @@
 #pragma once
 #include <3ds.h>
 
-#ifdef __cplusplus
-extern "C" {
-#endif
-
 typedef enum ParentalControlFlags {
     ACS_ENABLED = 0,                // Parental Controls is enabled
     ACS_INTERNET_BROWSER = 1,       // Internet Browser
+    ACS_3D_DISPLAY = 2,             // Display of 3D Images
     ACS_SHARING_DATA = 3,           // Sharing Images/Audio/Video/Long Text Data
     ACS_ONLINE_INTERACTION = 4,     // Online Interaction
     ACS_STREETPASS = 5,             // StreetPass
@@ -19,6 +16,10 @@ typedef enum ParentalControlFlags {
     ACS_MIIVERSE_POST = 11,         // Miiverse (post)
     ACS_COPPACS = 31                // "Child Online Privacy Protection" - only relevant to USA/Canada
 } ParentalControlFlags;
+
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 Result CFG_GetParentalControlMask(u32* flags);
 

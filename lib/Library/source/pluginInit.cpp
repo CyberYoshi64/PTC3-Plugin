@@ -60,6 +60,7 @@ namespace CTRPluginFramework
 
     // From main.cpp
     int     main(void);
+    int     StallProcess(void);
 }
 
 namespace Kernel
@@ -329,7 +330,8 @@ namespace CTRPluginFramework
         }
 
         // Wait for the required time
-        Sleep(settings.WaitTimeToBoot);
+        //Sleep(settings.WaitTimeToBoot);
+        StallProcess();
 
         svcCreateEvent(&g_keepEvent, RESET_ONESHOT);
 

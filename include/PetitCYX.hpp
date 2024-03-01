@@ -3,6 +3,7 @@
 
 #include "main.hpp"
 #include "Hooks.hpp"
+#include "petitReimpl.hpp"
 #include <stdio.h>
 
 #define SBSERVER_DEFAULT_NAME1	"https://save.smilebasic.com"
@@ -27,7 +28,7 @@
 #define PRJSETFILEMAGIC     0x0154455325585943ULL
 #define THREADVARS_MAGIC    0x21545624 // !TV$
 
-typedef struct PTCConfig_s {
+typedef struct {
     u32 magic;          // Checked for, it's "SB3c"
     u16 smileToolPath[0x40]; // Null-terminated UTF-16 string
     u16 activeProject[0x10]; // Null-terminated UTF-16 string
@@ -120,7 +121,7 @@ typedef struct {
     char name[16];
 } PTCPackedProjectEntry;
 
-typedef struct BASICTextPalette_s { // EUR 3.6.0 @ 0x01D027CC
+typedef struct { // EUR 3.6.0 @ 0x01D027CC
     u32 conClear; u32 conBlack;
     u32 conMaroon; u32 conRed;
     u32 conGreen; u32 conLime;
@@ -136,12 +137,12 @@ typedef struct BASICTextPalette_s { // EUR 3.6.0 @ 0x01D027CC
     u32 editStatement; u32 editSelectFG;
 } BASICTextPalette;
 
-typedef struct BASICActiveProject_s { // EUR 3.6.0 @ 0x01B14B00
+typedef struct { // EUR 3.6.0 @ 0x01B14B00
     u16 activeProject[15]; u16 currentProject[15];
     u16 unk1; u16 unk2;
 } CTR_PACKED BASICActiveProject;
 
-typedef struct BASICGraphicPage_s {
+typedef struct {
     void* ptr1;
     u32 unk1; u32 unk2;
     u16* dispBuf; u16* workBuf;
@@ -154,7 +155,7 @@ typedef struct BASICGraphicPage_s {
     u32 isResourceProtected; // Used by "Protected Resource" error
 } CTR_PACKED BASICGraphicPage;
 
-typedef struct BASICGRPStructs_s { // EUR 3.6.0 @ 0x01D02A4C
+typedef struct { // EUR 3.6.0 @ 0x01D02A4C
     BASICGraphicPage grp[6];   // GRP0-GRP5
     BASICGraphicPage font;     // GRPF
     BASICGraphicPage system;   // SysUI / SysBASIC
@@ -162,7 +163,7 @@ typedef struct BASICGRPStructs_s { // EUR 3.6.0 @ 0x01D02A4C
     BASICGraphicPage unk1;     // Unknown data (Test?)
 } CTR_PACKED BASICGRPStructs;
 
-typedef struct BASICGenericVariable_s {
+typedef struct {
     u32 type; u32 unk1;
     u32 data; void* data2;
 } BASICGenericVariable;
@@ -176,7 +177,7 @@ typedef struct {
     u32 stringPtr;
 } BASICFunctionStack;
 
-typedef struct BASICProgramSlot_s {
+typedef struct {
     u16 text[1048576]; // UTF-16 content of slot
     u32 text_len;      // Length of slot content
     u32 text_og_len;   // Used to test if file is clean
@@ -187,17 +188,17 @@ typedef struct BASICProgramSlot_s {
     u32 cursorPosition;// Used by editor to know where the cursor is
 } CTR_PACKED BASICProgramSlot;
 
-typedef struct BASICEditorLine_s {
+typedef struct {
     u32 offset; u32 lineLen;
     u32 lineNum; u32 always_one;
 } CTR_PACKED BASICEditorLine;
 
-typedef struct BASICUndoEntry_s {
+typedef struct {
     u32 offset; u32 always_zero;
     u32 len; u16 data[0x1006];
 } CTR_PACKED BASICUndoEntry;
 
-typedef struct BASICEditorData_s { // EUR @ 0x00F5DC9C
+typedef struct { // EUR @ 0x00F5DC9C
     u16 clipboardData[0x100000];
     u32 clipboardLength;
     void* ptr1;
@@ -216,10 +217,129 @@ typedef struct BASICEditorData_s { // EUR @ 0x00F5DC9C
     u32 undoCount;
 } CTR_PACKED BASICEditorData;
 
-enum ProgramSlotName {
-    PRGSLOT_0 = 0, PRGSLOT_1,
-    PRGSLOT_2, PRGSLOT_3, PRGSLOT_MAX,
+typedef struct { // 0x31B570
+    u8 appletType;
+    u8 unk01;
+    u8 unk02;
+    u8 unk03;
+    u8 unk04;
+    u8 toHome01; // Not refreshed
+    u8 quitApplication01;
+    u8 unk07;
+    u8 unk08;
+    u8 quitApplication02; // used for nn::applet::WaitForStarting
+    u8 unk0a;
+    u8 unk0b;
+    u8 unk0c;
+    u8 toHome02;
+} appletFlag;
+
+enum ptcConsoleProp {
+    PTCCON_OFF_FRONTCLR = 0,
+    PTCCON_OFF_BACKCLR = 5,
+    PTCCON_OFF_ATTR = 10,
+    
+    PTCCON_FLS_FRONTCLR = 0x1F,
+    PTCCON_FLS_BACKCLR = 0x1F,
+    PTCCON_FLS_ATTR = 0x0F,
 };
+
+#define PTCCON_MKPROP(fc,bc,at) ( \
+    (fc & PTCCON_FLS_FRONTCLR)<<PTCCON_OFF_FRONTCLR | \
+    (bc & PTCCON_FLS_BACKCLR)<<PTCCON_OFF_BACKCLR | \
+    (at & PTCCON_FLS_ATTR)<<PTCCON_OFF_ATTR \
+)
+
+typedef struct {
+    struct {
+        u16 glyph;  // UTF-16 glyph
+        u16 prop;   // Bitfield containing color & ATTR
+        float z;    // z-Offset
+    } slot[1500];
+} ptcConsoleTiles;
+
+typedef struct { // 0x315D74
+    void* unk_0000;
+    u32 unk_0004;
+    u32 unk_0008;
+    u32 unk_000c;
+    void* unk_0010;
+    void* unk_0014;
+    u32 unk_0018;
+    ptcConsoleTiles* tiles;
+    u32 width; // Console width?
+    u32 height; // Console height?
+    u32 width2; // Console width?
+    u32 height2; // Console height?
+    u32 unk_0030;
+    u32 fgColor;
+    u32 bgColor;
+    u32 attr;
+    u32 csrx; // Horizontal cursor position (CSRX)
+    u32 csry; // Vertical cursor position (CSRY)
+    float csrz; // Cursor depth (CSRZ)
+    u32 unk_004c;
+    u32 unk_0050;
+    u32 unk_0054;
+    u32 unk_0058; // Vertical cursor position (input)
+    void* unk_005c;
+    u32 inputBufSize;
+    u32 inputCursorPos;
+    u32 unk_0068;
+    u32 inputSelEnabledPos;
+    u16 inputBuf[256];
+    u32 unk_0270;
+    u32 unk_0274;
+    u32 unk_0278[128];
+    u16 suggestion_buf[256][32];
+    u32 suggestion_len[32];
+    u32 suggestion_next; // Next offset to overwrite
+    u32 suggestion_count; // If < 32, add, otherwise replace
+    u32 unk_4504;
+    u32 unk_4508;
+    char general_buf[64]; // Used for error messages and FILES
+    u32 unk_454c;
+} ptcConsole;
+
+typedef struct {
+    void* ptr00;
+    ptcConsole* console;
+    u32 height;
+    u32 width;
+    void* unk10;
+    void* unk14;
+    BASICGraphicPage* dispGrpBuf;
+    BASICGraphicPage* workGrpBuf;
+    void* unk20;
+    void* unk24;
+    void* unk28;
+    void* unk2c;
+    u32 dispGrpIndex;
+    u32 workGrpIndex;
+    void* spritePtr;
+    void* unk3c;
+    void* unk40;
+    void* unk44;
+    u32 spriteCount;
+    void* unk4c;
+    void* bgPtr;
+    void* unk54;
+    void* unk58;
+    void* unk5c;
+    u32 bgCount;
+    void* unk64;
+    void* unk68;
+    void* unk6c;
+    u32 fadeColor;
+    u32 fadeDuration;
+    u32 fadeTimer;
+    u32 fadeSrcColor;
+    u32 fadeTargetColor;
+    bool visibleCon;
+    bool visibleGrp;
+    bool visibleSp;
+    bool visibleBg;
+} ptcScreen;
 
 #define SBVARRAW_INTEGER    0x305654
 #define SBVARRAW_DOUBLE     0x3056B8
@@ -256,6 +376,7 @@ enum BasicAPI_Flags { // Project flags
 
 namespace CTRPluginFramework {
     using FontOffFunc = bool(*)(int c, int* y, int* x);
+    using PrintCharFunc = int(*)(ptcConsole* con, u16 chr, u32 type);
     class CYX {
         typedef struct MirroredVars {
             u8 isDirectMode;
@@ -368,8 +489,8 @@ namespace CTRPluginFramework {
         
         static u8 getSBVariableType(u32 rawType);
         
-        /// @brief Screenshot stub - not implemented yet
-        static int scrShotStubFunc(void);
+        /// @brief Key Send Hook - used to filter out screenshot
+        static void sendKeyHookFunc(u32* ptr1, u32 key);
 
         /// @brief CONTROLLER stub - implements CYX API beside the main functionality
         static int controllerFuncHook(void* ptr, u32 selfPtr, BASICGenericVariable* outv, u32 outc, void* a4, u32 argc, BASICGenericVariable* argv);
@@ -416,6 +537,8 @@ namespace CTRPluginFramework {
         static void ResetServerLoginState();
         static int petcTokenHookFunc();
         static int nnActIsNetworkAccountStub();
+        static void ptcMainEntryHookFunc(u32 r0);
+        static void nnExitHookFunc(void);
 
         static u32 currentVersion;
         static BASICEditorData* editorInstance;     // Editor instance
@@ -424,10 +547,13 @@ namespace CTRPluginFramework {
         static BASICTextPalette* textPalette;       // Text console palette
         static PTCConfig* ptcConfig;                // BASIC config struct
         static PTCUDS* ptcUds;                      // Multiplayer Struct
+        static ptcScreen* ptcScreens;               // Screens
         static std::string g_currentProject;
         static RT_HOOK clipboardFunc;
         static RT_HOOK basControllerFunc;
-        static RT_HOOK scrShotStub;
+        static Hook sendKeyHook;
+        static Hook mainThreadEntryHook;            // MitM hook for main entry
+        static Hook nnExitHook;               // Replace nnWebbrsTick
         static Hook soundHook;
         static Hook soundHook2;
         static bool forceDisableSndOnPause;
@@ -438,6 +564,7 @@ namespace CTRPluginFramework {
         static u32 patch_FontGetOffsetNew[];
         static MirroredVars mirror;
         static FontOffFunc fontOff;                 // FONTDEF remap function
+        static PrintCharFunc printConFunc;          // Function to plot glyphs to the console
         static u64 sdmcFreeSpace;
         static u64 sdmcTotalSpace;
         static s32 volumeSliderValue;
