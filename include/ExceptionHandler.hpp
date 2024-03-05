@@ -1,7 +1,8 @@
 #ifndef EXCEPTIONHANDLER_HPP
 #define EXCEPTIONHANDLER_HPP
 
-#include "main.hpp"
+#include <CTRPluginFramework.hpp>
+#include "Config.hpp"
 #include "QrCode.hpp"
 #include "base64.hpp"
 #include <cmath>
@@ -84,12 +85,13 @@ namespace CTRPluginFramework {
         static CYXDumpHeader mkHeader(u16 type, u16 cnt);
         static void BuildExceptionData(ERRF_ExceptionInfo *excep, CpuRegisters *regs);
         static void BuildRescueScreen(u8 mode, u32 i, u32 j, std::string& s2);
-        static std::string SadMessageRnd(void);
-        static void BuildScreen(Screen& top, Screen& bot, u64 timer);
+        static void BuildScreen(Screen& top, Screen& bot);
+        static const char* SadMessage[];
         static std::string panicString;
-        static qrcodegen::QrCode* qr;
+        static std::vector<std::vector<bool>> qrModule;
         static u32 screenSadMessageIndex;
-        static u32 renderState;
+        static u32 state;
+        static u32 timer;
         static bool dumpAsText;
         static u8 dataBuffer[];
         static u16 dataLength;

@@ -1,7 +1,8 @@
 #ifndef CONFIG_HPP
 #define CONFIG_HPP
 
-#include "main.hpp"
+#include "CTRPluginFramework.hpp"
+#include "constants/main.h"
 
 #define CONFIG_HEADER       *(u64*)"CYX$CFG0"
 #define CONFIG_VERSION      2

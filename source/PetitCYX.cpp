@@ -1,6 +1,7 @@
 #include "PetitCYX.hpp"
 #include "BasicAPI.hpp"
 
+
 namespace CTRPluginFramework {
     u32 CYX::currentVersion = 0;
     CYX::MirroredVars CYX::mirror = {0};
@@ -25,12 +26,7 @@ namespace CTRPluginFramework {
     Hook CYX::soundHook;
     Hook CYX::soundHook2;
     bool CYX::forceDisableSndOnPause = false;
-    char CYX::introText[512] =
-#if DBG_QKSET
-        "SmileBASIC-CYX " STRING_VERSION "-dev (" BUILD_DATE ")\n\xA9 2022-2024 CyberYoshi64\n\n";
-#else
-        "SmileBASIC-CYX - Ver. " STRING_VERSION "\n\xA9 2022-2024 CyberYoshi64\n\n";
-#endif
+    char CYX::introText[512] = "SmileBASIC-CYX - Ver. " STRING_VERSION "\n(C) 2022-2024 CyberYoshi64\n\n";
     char CYX::bytesFreeText[32] = " bytes free\n\n";
     bool CYX::provideCYXAPI = true;
     bool CYX::wasCYXAPIused = false;
@@ -192,13 +188,110 @@ namespace CTRPluginFramework {
         if (BasicAPI::flags & APIFLAG_FS_ACC_SAFE) CreateHomeFolder();
         CYXConfirmDlg::ResetUse();
     }
+
+    void CYX::ValidateSaveData() {
+        std::vector<std::string> files;
+        std::vector<std::string> compromised;
+        u32 index, size; File f;
+        Directory dir, dir2;
+        StringVector dv1, dv2;
+
+        Process::Pause();
+        OSD::Lock();
+
+        Screen scr = OSD::GetTopScreen();
+        Directory::Open(dir, EXTDATA_PATH);
+        size = dir.ListDirectories(dv1);
+        for (index = 0; index < size; index++) {
+            scr.DrawRect(0, 0, 320, 64, Color::Black);
+            scr.Draw(Utils::Format("Listing files to verify...(%4d/%4d)", index + 1, size), 4, 4);
+            OSD::SwapBuffers();
+            Directory::Open(dir2, EXTDATA_PATH"/" + dv1.at(index));
+            dir2.ListFiles(dv2);
+            for (u32 i = 0; i < dv2.size(); i++) {
+                files.push_back(dv1.at(index) + "/" + dv2.at(i));
+            }
+            dir2.Close();
+            dv2.clear();
+        }
+        dir.Close();
+        dv1.clear();
+
+        size = files.size();
+        u8 digest[20], oldDigest[20];
+        u32 fsize, fsize2, chunk;
+        char* hmac = (char*)Hooks::offsets.serverHMACKey;
+        int hmac_len = strlen(hmac);
+        #define BUFFER_SIZE 262144
+        void* buf = new u8[BUFFER_SIZE];
+        if (!buf) abort();
+        SHA1_HMAC::CTX hmacCtx;
+        
+        if (File::Exists(VERFAIL_PATH))
+            File::Remove(VERFAIL_PATH);
+        File::Create(VERFAIL_PATH);
+        
+        for (index = 0; index < size; index++) {
+            scr.DrawRect(0, 0, 320, 64, Color::Black);
+            scr.Draw(Utils::Format("Verifying file...(%5d/%5d)", index + 1, size), 4, 4);
+            scr.Draw(files.at(index), 4, 16);
+            if (compromised.size())
+                scr.Draw(Utils::Format("%5d file(s) compromised", compromised.size()), 4, 32);
+            OSD::SwapBuffers();
+            if (!File::Open(f, EXTDATA_PATH"/" + files.at(index), File::READ)) {
+                SHA1_HMAC::Init(&hmacCtx, (u8*)hmac, hmac_len);
+                fsize = fsize2 = f.GetSize()-20;
+                f.Seek(-20, File::END);
+                f.Read(oldDigest, 20);
+                f.Seek(0, File::SET);
+                while (fsize) {
+                    chunk = fsize > BUFFER_SIZE ? BUFFER_SIZE : fsize;
+                    f.Read(buf, chunk);
+                    SHA1_HMAC::Update(&hmacCtx, (u8*)buf, chunk);
+                    fsize -= chunk;
+                }
+            }
+            f.Close();
+            SHA1_HMAC::Final(digest, &hmacCtx);
+            if (memcmp(digest, oldDigest, 20)) {
+                compromised.push_back(files.at(index));
+                if (!File::Open(f, VERFAIL_PATH, File::WRITE|File::APPEND)) {
+                    f.Write(files.at(index).c_str(), files.at(index).size());
+                    f.Write("\n", 1);
+                }
+                f.Close();
+            }
+        }
+        ::operator delete(buf);
+        #undef BUFFER_SIZE
+
+        scr.DrawRect(0, 0, 320, 64, Color::Black);
+        OSD::SwapBuffers();
+        scr.DrawRect(0, 0, 320, 64, Color::Black);
+        scr.Draw("Done.", 4, 4);
+        scr.Draw("You can view the list of compromised files in", 4, 16);
+        scr.Draw("the following file:", 4, 26);
+        scr.Draw("sdmc:" VERFAIL_PATH, 4, 38);
+        OSD::SwapBuffers();
+        Sleep(Seconds(3));
+        OSD::Unlock();
+        Process::Play();
+    }
+
     void CYX::TrySave() {cyxSaveTimer = 0;}
+    
     void CYX::MenuTick() {
         if (!isCYXenabled) return;
         std::string str;
         bool doUpdate = (!cyxSaveTimer);
         bool didUpdateManually = false;
 
+        if (Config::Get().validateSaveData) {
+            CYX::ValidateSaveData();
+            Config::Get().validateSaveData = false;
+            doUpdate = true;
+        }
+        
         if (Config::Get().pluginDisclAgreed < PLUGINDISCLAIMERVER) {
             pluginDisclaimer(NULL);
             doUpdate = true;
@@ -254,19 +347,21 @@ namespace CTRPluginFramework {
             FSUSER_GetArchiveResource(&g_sdmcArcRes, SYSTEM_MEDIATYPE_SD);
             sdmcFreeSpace = (float)g_sdmcArcRes.clusterSize * g_sdmcArcRes.freeClusters;
             sdmcTotalSpace = (float)g_sdmcArcRes.clusterSize * g_sdmcArcRes.totalClusters;
-            mcuHwcInit();
             if (System::IsCitra()) {
                 volumeSliderValue = 63;
                 rawBatteryLevel = 100;
+                mcuSleep = false;
             } else {
-                volumeSliderValue = 0;
-                rawBatteryLevel = 0;
-                MCUHWC_GetBatteryLevel((u8*)&rawBatteryLevel);
-                MCUHWC_GetSoundSliderLevel((u8*)&volumeSliderValue);
+                if R_SUCCEEDED(mcuHwcInit()) {
+                    volumeSliderValue = 0;
+                    rawBatteryLevel = 0;
+                    MCUHWC_GetBatteryLevel((u8*)&rawBatteryLevel);
+                    MCUHWC_GetSoundSliderLevel((u8*)&volumeSliderValue);
+                    MCUHWC_ReadRegister(0x18, &mcuSleep, 1);
+                    mcuSleep = !(mcuSleep & 0x6C);
+                }
+                mcuHwcExit();
             }
-            MCUHWC_ReadRegister(0x18, &mcuSleep, 1);
-            mcuSleep = !(mcuSleep & 0x6C);
-            mcuHwcExit();
             cyxUpdateSDMCStats = 24;
         } else {
             cyxUpdateSDMCStats--;
@@ -274,11 +369,14 @@ namespace CTRPluginFramework {
     }
 
     bool CYX::WouldOpenMenu() {
-        if (!isCYXenabled) return true;
+        if (!isCYXenabled)
+            return true;
+        
         //if (mirror.isInBasic) {
         //    SoundEngine::PlayMenuSound(SoundEngine::Event::DESELECT);
         //    return false;
         //}
+        
         return true;
     }
     void CYX::UpdateMirror() {
@@ -309,8 +407,7 @@ namespace CTRPluginFramework {
         return wasCYXAPIused;
     }
     void CYX::sendKeyHookFunc(u32* ptr1, u32 key) {
-        if (key == 0x10023) return; // Filter screenshot key code
-        
+        if (key == 0x10023) return;
         // OSD::Notify(Utils::Format("%08X %08X", (u32)ptr1, key));
         
         __asm__ __volatile__ (
@@ -324,6 +421,7 @@ namespace CTRPluginFramework {
     void CYX::ptcMainEntryHookFunc(u32 r0) {
         extern LightEvent mainEvent1;
         LightEvent_Signal(&mainEvent1);
+
         __asm__ __volatile__ ("ldr r0, %0\n" : "=m"(r0));
         ctrpfHook__ExecuteOriginalFunction();
     }

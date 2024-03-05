@@ -1,7 +1,8 @@
 #ifndef CYXCONFIRMDLG_HPP
 #define CYXCONFIRMDLG_HPP
 
-#include "main.hpp"
+#include <CTRPluginFramework.hpp>
+#include "PetitCYX.hpp"
 
 namespace CTRPluginFramework {
     enum CYXConfirmID {

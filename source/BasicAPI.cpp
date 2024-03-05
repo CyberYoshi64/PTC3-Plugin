@@ -2,18 +2,16 @@
 
 namespace CTRPluginFramework {
     u32 BasicAPI::handleIDCounter = BASICAPI_HANDLE_START;
-    std::vector<BasicAPI::QueueEntry> BasicAPI::Queue = {};
     std::vector<BasicAPI::FileStruct> BasicAPI::Files = {};
-    u32 BasicAPI::queueOffset = 0;
     u32 BasicAPI::flags = APIFLAG_DEFAULT;
     u32 g_BasicAPI_PathType = 0;
 
     #define RGBA8_to_5551(r,g,b,a)  ((((b)>>3)&0x1f)<<1)|((((g)>>2)&0x1f)<<6)|((((r)>>3)&0x1f)<<11)|((a / 255)&1)
 
-    #define APIOUT(o,s)       CYX::CYXAPI_Out(o,s)
-    #define APIOUT_I(o,s)       CYX::CYXAPI_Out(o,(s32)(s))
-    #define APIOUT_D(o,s)       CYX::CYXAPI_Out(o,(double)(s))
-    #define APIOUT_C(o)       CYX::CYXAPI_Out(o)
+    #define APIOUT(o,s)     CYX::CYXAPI_Out(o,s)
+    #define APIOUT_I(o,s)   CYX::CYXAPI_Out(o,(s32)(s))
+    #define APIOUT_D(o,s)   CYX::CYXAPI_Out(o,(double)(s))
+    #define APIOUT_C(o)     CYX::CYXAPI_Out(o)
     #define APIGETCLIP(s)   s.append(CYX::editorInstance->clipboardData, CYX::editorInstance->clipboardLength)
 
     bool basicapi__HavePermission(bool write){
@@ -1001,6 +999,40 @@ namespace CTRPluginFramework {
     u32 basicapi__getDataPtr(){
         return (u32)CYX::editorInstance->clipboardData;
     }
+    int basicapi__Experiment1(BASICAPI_FUNCVARS) {
+        if (!argc) return 0;
+        int size = 0;
+        void* p = ((ptcVariableObject*)argv->type)->getString(argv, &size);
+        OSD::Notify(Utils::Format("%p", p));
+        return 0;
+    }
+    int basicapi__Experiment2(BASICAPI_FUNCVARS) {
+        if (argc < 2) return 0;
+        int arg, out1; void* ptr; std::string s;
+        string16 s2 = (u16*)u"Hello";
+        double outf;
+        if (((ptcVariableObject*)(argv+1)->type)->getInteger(argv+1, &arg))
+            return 3;
+        switch (arg) {
+        case 0:
+            ((ptcVariableObject*)argv->type)->getInteger(argv, &out1);
+            OSD::Notify(Utils::Format("%ld", out1));
+            return 0;
+        case 1:
+            ptr = ((ptcVariableObject*)argv->type)->getString(argv, &out1);
+            Process::ReadString((u32)ptr, s, out1 * 2, StringFormat::Utf8);
+            OSD::Notify(s);
+            return 0;
+        case 2:
+            if (!outc) return 0;
+            out1 = ((int(*)(void*, int, u16*))0x1ED3A8)(&ptr, s2.size(), (u16*)s2.c_str());
+            if (ptr)
+                ((ptcVariableObject*)outv->type)->setString(outv, &ptr);
+            OSD::Notify(Utils::Format("%p, %ld", ptr, out1));
+            return 0;
+        }
+        return 0;
+    }
     int BasicAPI::Parse(BASICAPI_FUNCVARS) {
         s32 funcType, len;
         
@@ -1010,7 +1042,6 @@ namespace CTRPluginFramework {
         CYX::SetAPIUse(true);
         if (argc) {
             funcType = CYX::argGetInteger(argv);
-            APIOUT_I(outv, 0);
             switch (funcType)
             {
             case 0:
@@ -1092,6 +1123,10 @@ namespace CTRPluginFramework {
                 return Func_SYSGCOPY(BASICAPI_FUNCVARSPASS);
             case BAPIFUNC_SETUP_CLIP:
                 return Func_SETUP_CLIP(BASICAPI_FUNCVARSPASS);
+            case 42068:
+                return basicapi__Experiment1(BASICAPI_FUNCVARSPASS);
+            case 42069:
+                return basicapi__Experiment2(BASICAPI_FUNCVARSPASS);
             }
             APIOUT_I(outv, -1);
             return 1;

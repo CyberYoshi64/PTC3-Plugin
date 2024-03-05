@@ -1,7 +1,7 @@
 #ifndef BASICAPI_HPP
 #define BASICAPI_HPP
 
-#include "main.hpp"
+#include "PetitCYX.hpp"
 
 namespace CTRPluginFramework {
     using BasicAPIFunction = int(*)(
@@ -39,16 +39,6 @@ namespace CTRPluginFramework {
         File* f;
     } FileStruct;
 
-    typedef struct QueueEntry_s {
-        bool wasProcessed;
-        u32* returnValue;
-        u32 type;
-        u32 arg1;
-        u32 arg2;
-        std::string arg3;
-        std::string arg4;
-    } QueueEntry;
-    
     enum BasicAPI_Funcs {
         BAPIFUNC__GETMAP    = 1337,
         BAPIFUNC_INIT       = 1000000,
@@ -157,9 +147,7 @@ namespace CTRPluginFramework {
         static int Func_SETUP_CLIP(BASICAPI_FUNCVARS);
         static int Func_CRASH(BASICAPI_FUNCVARS);
         
-        static std::vector<QueueEntry> Queue;
         static std::vector<FileStruct> Files;
-        static u32 queueOffset;
         static u32 handleIDCounter;
     };
     

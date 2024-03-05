@@ -19,7 +19,6 @@ u8 fsObsSetThisSecValPat[] = {0x40, 0x01, 0x65, 0x08};
 u8 fsSetSecValPat[] = {0x80, 0x01, 0x75, 0x08};
 u8 fsCheckPermsPat[] = {0x04, 0x10, 0x12, 0x00, 0x76, 0x46, 0x00, 0xD9};
 
-
 namespace CTRPluginFramework {
     LightEvent mainEvent1;
     bool isCYXenabled;
@@ -50,16 +49,18 @@ namespace CTRPluginFramework {
     char g_osSysVer[16];
     u32 cyxres;
 
-    void setCTRPFConfirm(u32 id, int defaultRes = 0){
+    void setCTRPFConfirm(u32 id, int defaultRes = 0) {
         ___confirmID = id;
         ___confirmRes = defaultRes;
         ___confirmWaiting = true;
     }
-    int waitCTRPFConfirm(){
+
+    int waitCTRPFConfirm() {
         while (___confirmWaiting) Sleep(Milliseconds(16));
         return ___confirmRes;
     }
-    void mcuSetSleep(bool on){
+
+    void mcuSetSleep(bool on) {
         u8 reg;
         if (R_FAILED(mcuHwcInit())) return;
         MCUHWC_ReadRegister(0x18, &reg, 1);
@@ -71,26 +72,13 @@ namespace CTRPluginFramework {
         mcuHwcExit();
         return;
     }
-    bool mcuIsSleepEnabled(){
+
+    bool mcuIsSleepEnabled() {
         u8 reg;
         if (R_FAILED(mcuHwcInit())) return false;
         MCUHWC_ReadRegister(0x18, &reg, 1);
         mcuHwcExit();
         return !(reg & 0x6C);
-    }
-
-    void menuTick(){
-        BasicAPI::MenuTick();
-        CYX::MenuTick();
-        CYXConfirmDlg::DoTheThing();
-    } 
-
-    bool menuOpen(){
-        return CYX::WouldOpenMenu();
-    }
-
-    void menuClose(){
-        CYX::TrySave();
     }
 
     void deleteSecureVal() {
@@ -104,24 +92,24 @@ namespace CTRPluginFramework {
             res = svcOpenProcess(&prochand, 0); // fs processID
             if (res) {
                 DEBUG(", svcOpenProcess returned: 0x%08X, aborting.\n", res);
-                customBreak(0xAB047, 1, 0);
+                customBreak(0xAB047, 1, 0, 0);
             }
             s64 info;
             res = svcGetProcessInfo(&info, prochand, 0x10005); // get start of .text
             if (res) {
                 DEBUG(", svcGetProcessInfo 0x10005 returned: 0x%08X, aborting.\n", res);
-                customBreak(0xAB047, 1, 0);
+                customBreak(0xAB047, 1, 0, 0);
             }
             u32 *addr = (u32 *)info;
             res = svcGetProcessInfo(&info, prochand, 0x10002); // get .text size
             if (res) {
                 DEBUG(", svcGetProcessInfo 0x10002 returned: 0x%08X, aborting.\n", res);
-                customBreak(0xAB047, 1, 0);
+                customBreak(0xAB047, 1, 0, 0);
             }
             res = svcMapProcessMemoryEx(CUR_PROCESS_HANDLE, 0x08000000, prochand, (u32)addr, (u32)info);
             if (res) {
                 DEBUG(", svcMapProcessMemoryEx returned: 0x%08X, aborting.\n", res);
-                customBreak(0xAB047, 1, 0);
+                customBreak(0xAB047, 1, 0, 0);
             }
             addr = (u32 *)0x08000000;
             u32 *endAddr = (u32 *)((u32)addr + (u32)info);
@@ -145,7 +133,7 @@ namespace CTRPluginFramework {
             res = FSUSER_ControlSecureSave(SECURESAVE_ACTION_DELETE, &secureValue, 8, &out, 1);
             if (res) {
                 DEBUG("patched fsControlSecureSave returned: 0x%08X, abort.\n", res);
-                customBreak(0xAB047, 1, 0);
+                customBreak(0xAB047, 1, 0, 0);
             } else {
                 DEBUG("patch succeeded, ");
             }
@@ -162,7 +150,7 @@ namespace CTRPluginFramework {
         }
     }
 
-    void dummyEntry(MenuEntry *entry){}
+    void dummyEntry(MenuEntry *entry) {}
 
     u32 *findNearestSTMFD(u32 *newaddr) {
         for (u32 i=0; i<1024; i++) {
@@ -184,35 +172,35 @@ namespace CTRPluginFramework {
             return;
         offset >>= 2;
         if (ENABLE_DEBUG) {
-            char *funcstr = (char *)"";
+            const char *funcstr = "";
             char buf[10];
             switch (offset) {
             case 0:
-                funcstr = (char *)"fsOpenFile";
+                funcstr = "fsOpenFile";
                 break;
             case 1:
-                funcstr = (char *)"fsOpenDirectory";
+                funcstr = "fsOpenDirectory";
                 break;
             case 2:
-                funcstr = (char *)"fsDeleteFile";
+                funcstr = "fsDeleteFile";
                 break;
             case 3:
-                funcstr = (char *)"fsRenameFile";
+                funcstr = "fsRenameFile";
                 break;
             case 4:
-                funcstr = (char *)"fsDeleteDirectory";
+                funcstr = "fsDeleteDirectory";
                 break;
             case 5:
-                funcstr = (char *)"fsDeleteDirectoryRecursively";
+                funcstr = "fsDeleteDirectoryRecursively";
                 break;
             case 6:
-                funcstr = (char *)"fsCreateFile";
+                funcstr = "fsCreateFile";
                 break;
             case 7:
-                funcstr = (char *)"fsCreateDirectory";
+                funcstr = "fsCreateDirectory";
                 break;
             case 8:
-                funcstr = (char *)"fsRenameDirectory";
+                funcstr = "fsRenameDirectory";
                 break;
             default:
                 snprintf(buf, sizeof(buf), "%d", offset);
@@ -245,7 +233,7 @@ namespace CTRPluginFramework {
         DEBUG("> getArchObj found at 0x%08X\n", funcAddr);
         addr = (u32 *)0x100000;
         while (addr < endAddr) { // Scan the text section of the code for the fs functions
-            if ((*addr & 0xFF000000) == 0xEB000000 && (decodeARMBranch(addr) == funcAddr)) { // If a branch to getArchObj if found analize it.
+            if ((*addr & 0xFF000000) == 0xEB000000 && (decodeARMBranch(addr) == funcAddr)) { // If a branch to getArchObj if found analyze it.
                 u8 regId = 0xFF;
                 for (i = 0; i < 1024; i++) { // Scan forwards for the closest BLX, and get the register it is branching to
                     int currinst = addr[i];
@@ -280,8 +268,7 @@ namespace CTRPluginFramework {
         DEBUG("Finished processing fs functions: %d/%d found.\n\n", ctr, NUMBER_FILE_OP + 1);
     }
 
-    void initOnionFSHooks(u32 textSize)
-    {
+    void initOnionFSHooks(u32 textSize) {
         u32 *addr = (u32 *)0x100000;
         u32 *endAddr = (u32 *)(0x100000 + textSize);
         bool contOpen = true, contMount = true, contReg = true, contArch = true, contDelete = true, contSetThis = true, contSetObs = true, contSet = true;
@@ -342,12 +329,12 @@ namespace CTRPluginFramework {
             }
             addr++;
         }
-        if (fsSetThisSecValHook.isEnabled || fsObsSetThisSecValHook.isEnabled || fsSetSecValHook.isEnabled) {
+        if (fsSetThisSecValHook.isEnabled || fsObsSetThisSecValHook.isEnabled || fsSetSecValHook.isEnabled)
             deleteSecureVal();
-        }
+
         if (!(openArchiveHook.isEnabled && regArchiveHook.isEnabled)) {
             DEBUG("ERROR: Some hooks couldn't be initialized, aborting.\n");
-            customBreak(0xab047, 0, 0);
+            customBreak(0xab047, 0, 0, 0);
         }
     }
 
@@ -493,7 +480,12 @@ namespace CTRPluginFramework {
         }
     }
 
+    // Stall plugin thread until game starts for plugin menu to safely initialize
+    // Here done by waiting for a hooked function to signal a wakeup event
     void StallProcess(void) {
+        Controller::Update();
+        //if (Controller::GetKeysDown() & KEY_X)
+        //    customBreak(1,2,3,4);
         LightEvent_Wait(&mainEvent1);
     }
 
@@ -512,69 +504,113 @@ namespace CTRPluginFramework {
             menu += new MenuFolder(LANG("menuExperiments"),
             "These features are freshly implemented or are still work in progress. Use these at your own risk.",
             std::vector<MenuEntry *>({
-                new MenuEntry("Set FONTDEF strictness", nullptr, fontGetAddrPatch, "Allow FONTDEF to modify the [X] character (or help simplify using a custom non-standard font map)"),
-                new MenuEntry("Reset GRP display", nullptr, [](MenuEntry* entry){
-                    PLGSET(PLGFLG_EXPERIMENTS);
-                    u32 dspX = 0xBB000000, dspY = 0x3B000000;
-                    for (u8 i=0; i<6; i++){
-                        CYX::GraphicPage->grp[i].displayedFormat = 2;
-                        CYX::GraphicPage->grp[i].__unk__sizeX = 0x200;
-                        CYX::GraphicPage->grp[i].__unk__sizeY = 0x200;
-                        CYX::GraphicPage->grp[i].dispScaleX = *(float*)&dspX;
-                        CYX::GraphicPage->grp[i].dispScaleY = *(float*)&dspY;
+                new MenuEntry(
+                    "Set FONTDEF strictness",
+                    nullptr, fontGetAddrPatch,
+                    "Allow FONTDEF to modify the [X] character (or help simplify using a custom non-standard font map)"
+                ),
+                new MenuEntry(
+                    "Change editor ruler color",
+                    nullptr, editorRulerPalette,
+                    "Choose from one of a few palettes for the editor ruler."
+                ),
+                new MenuEntry(
+                    "Restore CYX rescue dump",
+                    nullptr, restoreRescueDump,
+                    "Restore a CYX rescue dump that is obtained when the plugin closes abnormally, i.e. during a critical error or an exception."
+                ),
+                new MenuEntry(
+                    "Correct file HMAC",
+                    nullptr, validateFile,
+                    "Select a file to fix its HMAC signature footer. Fixing the signature will make the file eligible for upload to the SmileBASIC server."
+                ),
+                new MenuEntry(
+                    "Server session token hooking",
+                    nullptr, tokenHooker,
+                    "This hook will replace the obtainment of the NNID-based session token for the SmileBASIC server with a dummy one. This option is only for use as a test with custom servers and is discouraged to be used for the official server."
+                ),
+                new MenuEntry(
+                    "———————————",
+                    nullptr, nullptr
+                ),
+                new MenuEntry(
+                    "experiment1",
+                    nullptr, [](MenuEntry* entry) {
+                        PLGSET(PLGFLG_EXPERIMENTS);
+                        PANIC("experiment1(): PANIC() Test", __FILE, __LINE);
                     }
-                    CYX::GraphicPage->font.displayedFormat = 2;
-                    CYX::GraphicPage->system.displayedFormat = 2;
-                }, "The graphic pages have to be cleared/reloaded to flush the display buffer."),
-                new MenuEntry("Change editor ruler color", nullptr, editorRulerPalette, "Choose from one of a few palettes for the editor ruler."),
-                new MenuEntry("Restore CYX rescue dump", nullptr, restoreRescueDump, "Restore a CYX rescue dump that is obtained when the plugin closes abnormally, i.e. during a critical error or an exception."),
-                new MenuEntry("Correct file HMAC", nullptr, validateFile, "Select a file to fix its HMAC signature footer. Fixing the signature will make the file eligible for upload to the SmileBASIC server."),
-                new MenuEntry("Server session token hooking", nullptr, tokenHooker, "This hook will replace the obtainment of the NNID-based session token for the SmileBASIC server with a dummy one. This option is only for use as a test with custom servers and is discouraged to be used for the official server."),
-                new MenuEntry("———————————", nullptr, nullptr),
-                new MenuEntry("experiment1", nullptr, [](MenuEntry* entry) {
-                    PLGSET(PLGFLG_EXPERIMENTS);
-                    PANIC("experiment1(): PANIC() Test", __FILE, __LINE);
-                }),
-                new MenuEntry("experiment2", nullptr, [](MenuEntry* entry) {
-                    PLGSET(PLGFLG_EXPERIMENTS);
-                    ERROR_F("experiment2(): ERROR_F() Test", __FILE, __LINE);
-                }),
-                new MenuEntry("experiment3", nullptr, [](MenuEntry* entry) {
-                    PLGSET(PLGFLG_EXPERIMENTS);
-                    DANG("experiment3(): DANG() Test", __FILE, __LINE);
-                }),
-                new MenuEntry("experiment4", nullptr, [](MenuEntry* entry) {
-                    MessageBox("You tried to use this function but nothing happened.")();
-                }),
+                ),
+                new MenuEntry("experiment2",
+                    nullptr, [](MenuEntry* entry) {
+                        PLGSET(PLGFLG_EXPERIMENTS);
+                        ERROR_F("experiment2(): ERROR_F() Test", __FILE, __LINE);
+                    }
+                ),
+                new MenuEntry("experiment3",
+                    nullptr, [](MenuEntry* entry) {
+                        PLGSET(PLGFLG_EXPERIMENTS);
+                        DANG("experiment3(): DANG() Test", __FILE, __LINE);
+                    }
+                ),
+                new MenuEntry("experiment4",
+                    nullptr, [](MenuEntry* entry) {
+                        MessageBox("You tried to use this function but nothing happened.")();
+                    }
+                ),
             }));
-            menu += new MenuEntry(LANG("menuCYXAPISet"), nullptr, cyxAPItoggle, "The CYX API adds various features to BASIC.");
-            menu += new MenuEntry(LANG("menuPluginDiscl"), nullptr, pluginDisclaimer, "General details about this plugin");
-        } else menu += new MenuEntry("Dummy entry", nullptr, nullptr, "This plugin is a dummy");
-        menu += new MenuEntry("About CYX", nullptr, [](MenuEntry* e){
-            std::string s = "";
-            s += Utils::Format("CYX Version: %s\n", STRING_VERSION);
-            s += Utils::Format("Built %s\n", BUILD_DATE);
-            s += Utils::Format("Commit %07X\n", COMMIT_HASH);
-            s += Utils::Format("SmileBASIC Version: %s %s\n", g_regionString, CYX::PTCVersionString(CYX::currentVersion).c_str());
-            s += Utils::Format("Current Console: %s\n", System::IsCitra() ? "Citra" : (System::IsNew3DS() ? "New 3DS" : "Old 3DS"));
-            s += Utils::Format("\n[%s]", pluginSerial);
+            menu += new MenuEntry(
+                LANG("menuCYXAPISet"),
+                nullptr, cyxAPItoggle,
+                "The CYX API adds various features to BASIC."
+            );
+            menu += new MenuEntry(
+                LANG("menuPluginDiscl"),
+                nullptr, pluginDisclaimer,
+                "General details about this plugin"
+            );
+        }
+        else
+            menu += new MenuEntry(
+                "Dummy entry",
+                nullptr, nullptr,
+                "This plugin is a dummy"
+            );
 
-            MessageBox("About CYX Plugin", s, DialogType::DialogOk, ClearScreen::Both)();
-        }, "General details about this plugin");
+        menu += new MenuEntry(
+            "About CYX",
+            nullptr, [](MenuEntry* e) {
+                std::string s = "";
+                s += Utils::Format("CYX Version: %s [%s]\n", STRING_VERSION, pluginSerial);
+                s += Utils::Format("Built %s (Commit %07X)\n", BUILD_DATE, COMMIT_HASH);
+
+                if (CYX::currentVersion && g_region>=REGION_JPN && g_region<=REGION_EUR)
+                    s += Utils::Format("SmileBASIC Version: %s %s\n", g_regionString, CYX::PTCVersionString(CYX::currentVersion).c_str());
+                
+                s += Utils::Format("Current Console: %s", System::IsCitra() ? "Citra" : (System::IsNew3DS() ? "New 3DS" : "Old 3DS"));
+
+                MessageBox("About CYX Plugin", s, DialogType::DialogOk, ClearScreen::Both)();
+            },
+            "General details about this plugin"
+        );
 #if DBG_QKSET
-        menu += new MenuEntry("Quick Exit", nullptr, [](MenuEntry* e){
-            Process::ReturnToHomeMenu();
-        });
+        menu += new MenuEntry(
+            "Quick Exit",
+            nullptr, [](MenuEntry* e) {
+                Process::ReturnToHomeMenu();
+            }
+        );
 #endif
     }
 
     void warnIfSDTooBig(void) {
         if (System::IsCitra()) return; // Citra stubs this, so I don't care what it gives
+        
         double sdmcSize = (float)g_sdmcArcRes.clusterSize * g_sdmcArcRes.totalClusters;
+        
         if (((u64)sdmcSize>>30) > 58 || (((u64)sdmcSize>>30) > 32 && g_sdmcArcRes.clusterSize < 65536)){
             MessageBox(
                 Color::Yellow << "Warning" + ResetColor(),
-                "\nThe SD Card is either too big or is not ideally formatted.\n" +
+                "\nThe SD Card is either too big or not ideally formatted for use with this system.\n" +
                 Utils::Format(
                     "Detected size: %.2f GiB (%d KiB clusters)\n\n",
                     sdmcSize / 1073741824.0, g_sdmcArcRes.clusterSize/1024
@@ -584,42 +620,94 @@ namespace CTRPluginFramework {
         }
     }
 
+    void menuSetScreenShotSettings(PluginMenu* menu, bool doEnable, u32 setHotKey) {
+        bool* enabled;
+        u32* hotkey;
+        menu->ScreenshotSettings(&enabled, &hotkey);
+        *enabled = doEnable;
+        *hotkey = setHotKey;
+        menu->ScreenshotFilePrefix() = SCRCAP_FPREFIX;
+        menu->ScreenshotPath() = SCRCAP_PATH;
+        if (!Directory::Exists(SCRCAP_PATH))
+            Directory::Create(SCRCAP_PATH);
+        menu->ScreenshotUpdatePaths();
+    }
+
+    void menuSetScreenShotSettings(bool doEnable, u32 setHotKey) {
+        menuSetScreenShotSettings(PluginMenu::GetRunningInstance(), doEnable, setHotKey);
+    }
+
+    bool menuOpen(void) {
+        return CYX::WouldOpenMenu();
+    }
+
     const std::string about =
-        "SmileBASIC-CYX " STRING_VERSION "\n"
-        "Build " BUILD_DATE "\n"
-        "Commit " TOSTRING(COMMIT_HASH) "\n"
-        "2022-2024 CyberYoshi64";
+        "SmileBASIC-CYX\n"
+        "© 2022-2024 CyberYoshi64\n"
+        "Made in Germany\n\n"
+        "Refer to its page on my website:\n"
+        "cyberyoshi64.github.io/prj/sb/cyx";
 
     int main(void) {
-        PluginMenu *menu = new PluginMenu("CYX", VER_MAJOR, VER_MINOR, VER_MICRO, about, 0&&isCYXenabled);
-
-        menu->SynchronizeWithFrame(true);
-        menu->ShowWelcomeMessage(false);
-        InitMenu(*menu);
-
         if (isCYXenabled) {
-            if (g_region != REGION_NONE && g_region < REGION_MAX){
+            if (g_region != REGION_NONE && g_region < REGION_MAX) {
                 Process::exceptionCallback = Exception::Handler;
                 g_osFirmVer = osGetFirmVersion();
                 g_osKernelVer = osGetKernelVersion();
                 osGetSystemVersionDataString(&g_osNVer, &g_osCVer, g_osSysVer, sizeof(g_osSysVer));
             } else {
+                
                 if (CYX::wouldExit)
                     MessageBox("An error occured while setting up CYX.\n\n"+CYX::exitMessage+Utils::Format("\n(Error code %08X)", cyxres))();
                 else
                     MessageBox("This application is not supported and will be closed.")();
+                
                 Process::ReturnToHomeMenu();
                 return 1;
             }
-            if (!System::IsCitra() && (g_sdmcArcRes.clusterSize * g_sdmcArcRes.freeClusters) < 67108864 && !MessageBox("Warning — SD Card running out of space", "There's less than 64 MiB free on the SD Card.\nIt is not recommended to continue using the SD Card without freeing some space.\n\nDo you want to risk data corruption by proceeding using this plugin?\n(Declining will close the game immediately.)", DialogType::DialogOkCancel)()){
+            
+            if (
+                !System::IsCitra() &&
+                (g_sdmcArcRes.clusterSize * g_sdmcArcRes.freeClusters) < 67108864 &&
+                !MessageBox(
+                    "Warning — SD Card running out of space",
+                    "There's less than 64 MiB free on the SD Card.\n"
+                    "It is not recommended to continue using the SD Card without freeing some space.\n\n"
+                    "Do you want to risk data corruption by proceeding using this plugin?\n"
+                    "(Declining will close the game immediately.)",
+                    DialogType::DialogOkCancel
+                )()
+            ){
                 Process::ReturnToHomeMenu();
                 return 1;
             }
+
             warnIfSDTooBig();
-            menu->Callback(menuTick);
-            menu->OnOpening = menuOpen;
-            menu->OnClosing = menuClose;
         }
+
+        PluginMenu *menu = new PluginMenu("CYX", about, isCYXenabled);
+        menu->SynchronizeWithFrame(true);
+        menu->ShowWelcomeMessage(true);
+        menu->SetHexEditorState(DBG_QKSET);
+        menuSetScreenShotSettings(menu, false, 0);
+
+        if (isCYXenabled) {
+            menu->Callback([](){
+                BasicAPI::MenuTick();
+                CYX::MenuTick();
+                CYXConfirmDlg::DoTheThing();
+            });
+
+            menu->OnOpening = [](){
+                return CYX::WouldOpenMenu();
+            };
+
+            menu->OnClosing = [](){
+                CYX::TrySave();
+            };
+        }
+
+        InitMenu(*menu);
         menu->Run();
         delete menu;
         return 0;

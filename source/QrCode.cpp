@@ -1,5 +1,5 @@
 /* 
- * QR Code generator library (C++)
+ * QR Code generator library (C++) - edited
  * 
  * Copyright (c) Project Nayuki. (MIT License)
  * https://www.nayuki.io/page/qr-code-generator-library
@@ -19,6 +19,9 @@
  *   liability, whether in an action of contract, tort or otherwise, arising from,
  *   out of or in connection with the Software or the use or other dealings in the
  *   Software.
+ * 
+ * Changes made:
+ *  - Add QrCode::getRawModules to get the raw module vectors
  */
 
 #include <cstdlib>
@@ -372,6 +375,9 @@ int QrCode::getMask() const {
 	return mask;
 }
 
+std::vector<std::vector<bool>> QrCode::getRawModules() const {
+	return modules;
+}
 
 bool QrCode::getModule(int x, int y) const {
 	return 0 <= x && x < size && 0 <= y && y < size && module(x, y);

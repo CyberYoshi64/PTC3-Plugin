@@ -10,9 +10,10 @@ extern "C" char* __textend;
 namespace CTRPluginFramework {
     ExceptionSettings Exception::excepSet;
     std::string Exception::panicString = "";
-    qrcodegen::QrCode* Exception::qr;
+    std::vector<std::vector<bool>> Exception::qrModule;
     u32 Exception::screenSadMessageIndex = 0;
-    u32 Exception::renderState = 0;
+    u32 Exception::state = 0;
+    u32 Exception::timer = 0;
 
     bool Exception::dumpAsText = false;
 
@@ -71,6 +72,7 @@ namespace CTRPluginFramework {
         Config::Get().recoverFromException = true;
         Config::Get().wasExceptionFatal = false;
         Config::Get().clearCache = true;
+        Config::Get().validateSaveData = true;
         Config::Get().lastExcepDumpID = 0;
         if (excepSet.rescue) Exception::RescueIfRequired();
         CYX::Finalize();
@@ -186,40 +188,37 @@ namespace CTRPluginFramework {
         Sleep(Seconds(3));
     }
 
-    std::string Exception::SadMessageRnd() {
-        switch (screenSadMessageIndex) {
-            case  0: return "That's a shame.";
-            case  1: return "Kinda embarrassing.";
-            case  2: return "How dare you, Cyber!";
-            case  3: return "The sand can be eaten.";
-            case  4: return "Unterhaltungselektronik, na?";
-            case  5: return "I don't give a gold coin!";
-            case  6: return "Help me, Doctor Hakase!";
-            case  7: return "Wan-Paku has messed up.";
-            case  8: return "Syntax Error!";
-            case  9: return "I hope you got backups…";
-        }
-        return "How unfortunate.";
-    }
+    const char* Exception::SadMessage[] = {
+        "That's a shame.",
+        "What have you done!?",
+        "Kinda embarrassing.",
+        "How dare you, Cyber!",
+        "The sand can be eaten.",
+        "Unterhaltungselektronik, na?",
+        "I don't give a gold coin!",
+        "Help me, Doctor Hakase!",
+        "Wan-Paku has messed up.",
+        "Syntax Error!",
+        "I hope you got backups…",
+        "How unfortunate.",
+    };
 
-    void Exception::BuildScreen(Screen& top, Screen& bot, u64 timer) {
+    void Exception::BuildScreen(Screen& top, Screen& bot) {
         
-        bool flag;
+        bool flag; Color ccol;
         double startAnimFlt;
         float qrTexScale, px, _py, py;
         u32 qrSize, iw, ih, x, y, qrViewPort;
 
-        switch (renderState) {
-        case 0:
-            if (timer < 2) {
-                top.Fade(.5); bot.Fade(.5);
-            }
+        switch (state) {
+        case 1:
             startAnimFlt = sin((timer / EXCEPTIONSCREEN_DELAY) * 1.5707963267948966);
-            top.DrawRect(0, 0, 400, 240*startAnimFlt, Color::Black);
-            bot.DrawRect(0, 241-240*startAnimFlt, 320, 240*startAnimFlt, Color::Black);
-            if (timer >= EXCEPTIONSCREEN_DELAY) renderState++;
+            ccol = Color((88-startAnimFlt*88),(64-startAnimFlt*64),(72-startAnimFlt*72));
+            top.DrawRect(0, 0, 400, 240*startAnimFlt, ccol);
+            bot.DrawRect(0, 241-240*startAnimFlt, 320, 240*startAnimFlt, ccol);
+            if (timer >= EXCEPTIONSCREEN_DELAY) state++;
             break;
-        case 1: case 2: // Render twice because double-buffer
+        case 2: case 3: // Render twice because double-buffer
             top.DrawRect(0, 0, 400, 240, Color::Black);
             bot.DrawRect(0, 0, 320, 240, Color::Black);
             top.DrawSysfont("A fatal error has occured", 4, 3, Color::Red);
@@ -239,7 +238,7 @@ namespace CTRPluginFramework {
             x = 208;
             y = 0;
             qrViewPort = 192;
-            qrSize = qr->getSize();
+            qrSize = qrModule.size();
             top.DrawRect(x, y, qrViewPort, qrViewPort, Color::White);
             qrTexScale = (qrViewPort-10) / (float)qrSize;
             if (qrTexScale >= 2) qrTexScale = (u32)qrTexScale;
@@ -251,7 +250,7 @@ namespace CTRPluginFramework {
                     
                     iw = (u32)(px+qrTexScale) - (u32)px;
                     ih = (u32)(py+qrTexScale) - (u32)py;
-                    top.DrawRect(px, py, iw, ih, qr->getModule(ix, iy) ? Color::Black : Color::White);
+                    top.DrawRect(px, py, iw, ih, qrModule.at(iy).at(ix) ? Color::Black : Color::White);
                     py += qrTexScale;
                 }
                 px += qrTexScale;
@@ -285,11 +284,11 @@ namespace CTRPluginFramework {
             bot.Draw("Program slots", 24, 184);
             bot.Draw("Graphic pages", 24, 204);
             bot.Draw("Clipboard data", 24, 224);
-            renderState++;
+            state++;
             break;
-        case 3: // Only render parts that could change
+        case 4: // Only render parts that could change
             top.DrawRect(6, 35, 202, 18, Color::Black);
-            top.DrawSysfont(SadMessageRnd(), 6, 35);
+            top.DrawSysfont(SadMessage[screenSadMessageIndex], 6, 35);
             
             bot.DrawRect(0, 180, 22, 60, Color::Black);
             flag = Exception::excepSet.rescue & EXCEPRESCUE_PROGRAM;
@@ -348,7 +347,7 @@ namespace CTRPluginFramework {
                 u32 v;
                 while (Process::Read32(sp+soff, v) && soff<0x7000) {
                     soff += 4;
-                    if (v&0xFFF == 0) continue; // Most likely a length property of a sort
+                    if (v&0x3FF == 0) continue; // Most likely a length property of a sort
                     if ((v>=appTextBeg&&v<appTextEnd)||(v>=plgTextBeg&&v<plgTextEnd)) {
                         d.callStack[i] = v;
                         break;
@@ -374,33 +373,36 @@ namespace CTRPluginFramework {
         return ((t.x >= x) && (t.y >= y) && (t.x < x+w) && (t.y < y+h));
     }
     Process::ExceptionCallbackState Exception::Handler(ERRF_ExceptionInfo *excep, CpuRegisters *regs) {
-        mcuSetSleep(0);
-        excepSet.version = EXCEPTSET_VERSION;
         u32 kMask = Key::B | Key::X | Key::Y;
         u32 keyP;
         SoundEngine::Event sndSel = SoundEngine::Event::SELECT;
         SoundEngine::Event sndDesel = SoundEngine::Event::DESELECT;
-        u64 timer = 0;
         Screen top = OSD::GetTopScreen();
         Screen bot = OSD::GetBottomScreen();
-        bool touchP, oldTouchP;
-        
-        Config::Get().recoverFromException = true;
-        Config::Get().wasExceptionFatal = true;
-        Config::Get().clearCache = true;
-        Config::Get().lastExcepDumpID = 0;
-        BuildExceptionData(excep, regs);
+        static bool touchP, oldTouchP;
 
-        qrcodegen::QrCode __q = qrcodegen::QrCode::encodeText(Base64::Encode((u8*)dataBuffer, dataLength).c_str(), qrcodegen::QrCode::Ecc::MEDIUM);
-        qr = &__q;
+        if (!state) {
+            mcuSetSleep(0);
+            excepSet.version = EXCEPTSET_VERSION;
+            
+            Config::Get().recoverFromException = true;
+            Config::Get().wasExceptionFatal = true;
+            Config::Get().clearCache = true;
+            Config::Get().lastExcepDumpID = 0;
+            Config::Get().validateSaveData = true;
+            BuildExceptionData(excep, regs);
 
-        while (true) {
+            qrcodegen::QrCode __q = qrcodegen::QrCode::encodeText(Base64::Encode((u8*)dataBuffer, dataLength).c_str(), qrcodegen::QrCode::Ecc::MEDIUM);
+            qrModule = __q.getRawModules();
+            state++;
+        } else {
             Controller::Update();
-            if (!(timer % EXCEPTIONSCREENSAD_INT)) screenSadMessageIndex = Utils::Random(0,10);
+            if (!(timer % EXCEPTIONSCREENSAD_INT))
+                screenSadMessageIndex = ((u32)rand()) % (sizeof(SadMessage)/sizeof(const char*));
             keyP = Controller::GetKeysPressed();
             UIntVector t = Touch::GetPosition();
             oldTouchP = touchP; touchP = Touch::IsDown();
-            if (timer > EXCEPTIONSCREEN_DELAY) {
+            if (state > 3) {
                 if (!oldTouchP && touchP){
                     if (excep__isTouching(t, 0, 178, 160, 20)) {
                         excepSet.rescue ^= EXCEPRESCUE_PROGRAM;
@@ -436,10 +438,12 @@ namespace CTRPluginFramework {
                 }
             }
             OSD::Lock();
-            BuildScreen(top, bot, timer++);
+            BuildScreen(top, bot);
+            timer++;
             OSD::SwapBuffers();
             OSD::Unlock();
         }
+        return Process::EXCB_LOOP;
     }
     CYXDumpHeader Exception::mkHeader(u16 type, u16 cnt) {
         CYXDumpHeader d;

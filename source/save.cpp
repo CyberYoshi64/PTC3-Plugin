@@ -1,5 +1,6 @@
 #include "save.hpp"
-#include "main.hpp"
+#include "constants/main.h"
+#include "commonFuncs.hpp"
 #include <3ds/util/utf.h>
 
 /*

@@ -1,7 +1,9 @@
 #ifndef MISC_HPP
 #define MISC_HPP
 
-#include "main.hpp"
+#include <CTRPluginFramework.hpp>
+#include "Config.hpp"
+#include "StringArchive.hpp"
 #include "Hooks.hpp"
 
 namespace CTRPluginFramework {
