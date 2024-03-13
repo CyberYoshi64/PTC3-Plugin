@@ -16,8 +16,6 @@ if ./compile.sh $1; then
     $SENDFILEPY build/map_JPN.cyxmap /PTC3PLG/resources $FTP_IP $FTP_PORT
     $SENDFILEPY build/map_JPN.cyxmap /PTC3PLG/resources $FTP_IP $FTP_PORT
     $SENDFILEPY build/lang/ENG.bin /PTC3PLG/resources/lang $FTP_IP $FTP_PORT
-    $SENDFILEPY build/funcMap.bin /PTC3PLG/resources $FTP_IP $FTP_PORT
-    $SENDFILEPY build/funcCfgMap.bin /PTC3PLG/resources $FTP_IP $FTP_PORT
 else
     echo "Damnit..."
 fi

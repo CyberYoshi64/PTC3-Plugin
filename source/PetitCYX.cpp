@@ -14,6 +14,8 @@ namespace CTRPluginFramework {
     ptcScreen* CYX::ptcScreens = NULL;
     FontOffFunc CYX::fontOff;
     PrintCharFunc CYX::printConFunc;
+    BSAStringAllocFunc CYX::bsaAllocString;
+    BSAErrorFunc CYX::bsaError;
     u16* CYX::basicFontMap = NULL;
     u32 CYX::patch_FontGetOffset[2] = {0};
     u32 CYX::patch_FontGetOffsetNew[2] = {0xE3A00001,0xE3A00001}; // asm "mov r0, #1"
@@ -30,7 +32,6 @@ namespace CTRPluginFramework {
     char CYX::bytesFreeText[32] = " bytes free\n\n";
     bool CYX::provideCYXAPI = true;
     bool CYX::wasCYXAPIused = false;
-    string16 CYX::cyxApiTextOut;
     u32 CYX::cyxApiOutc;
     u32 CYX::cyxApiLastOutv;
     u32 CYX::cyxSaveTimer = 0;
@@ -80,10 +81,12 @@ namespace CTRPluginFramework {
         textPalette = (BASICTextPalette*)Hooks::offsets.consoleTextPal;
         activeProject = (BASICActiveProject*)Hooks::offsets.activeProjStr;
         ptcConfig = (PTCConfig*)Hooks::offsets.configBuf;
-        ptcScreens = (ptcScreen*)0x01B602B8;//Hooks::offsets.screenBuf;
+        ptcScreens = (ptcScreen*)Hooks::offsets.screenBuf;
         basicFontMap = (u16*)Hooks::offsets.fontMapBuf;
         fontOff = (FontOffFunc)Hooks::offsets.funcFontGetOff;
-        printConFunc = (PrintCharFunc)0x1F75A4;//Hooks::offsets.funcPrintCon;
+        printConFunc = (PrintCharFunc)Hooks::offsets.funcPrintCon;
+        bsaAllocString = (BSAStringAllocFunc)Hooks::offsets.funcBsaStringAlloc;
+        bsaError = (BSAErrorFunc)Hooks::offsets.funcBSAError;
         Process::Write32(Hooks::offsets.helpPagePal, (u32)helpPageColors);
         Process::Write32(Hooks::offsets.helpPageDefCol + 0, helpPageColors[1]); // Default text FG
         Process::Write32(Hooks::offsets.helpPageDefCol + 4, helpPageColors[0]); // Default help BG
@@ -96,23 +99,19 @@ namespace CTRPluginFramework {
         *(char**)Hooks::offsets.bootText = introText;
         *(char**)(Hooks::offsets.bootText+4) = bytesFreeText;
 
-        // These 2 hooks must be MitM, I just want their thread ID's for later
         soundHook.InitializeForMitm(Hooks::offsets.nnSndSoundThreadEntry1, (u32)SoundThreadHook);
         soundHook.SetFlags(USE_LR_TO_RETURN|MITM_MODE|EXECUTE_OI_AFTER_CB);
         soundHook.Enable();
         soundHook2.InitializeForMitm(Hooks::offsets.nnSndSoundThreadEntry2, (u32)SoundThreadHook2);
         soundHook2.SetFlags(USE_LR_TO_RETURN|MITM_MODE|EXECUTE_OI_AFTER_CB);
         soundHook2.Enable();
-
-        // Filter some key codes, notably the screenshot code
-        sendKeyHook.InitializeForMitm(0x1F7530, (u32)sendKeyHookFunc);
+        sendKeyHook.InitializeForMitm(Hooks::offsets.funcSendKeyCode, (u32)sendKeyHookFunc);
         sendKeyHook.SetFlags(USE_LR_TO_RETURN|MITM_MODE|EXECUTE_OI_AFTER_CB);
         sendKeyHook.Enable();
-        
-        mainThreadEntryHook.InitializeForMitm(0x104004, (u32)ptcMainEntryHookFunc);
+        mainThreadEntryHook.InitializeForMitm(Hooks::offsets.funcMainEntry, (u32)ptcMainEntryHookFunc);
         mainThreadEntryHook.SetFlags(USE_LR_TO_RETURN|MITM_MODE|EXECUTE_OI_AFTER_CB);
         mainThreadEntryHook.Enable();
-        nnExitHook.InitializeForMitm(0x1047A0, (u32)nnExitHookFunc);
+        nnExitHook.InitializeForMitm(Hooks::offsets.funcMainLoop1, (u32)nnExitHookFunc);
         nnExitHook.SetFlags(MITM_MODE|EXECUTE_OI_AFTER_CB);
         nnExitHook.Enable();
 
@@ -190,9 +189,9 @@ namespace CTRPluginFramework {
     }
 
     void CYX::ValidateSaveData() {
-        std::vector<std::string> files;
-        std::vector<std::string> compromised;
+        StringVector files, compromised;
         u32 index, size; File f;
+        bool cancel = false;
         Directory dir, dir2;
         StringVector dv1, dv2;
 
@@ -237,6 +236,7 @@ namespace CTRPluginFramework {
             scr.Draw(files.at(index), 4, 16);
             if (compromised.size())
                 scr.Draw(Utils::Format("%5d file(s) compromised", compromised.size()), 4, 32);
+            scr.Draw(Utils::Format("Press X to cancel", compromised.size()), 4, 44);
             OSD::SwapBuffers();
             if (!File::Open(f, EXTDATA_PATH"/" + files.at(index), File::READ)) {
                 SHA1_HMAC::Init(&hmacCtx, (u8*)hmac, hmac_len);
@@ -245,6 +245,12 @@ namespace CTRPluginFramework {
                 f.Read(oldDigest, 20);
                 f.Seek(0, File::SET);
                 while (fsize) {
+                    Controller::Update();
+                    if (Controller::GetKeysDown() & KEY_X) {
+                        cancel = true;
+                        break;
+                    }
+
                     chunk = fsize > BUFFER_SIZE ? BUFFER_SIZE : fsize;
                     f.Read(buf, chunk);
                     SHA1_HMAC::Update(&hmacCtx, (u8*)buf, chunk);
@@ -252,6 +258,7 @@ namespace CTRPluginFramework {
                 }
             }
             f.Close();
+            if (cancel) break;
             SHA1_HMAC::Final(digest, &hmacCtx);
             if (memcmp(digest, oldDigest, 20)) {
                 compromised.push_back(files.at(index));
@@ -268,7 +275,7 @@ namespace CTRPluginFramework {
         scr.DrawRect(0, 0, 320, 64, Color::Black);
         OSD::SwapBuffers();
         scr.DrawRect(0, 0, 320, 64, Color::Black);
-        scr.Draw("Done.", 4, 4);
+        scr.Draw(cancel ? "Cancelled." : "Done.", 4, 4);
         scr.Draw("You can view the list of compromised files in", 4, 16);
         scr.Draw("the following file:", 4, 26);
         scr.Draw("sdmc:" VERFAIL_PATH, 4, 38);
@@ -321,7 +328,10 @@ namespace CTRPluginFramework {
             mirror.isBasicRunning2 = mirror.isBasicRunning;
         }
         if (mirror.diff.isInBasic) {
-            if (!mirror.isInBasic) doUpdate = true;
+            if (!mirror.isInBasic) {
+                doUpdate = true;
+                mcuSetSleep(true);
+            }
             if (R_SUCCEEDED(frdInit())) {
                 if (mirror.isDirectMode) {
                     str = Utils::Format(LANG("friendListHeader").c_str(), Utils::Format(LANG("friendListEditing").c_str(), g_currentProject.c_str()).c_str());
@@ -400,9 +410,6 @@ namespace CTRPluginFramework {
     void CYX::DiscardAPIUse() {
         wasCYXAPIused = false;
     }
-    void CYX::SetAPIUse(bool enabled) {
-        wasCYXAPIused = enabled;
-    }
     bool CYX::WasCYXAPIUsed() {
         return wasCYXAPIused;
     }
@@ -422,145 +429,88 @@ namespace CTRPluginFramework {
         extern LightEvent mainEvent1;
         LightEvent_Signal(&mainEvent1);
 
+        if (R_SUCCEEDED(frdInit())) {
+            FRD_UpdateGameModeDescription(Utils::Format(LANG("friendListHeader").c_str(), Utils::Format(LANG("friendListIdling").c_str(), PTC_WORKSPACE_CYXNAME).c_str()).c_str());
+        }
+        frdExit();
+
         __asm__ __volatile__ ("ldr r0, %0\n" : "=m"(r0));
         ctrpfHook__ExecuteOriginalFunction();
     }
-    void CYX::nnExitHookFunc() {
+    void CYX::nnExitHookFunc(u32 r0) {
+        __asm__ __volatile__ ("ldr r0, %0\n" : "=m"(r0));
         ctrpfHook__ExecuteOriginalFunction();
     }
-    void CYX::CYXAPI_Out(BASICGenericVariable* out) {
-        if (out >= (BASICGenericVariable*)cyxApiLastOutv) return;
-        out->type = SBVARRAW_STRING;
-        out->data = editorInstance->clipboardLength;
-        out->data2 = editorInstance->clipboardData;
-    }
-    void CYX::CYXAPI_Out(BASICGenericVariable* out, s32 i) {
-        if (out >= (BASICGenericVariable*)cyxApiLastOutv) return;
-        out->type = SBVARRAW_INTEGER;
-        out->data = i;
-    }
-    void CYX::CYXAPI_Out(BASICGenericVariable* out, double f) {
-        if (out >= (BASICGenericVariable*)cyxApiLastOutv) return;
-        out->type = SBVARRAW_DOUBLE;
-        *(double*)&out->data = f;
-    }
-    void CYX::CYXAPI_Out(BASICGenericVariable* out, const char* s) {
-        if (out >= (BASICGenericVariable*)cyxApiLastOutv) return;
-        u32 o = cyxApiTextOut.size(), l;
-        Utils::ConvertUTF8ToUTF16(CYX::cyxApiTextOut, s);
-        l = cyxApiTextOut.size() - o;
-        out->type = SBVARRAW_STRING;
-        out->data = l;
-        out->data2 = (void*)(cyxApiTextOut.c_str() + o);
-    }
-    void CYX::CYXAPI_Out(BASICGenericVariable* out, const std::string& s) {
-        if (out >= (BASICGenericVariable*)cyxApiLastOutv) return;
-        u32 o = cyxApiTextOut.size(), l;
-        Utils::ConvertUTF8ToUTF16(CYX::cyxApiTextOut, s);
-        l = cyxApiTextOut.size() - o;
-        out->type = SBVARRAW_STRING;
-        out->data = l;
-        out->data2 = (void*)(cyxApiTextOut.c_str() + o);
+
+    int CYX::bsaGetInteger(BASICGenericVariable* a, int* out) {
+        if (!a || !a->type) return 0;
+        return a->type->getInteger(a, out);
     }
 
-    s32 CYX::argGetInteger(BASICGenericVariable* arg) {
-        if (!arg) return 0;
-        if (!arg->type) return 0;
-        switch (arg->type) {
-            case SBVARRAW_INTEGER:
-                return *(s32*)&arg->data;
-            case SBVARRAW_DOUBLE:
-                return (s32)(*(double*)&arg->data);
-            case SBVARRAW_STRING:
-                return 0;
-        }
-        return 0;
+    int CYX::bsaGetDouble(BASICGenericVariable* a, double* out) {
+        if (!a || !a->type) return 0;
+        return a->type->getDouble(a, out);
     }
-    void CYX::argGetString(string16& out, BASICGenericVariable* arg) {
-        out.clear();
-        if (!arg) return;
-        if (!arg->type) return;
-        switch (arg->type) {
-            case SBVARRAW_INTEGER:
-                Utils::ConvertUTF8ToUTF16(out, Utils::Format("%ld",*(s32*)&arg->data));
-                break;
-            case SBVARRAW_DOUBLE:
-                Utils::ConvertUTF8ToUTF16(out, Utils::ToString(*(double*)&arg->data));
-                break;
-            case SBVARRAW_STRING:
-                out.append((u16*)arg->data2, arg->data);
-                break;
-        }
+
+    int CYX::bsaGetFloat(BASICGenericVariable* a, float* out) {
+        if (!a || !a->type) return 0;
+        return a->type->getFloat(a, out);
     }
-    void CYX::argGetString(u16** ptr, u32* len, BASICGenericVariable* arg) {
-        *ptr = NULL;
-        *len = 0;
-        if (!arg) return;
-        if (!arg->type) return;
-        if (arg->type == SBVARRAW_STRING) {
-            *ptr = (u16*)arg->data2;
-            *len = arg->data;
-        }
+
+    u16* CYX::bsaGetString(BASICGenericVariable* a, int* len) {
+        if (!a || !a->type) return NULL;
+        u16* buf = a->type->getString(a, len);
+        return buf;
     }
-    double CYX::argGetFloat(BASICGenericVariable* arg) {
-        if (!arg) return 0;
-        if (!arg->type) return 0;
-        switch (arg->type) {
-            case SBVARRAW_INTEGER:
-                return *(s32*)&arg->data;
-            case SBVARRAW_DOUBLE:
-                return *(double*)&arg->data;
-            case SBVARRAW_STRING:
-                return 0;
-        }
-        return 0;
+
+    int CYX::bsaSetInteger(BASICGenericVariable* a, int in) {
+        if (!cyxApiOutc || !a || !a->type) return 0;
+        return a->type->setInteger(a, in);
     }
-    u8 CYX::getSBVariableType(u32 rawType) {
-        switch(rawType) {
-            case SBVARRAW_INTEGER: return VARTYPE_INT;
-            case SBVARRAW_DOUBLE: return VARTYPE_DOUBLE;
-            case SBVARRAW_STRING: return VARTYPE_STRING;
-            case SBVARRAW_ARRAY: return VARTYPE_DBLARRAY;
-            //case SBVARRAW_STRARRAY: return VARTYPE_STRARRAY;
-        }
-        return VARTYPE_NONE;
+
+    int CYX::bsaSetDouble(BASICGenericVariable* a, double in) {
+        if (!cyxApiOutc || !a || !a->type) return 0;
+        return a->type->setDouble(a, in);
     }
+
+    int CYX::bsaSetString(BASICGenericVariable* a, const std::string& str) {
+        if (!cyxApiOutc || !a || !a->type) return 0;
+        void* ptr;
+        string16 s16; Utils::ConvertUTF8ToUTF16(s16, str);
+        if (!bsaAllocString(&ptr, s16.size(), (u16*)s16.c_str()))
+            return bsaError(PTCERR_OUT_OF_MEMORY, -1, 0);
+        return a->type->setString(a, &ptr);
+    }
+
+    int CYX::bsaSetString(BASICGenericVariable* a, const string16& str) {
+        if (!cyxApiOutc || !a || !a->type) return 0;
+        void* ptr;
+        if (!bsaAllocString(&ptr, str.size(), (u16*)str.c_str()))
+            return bsaError(PTCERR_OUT_OF_MEMORY, -1, 0);
+        return a->type->setString(a, &ptr);
+    }
+
+    int CYX::bsaSetStringRaw(BASICGenericVariable* a, void* ptr) {
+        if (!cyxApiOutc || !a || !a->type) return 0;
+        return a->type->setString(a, &ptr);
+    }
+
     // Function stub
-    int CYX::stubBASICFunction(void* ptr, u32 selfPtr, BASICGenericVariable* outv, u32 outc, void* a4, u32 argc, BASICGenericVariable* argv) {
+    int CYX::stubBASICFunction(BSAFuncStack* stk) {
         return 0;
     }
-    int CYX::controllerFuncHook(void* ptr, u32 selfPtr, BASICGenericVariable* outv, u32 outc, void* a4, u32 argc, BASICGenericVariable* argv) {
-        u8 type; bool isCYX=false;
-        if (argc<1) return 0;
-        type = getSBVariableType(argv->type);
+    int CYX::controllerFuncHook(BSAFuncStack* stk) {
+        if (stk->argc<1) return bsaError(PTCERR_ILLEGAL_FUNCCALL, -1, 0);
         if (!provideCYXAPI) {
-            if (type != VARTYPE_NONE) {
-                switch (type) {
-                    case VARTYPE_STRING: return 3;
-                    case VARTYPE_INT:
-                        if (argv->data != 0) return 3;
-                        break;
-                    case VARTYPE_DOUBLE:
-                        if ((int)(*(double*)&argv->data) != 0) return 3;
-                        break;
-                }
-            }
-            if (outc){
-                outv->type = SBVARRAW_INTEGER;
-                outv->data = 1;
-            }
-
+            int type;
+            if (bsaGetInteger(stk->argv, &type))
+                return bsaError(PTCERR_TYPE_MISMATCH, 0, 0);
+            if (stk->outc && bsaSetInteger(stk->outv, type == 0 ? 1 : 0)) // Just indicate N/C instead of "Incompatible statement"
+                return 3;
         } else {
-            cyxApiOutc = outc;
-            cyxApiLastOutv = (u32)(outv+outc);
-            CYX::cyxApiTextOut.clear();
-            int res=BasicAPI::Parse(argv, argc, outv, outc);
-            switch (res) {
-                case 0: case 1: break;
-                case 2: return 1; // Silent exit
-                case 3: return 2; // Non-fatal quit
-                default: return 3; // Fatal quit
-            }
+            cyxApiOutc = stk->outc;
+            wasCYXAPIused = true;
+            return BasicAPI::Parse(stk);
         }
         return 0;
     }

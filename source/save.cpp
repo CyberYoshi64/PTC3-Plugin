@@ -37,7 +37,6 @@ namespace CTRPluginFramework {
         return Directory::Create(name) == 0;
     }
 
-#define PA_PTR(addr)            
     void OnionSave::initDebug() {
         if (ENABLE_DEBUG) {
             LightLock_Init(&debugLock);

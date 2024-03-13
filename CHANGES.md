@@ -1,3 +1,8 @@
+# 0.0.7-0 (2024/3/6, 05:32)
+- Refactor BASIC API obtaining/setting BASIC arguments
+- Add cancel to save validation on boot
+- Allow non-literal strings as API input
+
 # 0.0.7-0 (2024/3/5, 08:42)
 - Refactor some code
 - Fix Citra inconsistencies

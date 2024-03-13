@@ -16,6 +16,8 @@
 #define PTC_WORKSPACE_CYXNAME       "$DEFAULT"
 
 #define CYX__COLORVER_NOCOLOR   1
+#define CYX__CONTROLLER_ACCURATE false // Whether to make CONTROLLER faithful or more friendly
+
 #define PRJSETFILEMAGIC     0x0154455325585943ULL
 #define THREADVARS_MAGIC    0x21545624 // !TV$
 
@@ -41,6 +43,8 @@ enum BasicAPI_Flags { // Project flags
 namespace CTRPluginFramework {
     using FontOffFunc = bool(*)(int c, int* y, int* x);
     using PrintCharFunc = int(*)(ptcConsole* con, u16 chr, u32 type);
+    using BSAStringAllocFunc = int(*)(void* out, int size, u16* buf);
+    using BSAErrorFunc = int(*)(s32 type, s32 arg, s32 unk);
     class CYX {
         typedef struct MirroredVars {
             u8 isDirectMode;
@@ -97,12 +101,6 @@ namespace CTRPluginFramework {
         static void DiscardAPIUse();
 
         /**
-         * @brief [Internal] Set the API Use flag
-         * @param[in] enabled Whether to enable or not
-         */
-        static void SetAPIUse(bool enabled);
-
-        /**
          * @brief [Internal] Get the API Use flag
          * @return true if API was used, false otherwise
          */
@@ -157,28 +155,28 @@ namespace CTRPluginFramework {
         static void sendKeyHookFunc(u32* ptr1, u32 key);
 
         /// @brief CONTROLLER stub - implements CYX API beside the main functionality
-        static int controllerFuncHook(void* ptr, u32 selfPtr, BASICGenericVariable* outv, u32 outc, void* a4, u32 argc, BASICGenericVariable* argv);
-        static int stubBASICFunction(void* ptr, u32 selfPtr, BASICGenericVariable* outv, u32 outc, void* a4, u32 argc, BASICGenericVariable* argv);
+        static int controllerFuncHook(BSAFuncStack* stk);
+        static int stubBASICFunction(BSAFuncStack* stk);
 
         static void TrySave();
         static void MenuTick();
         static bool WouldOpenMenu();
         static void UpdateMirror();
 
-        static s32 argGetInteger(BASICGenericVariable* arg);
-        static void argGetString(string16& out, BASICGenericVariable* arg);
-        static void argGetString(u16** ptr, u32* len, BASICGenericVariable* arg);
-        static double argGetFloat(BASICGenericVariable* arg);
         static u32 apiGetFlags(void);
         static void apiToggleFlag(u32 flag);
         static void apiEnableFlag(u32 flag);
         static void apiDisableFlag(u32 flag);
 
-        static void CYXAPI_Out(BASICGenericVariable* out);
-        static void CYXAPI_Out(BASICGenericVariable* out, s32 i);
-        static void CYXAPI_Out(BASICGenericVariable* out, double f);
-        static void CYXAPI_Out(BASICGenericVariable* out, const char* s);
-        static void CYXAPI_Out(BASICGenericVariable* out, const std::string& s);
+        static int bsaGetInteger(BASICGenericVariable* a, int* out);
+        static int bsaGetDouble(BASICGenericVariable* a, double* out);
+        static int bsaGetFloat(BASICGenericVariable* a, float* out);
+        static u16* bsaGetString(BASICGenericVariable* a, int* len);
+        static int bsaSetInteger(BASICGenericVariable* a, int in);
+        static int bsaSetDouble(BASICGenericVariable* a, double in);
+        static int bsaSetString(BASICGenericVariable* a, const std::string& str);
+        static int bsaSetString(BASICGenericVariable* a, const string16& str);
+        static int bsaSetStringRaw(BASICGenericVariable* a, void* ptr);
 
         static void CreateHomeFolder(const std::string& s);
         static void CreateHomeFolder();
@@ -202,7 +200,7 @@ namespace CTRPluginFramework {
         static int petcTokenHookFunc();
         static int nnActIsNetworkAccountStub();
         static void ptcMainEntryHookFunc(u32 r0);
-        static void nnExitHookFunc(void);
+        static void nnExitHookFunc(u32 r0);
         static void ValidateSaveData();
 
         static u32 currentVersion;
@@ -222,7 +220,6 @@ namespace CTRPluginFramework {
         static Hook soundHook;
         static Hook soundHook2;
         static bool forceDisableSndOnPause;
-        static string16 cyxApiTextOut;
         static u32 cyxApiOutc, cyxApiLastOutv;
         static u16* basicFontMap;                   // BASIC font map
         static u32 patch_FontGetOffset[];
@@ -230,6 +227,8 @@ namespace CTRPluginFramework {
         static MirroredVars mirror;
         static FontOffFunc fontOff;                 // FONTDEF remap function
         static PrintCharFunc printConFunc;          // Function to plot glyphs to the console
+        static BSAStringAllocFunc bsaAllocString;
+        static BSAErrorFunc bsaError;
         static u64 sdmcFreeSpace;
         static u64 sdmcTotalSpace;
         static s32 volumeSliderValue;

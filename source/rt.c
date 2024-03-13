@@ -21,7 +21,9 @@ u32 getCurrentProcessHandle() {
     return hCurrentProcess;
 }
 
-u32 rtGetPageOfAddress(u32 addr) {return (addr / 0x1000) * 0x1000;}
+u32 rtGetPageOfAddress(u32 addr) {
+    return (addr / 0x1000) * 0x1000;
+}
 
 u32 rtFlushInstructionCache(void* ptr, u32 size) {
     return svcFlushProcessDataCache(getCurrentProcessHandle(), (u32)(const void*)ptr, size);

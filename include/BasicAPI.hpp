@@ -9,7 +9,7 @@ namespace CTRPluginFramework {
         BASICGenericVariable* outv, u32 outc
     );
     #define BASICAPI_FUNCVARS       BASICGenericVariable* argv, u32 argc, BASICGenericVariable* outv, u32 outc
-    #define BASICAPI_FUNCVARSPASS   argv+1, argc-1, outv, outc
+    #define BASICAPI_FUNCVARSPASS   stk->argv+1, stk->argc-1, stk->outv, stk->outc
     
     #define BASICAPI_HANDLE_START (u32)0x20000000U
     #define BASICAPI_HANDLE_END (u32)0x3FFFFFFFU
@@ -32,15 +32,24 @@ namespace CTRPluginFramework {
         APIFSTRUCT_ENCODINGS = (APIFSTRUCT_ANSI|APIFSTRUCT_UTF16)
     };
 
-    class BasicAPI {
     typedef struct FileStruct {
         u32 handle;
         u32 flags;
         File* f;
     } FileStruct;
+    
+    typedef struct FuncStruct {
+        const char* strid;
+        u32 intid;
+        int func;
+    } FuncStruct;
+
+    typedef struct BSAConfStruct {
+        const char* strid;
+        u32 intid;
+    } BSAConfStruct;
 
     enum BasicAPI_Funcs {
-        BAPIFUNC__GETMAP    = 1337,
         BAPIFUNC_INIT       = 1000000,
         BAPIFUNC_EXIT       = 1000001,
         BAPIFUNC_CFGGET     = 1000010,
@@ -64,13 +73,11 @@ namespace CTRPluginFramework {
         BAPIFUNC_UNIXTIME   = 1100000,
         BAPIFUNC_OSD        = 1900000,
         BAPIFUNC_CRASH      = 1900001,
-        BAPIFUNC_FILLGRP    = 1900002,
-        BAPIFUNC_SYSGCOPY   = 1900003,
-        BAPIFUNC_SETUP_CLIP = 1900004,
+        BAPIFUNC_SYSGCOPY   = 1900002,
+        BAPIFUNC_TYPE       = 9000000,
     };
 
     enum BasicAPI_CFGAPI_ID {
-        BAPICFGID__GETMAP       = 1337,
         BAPICFGID_SAFEDIR       = 1000000,
         BAPICFGID_PRJ_ACCESS    = 1000001,
         BAPICFGID_SD_ACCESS     = 1000002,
@@ -107,17 +114,18 @@ namespace CTRPluginFramework {
         BAPICFGID_SDMCFREE      = 4000002,
         BAPICFGID_SDMCFREE_C    = 4000003,
         BAPICFGID_SDMCTOTAL     = 4000004,
-        BAPICFGID_SDMCTOTAL_C   = 4000005
+        BAPICFGID_SDMCTOTAL_C   = 4000005,
     };
 
+    class BasicAPI {
     public:
         static void Initialize(void);
         static void Finalize(void);
         static void Cleanup(void);
         static void MenuTick(void);
-        static int Parse(BASICAPI_FUNCVARS);
-        static int FileRead(BasicAPI::FileStruct f, u16* buf, u32* len, u32 size, u32 bytesLeft);
-        static int FileWrite(BasicAPI::FileStruct f, u16* buf, u32 size);
+        static int Parse(BSAFuncStack* stk);
+        static int FileRead(FileStruct f, u16* buf, u32* len, u32 size, u32 bytesLeft);
+        static int FileWrite(FileStruct f, u16* buf, u32 size);
         static u32 flags;
     private:
         static int Func_INIT(BASICAPI_FUNCVARS);
@@ -141,13 +149,12 @@ namespace CTRPluginFramework {
         static int Func_CHKDIR(BASICAPI_FUNCVARS);
         static int Func_CHKFILE(BASICAPI_FUNCVARS);
         static int Func_VALIDATE(BASICAPI_FUNCVARS);
-        static int Func_FILLGRP(BASICAPI_FUNCVARS);
         static int Func_SYSGCOPY(BASICAPI_FUNCVARS);
-        static int Func_UNIXTIME(BASICAPI_FUNCVARS);
-        static int Func_SETUP_CLIP(BASICAPI_FUNCVARS);
         static int Func_CRASH(BASICAPI_FUNCVARS);
         
-        static std::vector<FileStruct> Files;
+        static std::vector<BSAConfStruct> bsaConfig;
+        static std::vector<FuncStruct> funcs;
+        static std::vector<FileStruct> files;
         static u32 handleIDCounter;
     };
     

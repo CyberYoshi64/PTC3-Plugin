@@ -5,7 +5,7 @@
 
 #define HOOKFILE_PATH   RESOURCES_PATH"/map_%s.cyxmap"
 #define HOOKFILE_MAGIC  *(u32*)"CY$X"
-#define HOOKFILE_VER    2
+#define HOOKFILE_VER    3
 
 #define HOOK_FUNCMAP_VER    1
 
@@ -56,6 +56,15 @@ namespace CTRPluginFramework {
             u32 nnActIsNetworkAccountFunc;  // Function nn::act::IsNetworkAccount()
             u32 nnSndSoundThreadEntry1;     // Sound Thread #1 Entry Point
             u32 nnSndSoundThreadEntry2;     // Sound Thread #2 Entry Point
+            u32 screenBuf;                  // Screen Structs
+            u32 funcBsaStringAlloc;         // Function to allocate a BASIC string
+            u32 funcPrintCon;               // Function to plot a character on a text console
+            u32 funcMainEntry;              // Function main() - used for MitM hook
+            u32 funcMainLoop1;              // A subfunction in main() - used for MitM hook
+            u32 funcSendKeyCode;            // Function that processes key codes from OSK
+            u32 funcBSAError;               // Function to pass BASIC errors
+            u32 varBsaResult;               // RESULT system variable
+
         } Offsets;
 
     public:

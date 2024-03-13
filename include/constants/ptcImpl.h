@@ -27,6 +27,48 @@ enum SBVariableTypes {
     VARTYPE_STRARRAY,
 };
 
+using ptcObjArg = int(*)(void* arg);
+using ptcObjCopyTo = int(*)(void* arg, void* out);
+using ptcObjCopyFrom = int(*)(void* arg, void* out);
+using ptcObjCopySetInt = int(*)(void* arg, int val);
+using ptcObjCopySetDbl = int(*)(void* arg, double val);
+using ptcObjCopyGetInt = int(*)(void* arg, int* out);
+using ptcObjCopyGetDbl = int(*)(void* arg, double* out);
+using ptcObjCopyGetFlt = int(*)(void* arg, float* out);
+using ptcObjSetString = int(*)(void* arg, void* ptr);
+using ptcObjGetString = u16*(*)(void* arg, int* len);
+
+typedef struct {
+    u8 type;
+    u8 unk01;
+    u8 unk02;
+    u8 unk03;
+    u32 unk04;
+    ptcObjArg unk08;
+    ptcObjArg unk0C;
+    ptcObjCopyTo copyTo;
+    ptcObjCopySetInt setInteger;
+    ptcObjCopySetDbl setDouble;
+    ptcObjArg unk1C; // setArrayElement ?
+    ptcObjArg toType5;
+    ptcObjArg unk24;
+    ptcObjCopyFrom copyFrom;
+    ptcObjArg unk2C;
+    ptcObjSetString setString;
+    ptcObjArg unk34; // blankString ?
+    ptcObjArg unk38;
+    ptcObjArg unk3C;
+    ptcObjCopyGetInt getInteger;
+    ptcObjCopyGetDbl getDouble;
+    ptcObjArg unk48;
+    ptcObjArg unk4C;
+    ptcObjGetString getString;
+    ptcObjArg unk54;
+    ptcObjArg unk58;
+    ptcObjArg unk5C;
+    ptcObjCopyGetFlt getFloat;
+} ptcVariableObject;
+
 typedef struct {
     u32 magic;          // Checked for, it's "SB3c"
     u16 smileToolPath[0x40]; // Null-terminated UTF-16 string
@@ -121,19 +163,17 @@ typedef struct {
 } PTCPackedProjectEntry;
 
 typedef struct { // EUR 3.6.0 @ 0x01D027CC
-    u32 conClear; u32 conBlack;
-    u32 conMaroon; u32 conRed;
-    u32 conGreen; u32 conLime;
-    u32 conOlive; u32 conYellow;
-    u32 conNavy; u32 conBlue;
-    u32 conPurple; u32 conMagenta;
-    u32 conTeal; u32 conCyan;
-    u32 conGray; u32 conWhite;
-    u32 editComment; u32 editString;
-    u32 editLabel; u32 editNumeric;
-    u32 editKeywords; u32 editText;
-    u32 editRuler; u32 editRulerSel;
-    u32 editStatement; u32 editSelectFG;
+    u32 mainPalette[16];
+    u32 editComment;
+    u32 editString;
+    u32 editLabel;
+    u32 editNumeric;
+    u32 editKeywords;
+    u32 editText;
+    u32 editRuler;
+    u32 editRulerSel;
+    u32 editStatement;
+    u32 editSelectFG;
 } BASICTextPalette;
 
 typedef struct { // EUR 3.6.0 @ 0x01B14B00
@@ -163,18 +203,19 @@ typedef struct { // EUR 3.6.0 @ 0x01D02A4C
 } CTR_PACKED BASICGRPStructs;
 
 typedef struct {
-    u32 type; u32 unk1;
-    u32 data; void* data2;
+    ptcVariableObject* type;
+    u32 unk1;
+    u32 data;
+    void* data2;
 } BASICGenericVariable;
 
-typedef struct {
-    BASICGenericVariable* argc;
-    u32 argv;
-    BASICGenericVariable* outv;
+typedef struct BSAFuncStack {
+    void* field_00;
+    u32 argc;
+    BASICGenericVariable* argv;
     u32 outc;
-    u32 unk[4];
-    u32 stringPtr;
-} BASICFunctionStack;
+    BASICGenericVariable* outv;
+} BSAFuncStack;
 
 typedef struct {
     u16 text[1048576]; // UTF-16 content of slot
@@ -340,44 +381,61 @@ typedef struct {
     bool visibleBg;
 } ptcScreen;
 
-using ptcObjArg = int(*)(BASICGenericVariable* arg);
-using ptcObjCopyTo = int(*)(BASICGenericVariable* arg, BASICGenericVariable* out);
-using ptcObjCopyFrom = int(*)(BASICGenericVariable* arg, BASICGenericVariable* out);
-using ptcObjCopySetInt = int(*)(BASICGenericVariable* arg, int val);
-using ptcObjCopySetDbl = int(*)(BASICGenericVariable* arg, double val);
-using ptcObjCopyGetInt = int(*)(BASICGenericVariable* arg, int* out);
-using ptcObjCopyGetDbl = int(*)(BASICGenericVariable* arg, double* out);
-using ptcObjCopyGetFlt = int(*)(BASICGenericVariable* arg, float* out);
-using ptcObjSetString = int(*)(BASICGenericVariable* arg, void* ptr);
-using ptcObjGetString = void*(*)(BASICGenericVariable* arg, int* len);
-
-typedef struct {
-    u8 type;
-    u8 unk01;
-    u8 unk02;
-    u8 unk03;
-    u32 unk04;
-    ptcObjArg unk08;
-    ptcObjArg unk0C;
-    ptcObjCopyTo copyTo;
-    ptcObjCopySetInt setInteger;
-    ptcObjCopySetDbl setDouble;
-    ptcObjArg unk1C; // setArrayElement ?
-    ptcObjArg toType5;
-    ptcObjArg unk24;
-    ptcObjCopyFrom copyFrom;
-    ptcObjArg unk2C;
-    ptcObjSetString setString;
-    ptcObjArg unk34; // blankString ?
-    ptcObjArg unk38;
-    ptcObjArg unk3C;
-    ptcObjCopyGetInt getInteger;
-    ptcObjCopyGetDbl getDouble;
-    ptcObjArg unk48;
-    ptcObjArg unk4C;
-    ptcObjGetString getString;
-    ptcObjArg unk54;
-    ptcObjArg unk58;
-    ptcObjArg unk5C;
-    ptcObjCopyGetFlt getFloat;
-} ptcVariableObject;
+enum PTCErrorNumber {
+    PTCERR_NO_ERROR = 0, // No Error
+    PTCERR_INTERNAL, // Internal Error
+    PTCERR_ILLEGAL_INSTR, // Illegal Instruction
+    PTCERR_SYNTAX_ERROR, // Syntax error
+    PTCERR_ILLEGAL_FUNCCALL, // Illegal function call
+    PTCERR_STACK_OVERFLOW, // Stack overflow
+    PTCERR_STACK_UNDERFLOW, // Stack underflow
+    PTCERR_DIV_BY_ZERO, // Divide by zero
+    PTCERR_TYPE_MISMATCH, // Type mismatch
+    PTCERR_OVERFLOW, // Overflow
+    PTCERR_OUT_OF_RANGE, // Out of range
+    PTCERR_OUT_OF_MEMORY, // Out of memory
+    PTCERR_OUT_OF_CODE_MEMORY, // Out of code memory
+    PTCERR_OUT_OF_DATA, // Out of DATA
+    PTCERR_UNDEF_LABEL, // Undefined label
+    PTCERR_UNDEF_VARIABLE, // Undefined variable
+    PTCERR_UNDEF_FUNCTION, // Undefined function
+    PTCERR_DUP_LABEL, // Duplicate label
+    PTCERR_DUP_VARIABLE, // Duplicate variable
+    PTCERR_DUP_FUNCTION, // Duplicate function
+    PTCERR_FOR_WO_NEXT, // FOR without NEXT
+    PTCERR_NEXT_WO_FOR, // NEXT without FOR
+    PTCERR_REPEAT_WO_UNTIL, // REPEAT without UNTIL
+    PTCERR_UNTIL_WO_REPEAT, // UNTIL without REPEAT
+    PTCERR_WHILE_WO_WEND, // WHILE without WEND
+    PTCERR_WEND_WO_WHILE, // WEND without WHILE
+    PTCERR_THEN_WO_ENDIF, // THEN without ENDIF
+    PTCERR_ELSE_WO_ENDIF, // ELSE without ENDIF
+    PTCERR_ENDIF_WO_IF, // ENDIF without IF
+    PTCERR_DEF_WO_END, // DEF without END
+    PTCERR_RETURN_WO_GOSUB, // RETURN without GOSUB
+    PTCERR_SUBSCRIPT_OUT_OF_RANGE, // Subscript out of range
+    PTCERR_NESTED_DEF, // Nested DEF
+    PTCERR_NO_CONTINUE, // Can't continue
+    PTCERR_ILLEGAL_SYM_STRING, // Illegal symbol string
+    PTCERR_ILLEGAL_FILE_FORMAT, // Illegal file format
+    PTCERR_MIC_UNAVAILABLE, // Mic is not available
+    PTCERR_MOTION_UNAVAILBLE, // Motion sensor is not available
+    PTCERR_PRGFUNC_WO_PRGEDIT, // Use PRGEDIT before any PRG function
+    PTCERR_ANIM_TOO_LONG, // Animation is too long
+    PTCERR_ILLEGAL_ANIM_DATA, // Illegal animation data
+    PTCERR_STRING_TOO_LONG, // String is too long
+    PTCERR_COMMBUF_OVERFLOW, // Communication buffer overflow
+    PTCERR_NO_USE_DIRECT, // Can't use from direct mode
+    PTCERR_NO_USE_PROGRAM, // Can't use in program
+    PTCERR_NO_USE_TOOL, // Can't use in tool program
+    PTCERR_LOAD_FAIL, // Load failed
+    PTCERR_ILLEGAL_MML, // Illegal MML
+    PTCERR_UNINIT_VARIABLE_USED, // Uninitialized variable used
+    PTCERR_PROTECTED_RESOURCES, // Protected resource
+    PTCERR_PROTECTED_FILE, // Protected file
+    PTCERR_DLC_NOT_FOUND, // DLC not found
+    PTCERR_INCOMPATIBLE_STATEMENT, // Incompatible statement
+    PTCERR_END_WO_CALL, // END without call (bytecode error)
+    PTCERR_ARRAY_TOO_LARGE, // Array is too large
+    PTCERR_TOO_MANY_ARGS, // Too many arguments
+};

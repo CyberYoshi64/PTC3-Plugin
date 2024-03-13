@@ -424,8 +424,6 @@ namespace CTRPluginFramework {
         settings.CustomKeyboard.BackgroundSecondary = Color(0x001010FF);
         settings.MainTextColor = Color(0xD0D0D0FF);
         sprintf(g_ProcessTID, "%016lX", Process::GetTitleID());
-        LightEvent_Init(&mainEvent1, RESET_ONESHOT);
-        
         CFG_GetParentalControlMask(&parentalControlFlag);
         CFGU_GetSystemModel(&g_systemModel);
         CFGU_SecureInfoGetRegion(&g_systemRegion);
@@ -461,6 +459,7 @@ namespace CTRPluginFramework {
             DEBUG("\nLoading CYX...\n\n");
             if (g_region != REGION_NONE) {
                 if R_SUCCEEDED(cyxres = CYX::Initialize()) {
+                    LightEvent_Init(&mainEvent1, RESET_ONESHOT);
                     Process::OnPauseResume = [](bool isGoingToPause) {
                         CYX::playMusicAlongCTRPF(isGoingToPause);
                     };
@@ -486,7 +485,11 @@ namespace CTRPluginFramework {
         Controller::Update();
         //if (Controller::GetKeysDown() & KEY_X)
         //    customBreak(1,2,3,4);
-        LightEvent_Wait(&mainEvent1);
+        if (isCYXenabled) {
+            LightEvent_Wait(&mainEvent1);
+            LightEvent_Clear(&mainEvent1);
+        } else
+            Sleep(Seconds(5)); // Since we've replaced it in pluginInit.cpp, we do it here
     }
 
     // Called when process ends
@@ -645,8 +648,11 @@ namespace CTRPluginFramework {
         "SmileBASIC-CYX\n"
         "© 2022-2024 CyberYoshi64\n"
         "Made in Germany\n\n"
-        "Refer to its page on my website:\n"
-        "cyberyoshi64.github.io/prj/sb/cyx";
+        "Refer to its page on my website:\n" +
+        ToggleDrawMode(Render::UNDERLINE) +
+        "https://cyberyoshi64.github.io/prj/sb/cyx" +
+        ToggleDrawMode(Render::UNDERLINE) + SetShake(true, true, 2) +
+        "\n\nThank you for downloading! <3";
 
     int main(void) {
         if (isCYXenabled) {

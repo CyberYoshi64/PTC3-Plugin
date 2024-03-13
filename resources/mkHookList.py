@@ -8,7 +8,7 @@ class HookAddresses:
         cfgprs.read(name)
         for i in cfgprs.items("Hooks"):
             if i[0]=="version":
-                if i[1]!="1.1": raise Exception("Incompatible version")
+                if i[1]!="2": raise Exception("Incompatible version")
         self.list = cfgprs.items("Hooks.Keys")
         del cfgprs
     def get(self, k:str, d=None):
@@ -63,9 +63,17 @@ class HookListFile:
         "nnActIsNetworkAccountFunc",
         "nnSndSoundThreadEntry1",
         "nnSndSoundThreadEntry2",
+        "screenBuf",
+        "funcBsaStringAlloc",
+        "funcPrintCon",
+        "funcMainEntry",
+        "funcMainLoop1",
+        "funcSendKeyCode",
+        "funcBSAError",
+        "varBsaResult",
     )
     _MGC = b"CY$X"
-    version = 2
+    version = 3
 
     def __init__(self, hooklist:HookAddresses=None)->None:
         if hooklist!=None:

@@ -13,6 +13,7 @@
 #define CACHE_PATH          TOP_DIR "/cache"        // Temporary data
 #define DUMP_PATH           TOP_DIR "/dumps"        // Crash dumps
 #define INCOMING_PATH       TOP_DIR "/in"           // Incoming data, such as packed project files
+#define OUTCOMING_PATH      TOP_DIR "/out"          // Outcoming data, such as packed project files
 #define DEBUGLOG_FILE       "debug.log"             // Log file to use in debug mode
 
 #define ROMFS_PATH          TOP_DIR "/datafs"       // Directory containing RomFS edits

@@ -7,5 +7,3 @@ cp output/*.3gx /home/cyberyoshi64/.local/share/citra-emu/sdmc/PTC3PLG/resources
 cp build/map_EUR.cyxmap /home/cyberyoshi64/.local/share/citra-emu/sdmc/PTC3PLG/resources
 cp build/map_USA.cyxmap /home/cyberyoshi64/.local/share/citra-emu/sdmc/PTC3PLG/resources
 cp build/map_JPN.cyxmap /home/cyberyoshi64/.local/share/citra-emu/sdmc/PTC3PLG/resources
-cp build/funcMap.bin /home/cyberyoshi64/.local/share/citra-emu/sdmc/PTC3PLG/resources
-cp build/funcCfgMap.bin /home/cyberyoshi64/.local/share/citra-emu/sdmc/PTC3PLG/resources

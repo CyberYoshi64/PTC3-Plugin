@@ -24,15 +24,12 @@ if make $1 -j$(nproc); then
     python3 resources/mkHookList.py -i resources/hooks/ptcUSA-3.6.0.ini -o build/map_USA.cyxmap
     python3 resources/mkHookList.py -i resources/hooks/ptcJPN-3.6.3.ini -o build/map_JPN.cyxmap
     python3 resources/mkStrArc.py resources/strings/csv build
-    python3 resources/mkCyxFuncMap.py
     if [ -d release ]; then
         mkdir -p release/PTC3PLG/resources/lang
         rm -f release/PTC3PLG/resources/*.*
         cp build/lang/*.* release/PTC3PLG/resources/lang
         cp output/*.3gx release/PTC3PLG/resources
         cp build/*.cyxmap release/PTC3PLG/resources
-        cp build/funcMap.bin release/PTC3PLG/resources
-        cp build/funcCfgMap.bin release/PTC3PLG/resources
         rm -rf release/luma/plugins
         mkdir -p release/luma/plugins
         mkdir release/luma/plugins/0004000000117200
